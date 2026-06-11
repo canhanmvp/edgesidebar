@@ -1,0 +1,89 @@
+/* Thanh sidebar nổi chèn vào trang web. Dùng tiền tố riêng + !important
+   để tránh bị style của trang ghi đè. */
+
+#pinned-sidebar-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 48px !important;
+  z-index: 2147483646 !important;
+  background: #202124 !important;
+  border-left: 1px solid #3c4043 !important;
+  border-right: 1px solid #3c4043 !important;
+  box-shadow: 0 0 14px rgba(0, 0, 0, 0.35) !important;
+  overflow: hidden !important;
+  transition: width 0.18s ease !important;
+  display: flex !important;
+  flex-direction: column !important;
+  font-family: "Segoe UI", system-ui, sans-serif !important;
+  box-sizing: border-box !important;
+}
+
+#pinned-sidebar-overlay.psb-right {
+  right: 0 !important;
+}
+#pinned-sidebar-overlay.psb-left {
+  left: 0 !important;
+}
+
+#pinned-sidebar-overlay:hover {
+  width: 220px !important;
+}
+
+#pinned-sidebar-overlay .psb-head {
+  height: 40px !important;
+  flex: 0 0 40px !important;
+  display: flex !important;
+  align-items: center !important;
+  color: #9aa0a6 !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  padding: 0 12px !important;
+  border-bottom: 1px solid #3c4043 !important;
+  white-space: nowrap !important;
+  letter-spacing: 0.04em !important;
+}
+
+#pinned-sidebar-overlay .psb-list {
+  flex: 1 1 auto !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 4px 0 !important;
+}
+
+#pinned-sidebar-overlay .psb-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  height: 40px !important;
+  padding: 0 12px !important;
+  cursor: pointer !important;
+  color: #e8eaed !important;
+  text-decoration: none !important;
+  white-space: nowrap !important;
+  box-sizing: border-box !important;
+}
+
+#pinned-sidebar-overlay .psb-item:hover {
+  background: #2d2e31 !important;
+}
+
+#pinned-sidebar-overlay .psb-item img {
+  width: 24px !important;
+  height: 24px !important;
+  flex: 0 0 24px !important;
+  border-radius: 5px !important;
+  background: transparent !important;
+}
+
+#pinned-sidebar-overlay .psb-item span {
+  font-size: 13px !important;
+  opacity: 0 !important;
+  transition: opacity 0.12s ease !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+#pinned-sidebar-overlay:hover .psb-item span {
+  opacity: 1 !important;
+}

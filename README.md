@@ -17,6 +17,10 @@ Dùng **Side Panel API** (Manifest V3), nên hoạt động trên Edge và cả 
 - ↕️ Kéo thả để sắp xếp lại thứ tự (kéo sang nhóm khác để đổi thư mục)
 - ⬇⬆ **Nhập / Xuất** danh sách ra file JSON để sao lưu, chuyển máy
 - ▦ **Chế độ chỉ icon** (compact) gọn gàng
+- 🧭 **Thanh nổi trên trang web**: thanh hẹp ~48px chỉ hiện icon, **rê chuột vào tự
+  bung rộng** hiện tên — đúng kiểu "nhỏ xíu khi không xài". Bật/tắt và đổi bên
+  trái/phải trong menu ⋯. (Chỉ hiện trên trang web thường, không hiện ở tab
+  trống/`edge://`.)
 - ⌨️ **Phím tắt** mở/đóng sidebar: `Ctrl+Shift+Y` (đổi được trong
   `edge://extensions/shortcuts`)
 - ➕ Thêm / ✎ sửa / 🗑 xóa trang ghim
@@ -55,6 +59,8 @@ giữ nguyên khi bạn chuyển tab/cửa sổ.
 | `manifest.json` | Khai báo extension, quyền, side panel, phím tắt      |
 | `background.js` | Service worker: bật side panel, menu chuột phải, mẫu |
 | `rules.json`    | Quy tắc gỡ header chặn nhúng để xem trong sidebar    |
+| `content.js`    | Thanh nổi hẹp chèn vào trang, hover để bung rộng     |
+| `content.css`   | Style cho thanh nổi                                  |
 | `sidebar.html`  | Giao diện sidebar                                    |
 | `sidebar.css`   | Style (hỗ trợ dark mode, compact)                    |
 | `sidebar.js`    | Logic: ghim, sửa, xóa, nhóm, tìm kiếm, nhập/xuất...  |

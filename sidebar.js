@@ -20,7 +20,8 @@ const viewerTitleEl = document.getElementById("viewer-title");
 
 // ===== Trạng thái =====
 let pins = [];
-let settings = { compact: false, collapsed: [] };
+let settings = { compact: false, collapsed: [], overlay: true, overlaySide: "right" };
+const DEFAULT_SETTINGS = { compact: false, collapsed: [], overlay: true, overlaySide: "right" };
 let editingId = null; // null = thêm mới
 let dragId = null;
 let currentUrl = ""; // url đang xem trong viewer
@@ -30,7 +31,7 @@ let query = ""; // từ khóa tìm kiếm
 async function loadAll() {
   const data = await chrome.storage.sync.get(["pins", "settings"]);
   pins = data.pins || [];
-  settings = { compact: false, collapsed: [], ...(data.settings || {}) };
+  settings = { ...DEFAULT_SETTINGS, ...(data.settings || {}) };
   applySettings();
   render();
 }
@@ -345,6 +346,21 @@ async function toggleCompact() {
   await saveSettings();
 }
 
+async function toggleOverlay() {
+  settings.overlay = !settings.overlay;
+  await saveSettings();
+  alert(
+    "Thanh nổi trên trang: " +
+      (settings.overlay ? "BẬT" : "TẮT") +
+      "\n(Tải lại trang web đang mở để thấy thay đổi.)"
+  );
+}
+
+async function toggleOverlaySide() {
+  settings.overlaySide = settings.overlaySide === "left" ? "right" : "left";
+  await saveSettings();
+}
+
 // ===== Gắn sự kiện =====
 document.getElementById("add-btn").addEventListener("click", () => openDialog(null));
 document.getElementById("pin-current-btn").addEventListener("click", pinCurrentTab);
@@ -380,6 +396,14 @@ document.getElementById("menu-new-folder").addEventListener("click", () => {
 document.getElementById("menu-compact").addEventListener("click", () => {
   toggleMenu(false);
   toggleCompact();
+});
+document.getElementById("menu-overlay").addEventListener("click", () => {
+  toggleMenu(false);
+  toggleOverlay();
+});
+document.getElementById("menu-overlay-side").addEventListener("click", () => {
+  toggleMenu(false);
+  toggleOverlaySide();
 });
 document.getElementById("menu-export").addEventListener("click", () => {
   toggleMenu(false);
@@ -427,7 +451,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
     render();
   }
   if (changes.settings) {
-    settings = { compact: false, collapsed: [], ...(changes.settings.newValue || {}) };
+    settings = { ...DEFAULT_SETTINGS, ...(changes.settings.newValue || {}) };
     applySettings();
     render();
   }

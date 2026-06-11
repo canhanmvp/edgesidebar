@@ -2,6 +2,13 @@
 // Chỉ chèn ở khung trên cùng (không chèn trong iframe, kể cả viewer của sidebar).
 if (window.top === window.self) {
   let overlay = null;
+  let side = "right";
+  let expandedWidth = 220; // độ rộng khi bung, do người dùng kéo chỉnh
+  let dragging = false;
+
+  const MIN_W = 120;
+  const MAX_W = 480;
+  const clampW = (w) => Math.max(MIN_W, Math.min(MAX_W, Math.round(w)));
 
   function faviconFor(url) {
     try {
@@ -20,10 +27,12 @@ if (window.top === window.self) {
     if (!settings.overlay) return;
     if (!pins || pins.length === 0) return;
 
+    side = settings.overlaySide === "left" ? "left" : "right";
+    expandedWidth = clampW(settings.overlayWidth || 220);
+
     overlay = document.createElement("div");
     overlay.id = "pinned-sidebar-overlay";
-    overlay.className =
-      settings.overlaySide === "left" ? "psb-left" : "psb-right";
+    overlay.className = side === "left" ? "psb-left" : "psb-right";
 
     const head = document.createElement("div");
     head.className = "psb-head";
@@ -59,7 +68,58 @@ if (window.top === window.self) {
     }
 
     overlay.appendChild(list);
+
+    // Tay kéo chỉnh độ rộng.
+    const resizer = document.createElement("div");
+    resizer.className = "psb-resizer";
+    resizer.addEventListener("mousedown", startDrag);
+    overlay.appendChild(resizer);
+
+    // Hover để bung / thu (bỏ qua khi đang kéo).
+    overlay.addEventListener("mouseenter", openBar);
+    overlay.addEventListener("mouseleave", () => {
+      if (!dragging) closeBar();
+    });
+
     (document.body || document.documentElement).appendChild(overlay);
+  }
+
+  function openBar() {
+    if (!overlay) return;
+    overlay.classList.add("psb-open");
+    overlay.style.setProperty("width", expandedWidth + "px", "important");
+  }
+
+  function closeBar() {
+    if (!overlay) return;
+    overlay.classList.remove("psb-open");
+    overlay.style.removeProperty("width"); // về lại 48px theo CSS
+  }
+
+  function startDrag(e) {
+    e.preventDefault();
+    dragging = true;
+    overlay.classList.add("psb-dragging", "psb-open");
+    document.addEventListener("mousemove", onDrag);
+    document.addEventListener("mouseup", endDrag);
+  }
+
+  function onDrag(e) {
+    const w =
+      side === "right" ? window.innerWidth - e.clientX : e.clientX;
+    expandedWidth = clampW(w);
+    overlay.style.setProperty("width", expandedWidth + "px", "important");
+  }
+
+  async function endDrag() {
+    dragging = false;
+    overlay.classList.remove("psb-dragging");
+    document.removeEventListener("mousemove", onDrag);
+    document.removeEventListener("mouseup", endDrag);
+    const { settings = {} } = await chrome.storage.sync.get("settings");
+    await chrome.storage.sync.set({
+      settings: { ...settings, overlayWidth: expandedWidth }
+    });
   }
 
   function remove() {
@@ -72,7 +132,12 @@ if (window.top === window.self) {
       "pins",
       "settings"
     ]);
-    build(pins, { overlay: true, overlaySide: "right", ...settings });
+    build(pins, {
+      overlay: true,
+      overlaySide: "right",
+      overlayWidth: 220,
+      ...settings
+    });
   }
 
   // Cập nhật khi dữ liệu/cài đặt thay đổi.

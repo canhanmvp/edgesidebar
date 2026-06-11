@@ -20,8 +20,8 @@ const viewerTitleEl = document.getElementById("viewer-title");
 
 // ===== Trạng thái =====
 let pins = [];
-let settings = { compact: false, collapsed: [], overlay: true, overlaySide: "right" };
-const DEFAULT_SETTINGS = { compact: false, collapsed: [], overlay: true, overlaySide: "right" };
+let settings = { compact: false, collapsed: [], overlay: true, overlaySide: "right", overlayWidth: 220 };
+const DEFAULT_SETTINGS = { compact: false, collapsed: [], overlay: true, overlaySide: "right", overlayWidth: 220 };
 let editingId = null; // null = thêm mới
 let dragId = null;
 let currentUrl = ""; // url đang xem trong viewer

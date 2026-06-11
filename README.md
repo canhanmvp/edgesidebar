@@ -19,8 +19,9 @@ Dùng **Side Panel API** (Manifest V3), nên hoạt động trên Edge và cả 
 - ▦ **Chế độ chỉ icon** (compact) gọn gàng
 - 🧭 **Thanh nổi trên trang web**: thanh hẹp ~48px chỉ hiện icon, **rê chuột vào tự
   bung rộng** hiện tên — đúng kiểu "nhỏ xíu khi không xài". Bật/tắt và đổi bên
-  trái/phải trong menu ⋯. (Chỉ hiện trên trang web thường, không hiện ở tab
-  trống/`edge://`.)
+  trái/phải trong menu ⋯. **Kéo mép thanh để chỉnh độ rộng** khi bung (được nhớ
+  lại). (Chỉ hiện trên trang web thường, không hiện ở tab trống/`edge://`.)
+- ↔ **Side Panel** kéo mép để chỉnh rộng như bình thường (tính năng gốc của Edge).
 - ⌨️ **Phím tắt** mở/đóng sidebar: `Ctrl+Shift+Y` (đổi được trong
   `edge://extensions/shortcuts`)
 - ➕ Thêm / ✎ sửa / 🗑 xóa trang ghim

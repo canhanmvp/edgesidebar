@@ -26,8 +26,28 @@
   left: 0 !important;
 }
 
-#pinned-sidebar-overlay:hover {
-  width: 220px !important;
+#pinned-sidebar-overlay.psb-dragging {
+  transition: none !important;
+}
+
+/* Tay kéo để chỉnh độ rộng (nằm ở mép hướng vào nội dung trang) */
+#pinned-sidebar-overlay .psb-resizer {
+  position: absolute !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 6px !important;
+  cursor: ew-resize !important;
+  z-index: 2 !important;
+  background: transparent !important;
+}
+#pinned-sidebar-overlay.psb-right .psb-resizer {
+  left: 0 !important;
+}
+#pinned-sidebar-overlay.psb-left .psb-resizer {
+  right: 0 !important;
+}
+#pinned-sidebar-overlay .psb-resizer:hover {
+  background: #4ea1ff !important;
 }
 
 #pinned-sidebar-overlay .psb-head {
@@ -84,6 +104,6 @@
   text-overflow: ellipsis !important;
 }
 
-#pinned-sidebar-overlay:hover .psb-item span {
+#pinned-sidebar-overlay.psb-open .psb-item span {
   opacity: 1 !important;
 }

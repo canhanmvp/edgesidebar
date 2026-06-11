@@ -22,6 +22,11 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  height: 100%;
+}
+
 body {
   margin: 0;
   font-family: "Segoe UI", system-ui, sans-serif;
@@ -33,17 +38,18 @@ body {
 .toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
+  gap: 2px;
+  padding: 8px 10px;
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
   background: var(--bg);
-  z-index: 1;
+  z-index: 2;
 }
 
 .brand {
   font-weight: 600;
+  margin-right: auto;
 }
 
 .icon-btn {
@@ -53,19 +59,96 @@ body {
   border-radius: 6px;
   background: transparent;
   color: var(--fg);
-  font-size: 18px;
+  font-size: 15px;
   line-height: 1;
   cursor: pointer;
+  flex: 0 0 auto;
 }
 
 .icon-btn:hover {
   background: var(--hover);
 }
 
+/* --- Search bar --- */
+.search-bar {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.search-bar input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 13px;
+}
+
+/* --- Menu tùy chọn --- */
+.menu {
+  position: absolute;
+  right: 8px;
+  top: 44px;
+  z-index: 5;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  padding: 4px;
+  min-width: 190px;
+}
+
+.menu hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 4px 0;
+}
+
+.menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: var(--fg);
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.menu-item:hover {
+  background: var(--hover);
+}
+
+/* --- Danh sách pin --- */
 .pin-list {
   list-style: none;
   margin: 0;
   padding: 4px;
+}
+
+.folder-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 8px 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.folder-header .chevron {
+  transition: transform 0.15s;
+}
+
+.folder-header.collapsed .chevron {
+  transform: rotate(-90deg);
 }
 
 .pin {
@@ -120,6 +203,21 @@ body {
   color: var(--fg);
 }
 
+/* --- Chế độ chỉ icon (compact) --- */
+body.compact .pin {
+  justify-content: center;
+  padding: 8px 4px;
+}
+
+body.compact .pin .title,
+body.compact .pin .actions {
+  display: none;
+}
+
+body.compact .folder-header {
+  justify-content: center;
+}
+
 .empty {
   color: var(--muted);
   text-align: center;
@@ -131,6 +229,7 @@ body {
   display: none !important;
 }
 
+/* --- Dialog --- */
 .dialog {
   position: fixed;
   inset: 0;
@@ -139,6 +238,7 @@ body {
   align-items: center;
   justify-content: center;
   padding: 16px;
+  z-index: 10;
 }
 
 .dialog-box {
@@ -197,7 +297,33 @@ body {
   filter: brightness(0.97);
 }
 
-/* Trạng thái đang kéo thả sắp xếp */
+/* --- Kéo thả sắp xếp --- */
 .pin.dragging {
   opacity: 0.4;
+}
+
+/* --- Khung xem website trong sidebar (kiểu mobile) --- */
+.viewer {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.viewer-bar {
+  gap: 4px;
+}
+
+.viewer-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.viewer-frame {
+  flex: 1;
+  width: 100%;
+  border: none;
+  background: var(--bg);
 }

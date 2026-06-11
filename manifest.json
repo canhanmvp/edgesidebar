@@ -1,9 +1,15 @@
 {
   "manifest_version": 3,
   "name": "Pinned Sidebar",
-  "version": "1.0.0",
-  "description": "Luôn hiển thị thanh sidebar với các icon website đã ghim, giống tính năng sidebar cũ của Edge.",
-  "permissions": ["sidePanel", "storage", "tabs"],
+  "version": "1.1.0",
+  "description": "Luôn hiển thị thanh sidebar với các icon website đã ghim, mở xem ngay trong sidebar kiểu mobile. Tái tạo tính năng sidebar cũ của Edge.",
+  "permissions": [
+    "sidePanel",
+    "storage",
+    "tabs",
+    "contextMenus",
+    "declarativeNetRequest"
+  ],
   "host_permissions": ["<all_urls>"],
   "action": {
     "default_title": "Mở/đóng Pinned Sidebar"
@@ -13,6 +19,23 @@
   },
   "side_panel": {
     "default_path": "sidebar.html"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Y"
+      },
+      "description": "Mở/đóng Pinned Sidebar"
+    }
+  },
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "frame_unlock",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
   },
   "icons": {
     "16": "icons/icon16.png",

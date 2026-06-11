@@ -7,16 +7,47 @@
     <link rel="stylesheet" href="sidebar.css" />
   </head>
   <body>
-    <header class="toolbar">
-      <span class="brand">Ghim</span>
-      <button id="add-btn" class="icon-btn" title="Thêm trang">+</button>
-    </header>
+    <!-- Màn hình danh sách pin -->
+    <section id="list-view">
+      <header class="toolbar">
+        <span class="brand">Ghim</span>
+        <button id="search-btn" class="icon-btn" title="Tìm kiếm">🔍</button>
+        <button id="pin-current-btn" class="icon-btn" title="Ghim tab hiện tại">📌</button>
+        <button id="add-btn" class="icon-btn" title="Thêm trang">+</button>
+        <button id="menu-btn" class="icon-btn" title="Thêm tùy chọn">⋯</button>
+      </header>
 
-    <ul id="pin-list" class="pin-list"></ul>
+      <div id="search-bar" class="search-bar hidden">
+        <input id="search-input" type="text" placeholder="Lọc trang đã ghim..." />
+      </div>
 
-    <p id="empty" class="empty hidden">
-      Chưa có trang nào được ghim.<br />Bấm <strong>+</strong> để thêm.
-    </p>
+      <!-- Menu tùy chọn -->
+      <div id="menu" class="menu hidden">
+        <button id="menu-pin-current" class="menu-item">📌 Ghim tab hiện tại</button>
+        <button id="menu-new-folder" class="menu-item">📁 Tạo thư mục mới</button>
+        <button id="menu-compact" class="menu-item">▦ Chế độ chỉ icon</button>
+        <hr />
+        <button id="menu-export" class="menu-item">⬇ Xuất ra file</button>
+        <button id="menu-import" class="menu-item">⬆ Nhập từ file</button>
+      </div>
+
+      <ul id="pin-list" class="pin-list"></ul>
+
+      <p id="empty" class="empty hidden">
+        Chưa có trang nào được ghim.<br />Bấm <strong>+</strong> để thêm.
+      </p>
+    </section>
+
+    <!-- Màn hình xem website ngay trong sidebar (kiểu mobile) -->
+    <section id="viewer" class="viewer hidden">
+      <header class="toolbar viewer-bar">
+        <button id="back-btn" class="icon-btn" title="Quay lại danh sách">‹</button>
+        <span id="viewer-title" class="viewer-title"></span>
+        <button id="reload-btn" class="icon-btn" title="Tải lại">⟳</button>
+        <button id="open-tab-btn" class="icon-btn" title="Mở trong tab mới">↗</button>
+      </header>
+      <iframe id="viewer-frame" class="viewer-frame" referrerpolicy="no-referrer"></iframe>
+    </section>
 
     <!-- Form thêm/sửa -->
     <div id="dialog" class="dialog hidden">
@@ -30,12 +61,20 @@
           URL
           <input id="field-url" type="text" placeholder="https://..." />
         </label>
+        <label>
+          Thư mục (tùy chọn)
+          <input id="field-folder" type="text" list="folder-options" placeholder="Để trống nếu không phân nhóm" />
+          <datalist id="folder-options"></datalist>
+        </label>
         <div class="dialog-actions">
           <button id="cancel-btn" class="btn">Hủy</button>
           <button id="save-btn" class="btn primary">Lưu</button>
         </div>
       </div>
     </div>
+
+    <!-- input ẩn cho chức năng nhập file -->
+    <input id="import-file" type="file" accept="application/json,.json" class="hidden" />
 
     <script src="sidebar.js"></script>
   </body>

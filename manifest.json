@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Pinned Sidebar",
+  "version": "1.0.0",
+  "description": "Luôn hiển thị thanh sidebar với các icon website đã ghim, giống tính năng sidebar cũ của Edge.",
+  "permissions": ["sidePanel", "storage", "tabs"],
+  "host_permissions": ["<all_urls>"],
+  "action": {
+    "default_title": "Mở/đóng Pinned Sidebar"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "side_panel": {
+    "default_path": "sidebar.html"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

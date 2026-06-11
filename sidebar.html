@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pinned Sidebar</title>
+    <link rel="stylesheet" href="sidebar.css" />
+  </head>
+  <body>
+    <header class="toolbar">
+      <span class="brand">Ghim</span>
+      <button id="add-btn" class="icon-btn" title="Thêm trang">+</button>
+    </header>
+
+    <ul id="pin-list" class="pin-list"></ul>
+
+    <p id="empty" class="empty hidden">
+      Chưa có trang nào được ghim.<br />Bấm <strong>+</strong> để thêm.
+    </p>
+
+    <!-- Form thêm/sửa -->
+    <div id="dialog" class="dialog hidden">
+      <div class="dialog-box">
+        <h3 id="dialog-title">Thêm trang</h3>
+        <label>
+          Tên
+          <input id="field-title" type="text" placeholder="Ví dụ: Gmail" />
+        </label>
+        <label>
+          URL
+          <input id="field-url" type="text" placeholder="https://..." />
+        </label>
+        <div class="dialog-actions">
+          <button id="cancel-btn" class="btn">Hủy</button>
+          <button id="save-btn" class="btn primary">Lưu</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="sidebar.js"></script>
+  </body>
+</html>

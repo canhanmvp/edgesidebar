@@ -24,9 +24,13 @@ Dùng **Side Panel API** (Manifest V3), nên hoạt động trên Edge và cả 
 - ↔ **Side Panel** kéo mép để chỉnh rộng như bình thường (tính năng gốc của Edge).
 - ⌨️ **Phím tắt** mở/đóng sidebar: `Ctrl+Shift+Y` (đổi được trong
   `edge://extensions/shortcuts`)
-- ➕ Thêm / ✎ sửa / 🗑 xóa trang ghim
+- ➕ Thêm / ✎ sửa / 🗑 xóa trang ghim (xóa có hỏi xác nhận)
 - 🔄 Đồng bộ qua `chrome.storage.sync` (theo tài khoản đăng nhập trình duyệt)
-- 🌗 Tự động sáng/tối theo giao diện hệ thống
+- 🎨 **Chọn giao diện** Tự động / Sáng / Tối ngay trong menu ⋯ (thanh nổi cũng đổi
+  theo)
+- ✨ **Giao diện nâng cấp**: accent gradient, hiệu ứng mượt, **thông báo nổi
+  (toast)** và hộp thoại xác nhận thay cho popup mặc định, **spinner khi đang
+  tải** trang trong sidebar
 
 ### Về việc xem trong sidebar
 

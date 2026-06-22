@@ -34,6 +34,15 @@ if (window.top === window.self) {
     overlay.id = "pinned-sidebar-overlay";
     overlay.className = side === "left" ? "psb-left" : "psb-right";
 
+    // Áp dụng giao diện sáng/tối theo cài đặt (mặc định theo hệ thống).
+    const theme = settings.theme || "system";
+    const dark =
+      theme === "dark" ||
+      (theme === "system" &&
+        window.matchMedia &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches);
+    overlay.classList.add(dark ? "psb-dark" : "psb-light");
+
     const head = document.createElement("div");
     head.className = "psb-head";
     head.textContent = "Ghim";
@@ -136,6 +145,7 @@ if (window.top === window.self) {
       overlay: true,
       overlaySide: "right",
       overlayWidth: 220,
+      theme: "system",
       ...settings
     });
   }

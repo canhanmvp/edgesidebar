@@ -2,21 +2,40 @@
    để tránh bị style của trang ghi đè. */
 
 #pinned-sidebar-overlay {
+  /* Mặc định tông tối; .psb-light đổi sang tông sáng. */
+  --psb-bg: #1f2023;
+  --psb-border: #34363b;
+  --psb-fg: #e8eaed;
+  --psb-muted: #9aa0a6;
+  --psb-hover: #2c2e32;
+  --psb-accent: #4ea1ff;
+  --psb-accent-2: #7cc0ff;
+
   position: fixed !important;
   top: 0 !important;
   bottom: 0 !important;
   width: 48px !important;
   z-index: 2147483646 !important;
-  background: #202124 !important;
-  border-left: 1px solid #3c4043 !important;
-  border-right: 1px solid #3c4043 !important;
-  box-shadow: 0 0 14px rgba(0, 0, 0, 0.35) !important;
+  background: var(--psb-bg) !important;
+  border-left: 1px solid var(--psb-border) !important;
+  border-right: 1px solid var(--psb-border) !important;
+  box-shadow: 0 0 24px rgba(0, 0, 0, 0.3) !important;
   overflow: hidden !important;
-  transition: width 0.18s ease !important;
+  transition: width 0.2s cubic-bezier(0.22, 0.61, 0.36, 1) !important;
   display: flex !important;
   flex-direction: column !important;
   font-family: "Segoe UI", system-ui, sans-serif !important;
   box-sizing: border-box !important;
+}
+
+#pinned-sidebar-overlay.psb-light {
+  --psb-bg: #ffffff;
+  --psb-border: #e6e8eb;
+  --psb-fg: #1f1f1f;
+  --psb-muted: #6b6b6b;
+  --psb-hover: #f0f2f5;
+  --psb-accent: #0078d4;
+  --psb-accent-2: #4ea1ff;
 }
 
 #pinned-sidebar-overlay.psb-right {
@@ -39,6 +58,7 @@
   cursor: ew-resize !important;
   z-index: 2 !important;
   background: transparent !important;
+  transition: background 0.15s ease !important;
 }
 #pinned-sidebar-overlay.psb-right .psb-resizer {
   left: 0 !important;
@@ -47,21 +67,33 @@
   right: 0 !important;
 }
 #pinned-sidebar-overlay .psb-resizer:hover {
-  background: #4ea1ff !important;
+  background: var(--psb-accent) !important;
 }
 
 #pinned-sidebar-overlay .psb-head {
-  height: 40px !important;
-  flex: 0 0 40px !important;
+  height: 42px !important;
+  flex: 0 0 42px !important;
   display: flex !important;
   align-items: center !important;
-  color: #9aa0a6 !important;
+  color: var(--psb-muted) !important;
   font-size: 12px !important;
-  font-weight: 600 !important;
+  font-weight: 700 !important;
   padding: 0 12px !important;
-  border-bottom: 1px solid #3c4043 !important;
+  border-bottom: 1px solid var(--psb-border) !important;
   white-space: nowrap !important;
-  letter-spacing: 0.04em !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+}
+
+/* Chấm nhấn nhỏ đầu thanh tiêu đề */
+#pinned-sidebar-overlay .psb-head::before {
+  content: "" !important;
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50% !important;
+  margin-right: 10px !important;
+  flex: 0 0 8px !important;
+  background: linear-gradient(135deg, var(--psb-accent), var(--psb-accent-2)) !important;
 }
 
 #pinned-sidebar-overlay .psb-list {
@@ -75,31 +107,35 @@
   display: flex !important;
   align-items: center !important;
   gap: 12px !important;
-  height: 40px !important;
-  padding: 0 12px !important;
+  height: 42px !important;
+  margin: 2px 6px !important;
+  padding: 0 6px !important;
+  border-radius: 9px !important;
   cursor: pointer !important;
-  color: #e8eaed !important;
+  color: var(--psb-fg) !important;
   text-decoration: none !important;
   white-space: nowrap !important;
   box-sizing: border-box !important;
+  transition: background 0.14s ease !important;
 }
 
 #pinned-sidebar-overlay .psb-item:hover {
-  background: #2d2e31 !important;
+  background: var(--psb-hover) !important;
 }
 
 #pinned-sidebar-overlay .psb-item img {
   width: 24px !important;
   height: 24px !important;
   flex: 0 0 24px !important;
-  border-radius: 5px !important;
+  border-radius: 6px !important;
   background: transparent !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25) !important;
 }
 
 #pinned-sidebar-overlay .psb-item span {
   font-size: 13px !important;
   opacity: 0 !important;
-  transition: opacity 0.12s ease !important;
+  transition: opacity 0.14s ease !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
 }

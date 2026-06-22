@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Pinned Sidebar",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Luôn hiển thị thanh sidebar với các icon website đã ghim, mở xem ngay trong sidebar kiểu mobile. Tái tạo tính năng sidebar cũ của Edge.",
   "permissions": [
     "sidePanel",

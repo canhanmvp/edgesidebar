@@ -26,6 +26,9 @@
         <button id="menu-pin-current" class="menu-item">📌 Ghim tab hiện tại</button>
         <button id="menu-new-folder" class="menu-item">📁 Tạo thư mục mới</button>
         <button id="menu-compact" class="menu-item">▦ Chế độ chỉ icon</button>
+        <button id="menu-theme" class="menu-item">
+          🎨 Giao diện <span id="theme-tag" class="tag">Tự động</span>
+        </button>
         <hr />
         <button id="menu-overlay" class="menu-item">🧭 Thanh nổi trên trang</button>
         <button id="menu-overlay-side" class="menu-item">↔ Đổi bên trái/phải</button>
@@ -49,7 +52,12 @@
         <button id="reload-btn" class="icon-btn" title="Tải lại">⟳</button>
         <button id="open-tab-btn" class="icon-btn" title="Mở trong tab mới">↗</button>
       </header>
-      <iframe id="viewer-frame" class="viewer-frame" referrerpolicy="no-referrer"></iframe>
+      <div class="viewer-body">
+        <iframe id="viewer-frame" class="viewer-frame" referrerpolicy="no-referrer"></iframe>
+        <div id="viewer-loading" class="viewer-loading">
+          <div class="spinner" aria-label="Đang tải"></div>
+        </div>
+      </div>
     </section>
 
     <!-- Form thêm/sửa -->
@@ -78,6 +86,9 @@
 
     <!-- input ẩn cho chức năng nhập file -->
     <input id="import-file" type="file" accept="application/json,.json" class="hidden" />
+
+    <!-- Vùng hiện thông báo nổi (toast) -->
+    <div id="toast-wrap" class="toast-wrap"></div>
 
     <script src="sidebar.js"></script>
   </body>

@@ -20,8 +20,17 @@ const viewerTitleEl = document.getElementById("viewer-title");
 
 // ===== Trạng thái =====
 let pins = [];
-let settings = { compact: false, collapsed: [], overlay: true, overlaySide: "right", overlayWidth: 220 };
-const DEFAULT_SETTINGS = { compact: false, collapsed: [], overlay: true, overlaySide: "right", overlayWidth: 220 };
+const DEFAULT_SETTINGS = {
+  compact: false,
+  collapsed: [],
+  overlay: true,
+  overlaySide: "right",
+  overlayWidth: 220,
+  theme: "system" // "system" | "light" | "dark"
+};
+let settings = { ...DEFAULT_SETTINGS };
+const THEME_ORDER = ["system", "light", "dark"];
+const THEME_LABEL = { system: "Tự động", light: "Sáng", dark: "Tối" };
 let editingId = null; // null = thêm mới
 let dragId = null;
 let currentUrl = ""; // url đang xem trong viewer
@@ -72,9 +81,71 @@ function faviconFor(url) {
 const FALLBACK_ICON =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Crect width='20' height='20' rx='4' fill='%23bbb'/%3E%3C/svg%3E";
 
+// ===== Thông báo nổi (toast) =====
+const toastWrap = document.getElementById("toast-wrap");
+function toast(message, type = "", ms = 2600) {
+  const el = document.createElement("div");
+  el.className = "toast" + (type ? " " + type : "");
+  el.textContent = message;
+  toastWrap.appendChild(el);
+  setTimeout(() => {
+    el.classList.add("out");
+    el.addEventListener("animationend", () => el.remove(), { once: true });
+  }, ms);
+}
+
+// ===== Hộp thoại xác nhận (thay cho confirm() mặc định) =====
+function confirmDialog({ message, okText = "Đồng ý", cancelText = "Hủy", danger = false }) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "dialog";
+    overlay.innerHTML = `
+      <div class="dialog-box">
+        <p class="dialog-msg"></p>
+        <div class="dialog-actions">
+          <button class="btn" data-act="cancel"></button>
+          <button class="btn primary" data-act="ok"></button>
+        </div>
+      </div>`;
+    overlay.querySelector(".dialog-msg").textContent = message;
+    const okBtn = overlay.querySelector('[data-act="ok"]');
+    const cancelBtn = overlay.querySelector('[data-act="cancel"]');
+    okBtn.textContent = okText;
+    cancelBtn.textContent = cancelText;
+    if (danger) okBtn.style.background = "var(--danger)";
+
+    function close(result) {
+      overlay.remove();
+      document.removeEventListener("keydown", onKey);
+      resolve(result);
+    }
+    function onKey(e) {
+      if (e.key === "Escape") close(false);
+      if (e.key === "Enter") close(true);
+    }
+    okBtn.addEventListener("click", () => close(true));
+    cancelBtn.addEventListener("click", () => close(false));
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) close(false);
+    });
+    document.addEventListener("keydown", onKey);
+    document.body.appendChild(overlay);
+    okBtn.focus();
+  });
+}
+
 // ===== Render =====
 function applySettings() {
   document.body.classList.toggle("compact", settings.compact);
+  applyTheme();
+}
+
+function applyTheme() {
+  const theme = settings.theme || "system";
+  if (theme === "system") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.setAttribute("data-theme", theme);
+  const tag = document.getElementById("theme-tag");
+  if (tag) tag.textContent = THEME_LABEL[theme];
 }
 
 function matchesQuery(pin) {
@@ -126,7 +197,7 @@ function createPinEl(pin) {
   });
 
   const delBtn = document.createElement("button");
-  delBtn.className = "mini-btn";
+  delBtn.className = "mini-btn danger";
   delBtn.title = "Xóa";
   delBtn.textContent = "🗑";
   delBtn.addEventListener("click", (e) => {
@@ -201,9 +272,18 @@ function reorder(fromId, toId) {
 }
 
 async function removePin(id) {
+  const pin = pins.find((p) => p.id === id);
+  if (!pin) return;
+  const ok = await confirmDialog({
+    message: `Xóa "${pin.title || pin.url}" khỏi danh sách ghim?`,
+    okText: "Xóa",
+    danger: true
+  });
+  if (!ok) return;
   pins = pins.filter((p) => p.id !== id);
   render();
   await savePins();
+  toast("Đã xóa trang ghim", "success");
 }
 
 function toggleFolder(folder) {
@@ -270,9 +350,27 @@ async function pinCurrentTab() {
 }
 
 // ===== Viewer =====
+const viewerLoadingEl = document.getElementById("viewer-loading");
+let viewerLoadTimer = null;
+
+function showViewerLoading() {
+  viewerLoadingEl.classList.remove("hidden");
+  clearTimeout(viewerLoadTimer);
+  // Phòng khi khung chéo nguồn không bắn sự kiện load — tự ẩn sau 8s.
+  viewerLoadTimer = setTimeout(() => viewerLoadingEl.classList.add("hidden"), 8000);
+}
+viewerFrame.addEventListener("load", () => {
+  // Khi src = about:blank (đóng viewer) thì không cần hiện spinner.
+  if (viewerFrame.src && viewerFrame.src !== "about:blank") {
+    clearTimeout(viewerLoadTimer);
+    viewerLoadingEl.classList.add("hidden");
+  }
+});
+
 function openViewer(pin) {
   currentUrl = pin.url;
   viewerTitleEl.textContent = pin.title || pin.url;
+  showViewerLoading();
   viewerFrame.src = pin.url;
   listViewEl.classList.add("hidden");
   viewerEl.classList.remove("hidden");
@@ -317,14 +415,17 @@ importFileEl.addEventListener("change", async () => {
         url: normalizeUrl(p.url),
         folder: (p.folder || "").toString()
       }));
-    const replace = confirm(
-      "OK = Thay thế toàn bộ danh sách hiện tại.\nHủy = Gộp thêm vào danh sách."
-    );
+    const replace = await confirmDialog({
+      message: `Đã đọc ${cleaned.length} trang. Thay thế toàn bộ danh sách hiện tại, hay gộp thêm?`,
+      okText: "Thay thế",
+      cancelText: "Gộp thêm"
+    });
     pins = replace ? cleaned : pins.concat(cleaned);
     render();
     await savePins();
+    toast(`Đã nhập ${cleaned.length} trang`, "success");
   } catch (err) {
-    alert("Không đọc được file: " + err.message);
+    toast("Không đọc được file: " + err.message, "error", 3600);
   }
 });
 
@@ -349,16 +450,25 @@ async function toggleCompact() {
 async function toggleOverlay() {
   settings.overlay = !settings.overlay;
   await saveSettings();
-  alert(
+  toast(
     "Thanh nổi trên trang: " +
       (settings.overlay ? "BẬT" : "TẮT") +
-      "\n(Tải lại trang web đang mở để thấy thay đổi.)"
+      " — tải lại trang để thấy thay đổi"
   );
 }
 
 async function toggleOverlaySide() {
   settings.overlaySide = settings.overlaySide === "left" ? "right" : "left";
   await saveSettings();
+  toast("Thanh nổi: chuyển sang bên " + (settings.overlaySide === "left" ? "trái" : "phải"));
+}
+
+async function cycleTheme() {
+  const i = THEME_ORDER.indexOf(settings.theme || "system");
+  settings.theme = THEME_ORDER[(i + 1) % THEME_ORDER.length];
+  applyTheme();
+  await saveSettings();
+  toast("Giao diện: " + THEME_LABEL[settings.theme]);
 }
 
 // ===== Gắn sự kiện =====
@@ -397,6 +507,11 @@ document.getElementById("menu-compact").addEventListener("click", () => {
   toggleMenu(false);
   toggleCompact();
 });
+document.getElementById("menu-theme").addEventListener("click", (e) => {
+  // Giữ menu mở để bấm đổi giao diện liên tục.
+  e.stopPropagation();
+  cycleTheme();
+});
 document.getElementById("menu-overlay").addEventListener("click", () => {
   toggleMenu(false);
   toggleOverlay();
@@ -421,7 +536,10 @@ menuEl.addEventListener("click", (e) => e.stopPropagation());
 // Viewer controls.
 document.getElementById("back-btn").addEventListener("click", closeViewer);
 document.getElementById("reload-btn").addEventListener("click", () => {
-  if (currentUrl) viewerFrame.src = currentUrl;
+  if (currentUrl) {
+    showViewerLoading();
+    viewerFrame.src = currentUrl;
+  }
 });
 document.getElementById("open-tab-btn").addEventListener("click", () => {
   if (currentUrl) chrome.tabs.create({ url: currentUrl });

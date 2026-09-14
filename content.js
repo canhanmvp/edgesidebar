@@ -1,159 +1,351 @@
-// Thanh sidebar nổi chèn vào trang web: hẹp khi rảnh, bung rộng khi hover.
-// Chỉ chèn ở khung trên cùng (không chèn trong iframe, kể cả viewer của sidebar).
-if (window.top === window.self) {
-  let overlay = null;
-  let side = "right";
-  let expandedWidth = 220; // độ rộng khi bung, do người dùng kéo chỉnh
-  let dragging = false;
-
-  const MIN_W = 120;
-  const MAX_W = 480;
-  const clampW = (w) => Math.max(MIN_W, Math.min(MAX_W, Math.round(w)));
-
-  function faviconFor(url) {
-    try {
-      const host = new URL(url).hostname;
-      return `https://www.google.com/s2/favicons?domain=${host}&sz=64`;
-    } catch {
-      return "";
-    }
+/* Isolated floating rail: no page CSS or storage writes. */
+(() => {
+  "use strict";
+  if (
+    window.top !== window.self ||
+    document.getElementById("pinned-sidebar-v2")
+  )
+    return;
+  let host,
+    shadow,
+    rail,
+    current,
+    refreshId = 0,
+    activeDrag = null,
+    repairTimer = 0;
+  const DEFAULT_EDGE_INSET = 24;
+  const systemTheme = matchMedia("(prefers-color-scheme: dark)");
+  function el(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text != null) node.textContent = text;
+    return node;
   }
-
-  const FALLBACK_ICON =
-    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Crect width='24' height='24' rx='5' fill='%23888'/%3E%3C/svg%3E";
-
-  function build(pins, settings) {
-    remove();
-    if (!settings.overlay) return;
-    if (!pins || pins.length === 0) return;
-
-    side = settings.overlaySide === "left" ? "left" : "right";
-    expandedWidth = clampW(settings.overlayWidth || 220);
-
-    overlay = document.createElement("div");
-    overlay.id = "pinned-sidebar-overlay";
-    overlay.className = side === "left" ? "psb-left" : "psb-right";
-
-    // Áp dụng giao diện sáng/tối theo cài đặt (mặc định theo hệ thống).
-    const theme = settings.theme || "system";
-    const dark =
-      theme === "dark" ||
-      (theme === "system" &&
-        window.matchMedia &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches);
-    overlay.classList.add(dark ? "psb-dark" : "psb-light");
-
-    const head = document.createElement("div");
-    head.className = "psb-head";
-    head.textContent = "Ghim";
-    overlay.appendChild(head);
-
-    const list = document.createElement("div");
-    list.className = "psb-list";
-
-    for (const pin of pins) {
-      const item = document.createElement("a");
-      item.className = "psb-item";
-      item.href = pin.url;
-      item.title = pin.title || pin.url;
-
-      const img = document.createElement("img");
-      img.src = faviconFor(pin.url);
-      img.alt = "";
-      img.onerror = () => (img.src = FALLBACK_ICON);
-
-      const label = document.createElement("span");
-      label.textContent = pin.title || pin.url;
-
-      item.append(img, label);
-
-      // Bấm thường: mở tab nền. Ctrl/Cmd hoặc chuột giữa: cũng tab mới.
-      item.addEventListener("click", (e) => {
-        e.preventDefault();
-        window.open(pin.url, "_blank");
-      });
-
-      list.appendChild(item);
-    }
-
-    overlay.appendChild(list);
-
-    // Tay kéo chỉnh độ rộng.
-    const resizer = document.createElement("div");
-    resizer.className = "psb-resizer";
-    resizer.addEventListener("mousedown", startDrag);
-    overlay.appendChild(resizer);
-
-    // Hover để bung / thu (bỏ qua khi đang kéo).
-    overlay.addEventListener("mouseenter", openBar);
-    overlay.addEventListener("mouseleave", () => {
-      if (!dragging) closeBar();
-    });
-
-    (document.body || document.documentElement).appendChild(overlay);
+  async function send(type, extra = {}) {
+    const response = await chrome.runtime.sendMessage({ type, ...extra });
+    if (!response?.ok)
+      throw new Error(
+        response?.error || "Hãy tải lại trang để kết nối extension.",
+      );
+    return response;
   }
-
-  function openBar() {
-    if (!overlay) return;
-    overlay.classList.add("psb-open");
-    overlay.style.setProperty("width", expandedWidth + "px", "important");
+  function message(text) {
+    if (!shadow) return;
+    const notice = shadow.querySelector(".notice");
+    notice.textContent = text;
+    notice.hidden = false;
+    setTimeout(() => {
+      if (notice.isConnected) notice.hidden = true;
+    }, 5500);
   }
-
-  function closeBar() {
-    if (!overlay) return;
-    overlay.classList.remove("psb-open");
-    overlay.style.removeProperty("width"); // về lại 48px theo CSS
+  function theme() {
+    if (rail && current)
+      rail.dataset.theme =
+        current.settings.theme === "system"
+          ? systemTheme.matches
+            ? "dark"
+            : "light"
+          : current.settings.theme;
   }
-
-  function startDrag(e) {
-    e.preventDefault();
-    dragging = true;
-    overlay.classList.add("psb-dragging", "psb-open");
-    document.addEventListener("mousemove", onDrag);
-    document.addEventListener("mouseup", endDrag);
+  function siteIcon(pin) {
+    const tile = el("span", "tile");
+    const fallback = el(
+      "span",
+      "tile-fallback",
+      Array.from(pin.title)[0]?.toLocaleUpperCase("vi") || "•",
+    );
+    const favicon = document.createElement("img");
+    favicon.className = "tile-favicon";
+    favicon.alt = "";
+    favicon.width = 30;
+    favicon.height = 30;
+    favicon.referrerPolicy = "no-referrer";
+    // Ask the pinned website for its conventional icon. If it has none, the
+    // readable letter tile remains in place without depending on page CSS.
+    favicon.src = new URL("/favicon.ico", pin.url).href;
+    favicon.addEventListener("load", () => tile.classList.add("has-favicon"));
+    favicon.addEventListener("error", () => favicon.remove());
+    tile.append(fallback, favicon);
+    return tile;
   }
-
-  function onDrag(e) {
-    const w =
-      side === "right" ? window.innerWidth - e.clientX : e.clientX;
-    expandedWidth = clampW(w);
-    overlay.style.setProperty("width", expandedWidth + "px", "important");
-  }
-
-  async function endDrag() {
-    dragging = false;
-    overlay.classList.remove("psb-dragging");
-    document.removeEventListener("mousemove", onDrag);
-    document.removeEventListener("mouseup", endDrag);
-    const { settings = {} } = await chrome.storage.sync.get("settings");
-    await chrome.storage.sync.set({
-      settings: { ...settings, overlayWidth: expandedWidth }
-    });
-  }
-
   function remove() {
-    if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
-    overlay = null;
+    if (activeDrag) {
+      activeDrag.abort();
+      activeDrag = null;
+    }
+    host?.remove();
+    host = null;
+    shadow = null;
+    rail = null;
   }
-
-  async function refresh() {
-    const { pins = [], settings = {} } = await chrome.storage.sync.get([
-      "pins",
-      "settings"
-    ]);
-    build(pins, {
-      overlay: true,
-      overlaySide: "right",
-      overlayWidth: 220,
-      theme: "system",
-      ...settings
+  function clampPosition(left, top) {
+    // The rail expands on hover to reveal labels, but its saved location is
+    // the 48px icon column. Using the expanded width here made right-side
+    // dragging stop far from the viewport edge.
+    const width = 48;
+    const height = rail?.getBoundingClientRect().height || 48;
+    // Keep clear of a page's scrollbar. When Edge opens its native side
+    // panel, the remaining page viewport can become very narrow, so reduce
+    // the preferred 24px inset only when that is necessary to keep the rail
+    // visible.
+    const horizontalInset = Math.min(
+      DEFAULT_EDGE_INSET,
+      Math.max(8, Math.floor((innerWidth - width) / 2)),
+    );
+    const verticalInset = Math.min(
+      8,
+      Math.max(0, Math.floor((innerHeight - height) / 2)),
+    );
+    const maxLeft = Math.max(
+      horizontalInset,
+      innerWidth - width - horizontalInset,
+    );
+    const maxTop = Math.max(
+      verticalInset,
+      innerHeight - height - verticalInset,
+    );
+    return {
+      left: Math.max(horizontalInset, Math.min(maxLeft, Math.round(left))),
+      top: Math.max(verticalInset, Math.min(maxTop, Math.round(top))),
+    };
+  }
+  function placeRail(left, top) {
+    const position = clampPosition(left, top);
+    host.style.setProperty("left", position.left + "px", "important");
+    host.style.setProperty("top", position.top + "px", "important");
+    host.style.setProperty("right", "auto", "important");
+    rail.classList.toggle("left", position.left < innerWidth / 2);
+    return position;
+  }
+  async function open(pin, event) {
+    const tab =
+      current.settings.openMode === "tab" ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.shiftKey ||
+      event.button === 1;
+    try {
+      await send(tab ? "OPEN_PIN" : "OPEN_PANEL", {
+        id: pin.id,
+        background: event.ctrlKey || event.metaKey || event.button === 1,
+      });
+    } catch (error) {
+      if (/context invalidated/i.test(error.message)) {
+        message(
+          "Extension vừa được tải lại. Tải lại trang này (F5), rồi bấm icon để mở sidebar.",
+        );
+        return;
+      }
+      message(
+        error.message +
+          " Bạn có thể mở bằng biểu tượng extension trên thanh công cụ.",
+      );
+    }
+  }
+  function build(data) {
+    const previousFocus = shadow?.activeElement?.dataset.pin;
+    const expanded = rail?.matches(":hover") || !!previousFocus;
+    current = data;
+    remove();
+    if (!data.settings.overlay) return;
+    host = document.createElement("div");
+    host.id = "pinned-sidebar-v2";
+    // Reset only our host. The host never reserves or changes the page layout.
+    host.style.cssText =
+      "all:initial!important;position:fixed!important;z-index:2147483646!important;display:block!important;";
+    shadow = host.attachShadow({ mode: "closed" });
+    const stylesheet = el("link");
+    stylesheet.rel = "stylesheet";
+    stylesheet.href = chrome.runtime.getURL("content.css");
+    shadow.append(stylesheet);
+    rail = el("nav", "rail");
+    rail.setAttribute("aria-label", "Pinned Sidebar");
+    rail.style.setProperty("--expanded", data.settings.overlayWidth + "px");
+    if (expanded) {
+      rail.classList.add("keep-open");
+      rail.addEventListener(
+        "mouseleave",
+        () => rail?.classList.remove("keep-open"),
+        { once: true },
+      );
+    }
+    const home = el("button", "home");
+    home.type = "button";
+    home.title = "Mở Pinned Sidebar";
+    home.setAttribute("aria-label", "Mở Pinned Sidebar");
+    home.append(
+      el("span", "home-icon", "p."),
+      el("span", "label", "Không gian của bạn"),
+    );
+    home.onclick = () =>
+      send("OPEN_PANEL").catch((error) => message(error.message));
+    rail.append(home);
+    const moveHandle = el("div", "move-handle", "⠿");
+    moveHandle.title = "Kéo để di chuyển thanh icon";
+    moveHandle.setAttribute("aria-label", "Kéo để di chuyển thanh icon");
+    moveHandle.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      activeDrag?.abort();
+      rail.classList.remove("resizing");
+      activeDrag = new AbortController();
+      const { signal } = activeDrag;
+      const start = { left: host.offsetLeft, top: host.offsetTop };
+      const pointer = { x: event.clientX, y: event.clientY };
+      moveHandle.setPointerCapture(event.pointerId);
+      rail.classList.add("moving");
+      const move = (next) =>
+        placeRail(
+          start.left + next.clientX - pointer.x,
+          start.top + next.clientY - pointer.y,
+        );
+      const end = (cancelled) => {
+        rail?.classList.remove("moving");
+        activeDrag?.abort();
+        activeDrag = null;
+        if (cancelled) return;
+        const position = clampPosition(host.offsetLeft, host.offsetTop);
+        placeRail(position.left, position.top);
+        send("OVERLAY_POSITION", {
+          x: position.left,
+          y: position.top,
+          side: position.left < innerWidth / 2 ? "left" : "right",
+        }).catch((error) => message(error.message));
+      };
+      moveHandle.addEventListener("pointermove", move, { signal });
+      moveHandle.addEventListener("pointerup", () => end(false), { signal });
+      moveHandle.addEventListener("pointercancel", () => end(true), { signal });
+      moveHandle.addEventListener("lostpointercapture", () => end(true), {
+        signal,
+      });
     });
+    rail.append(moveHandle);
+    const list = el("div", "list");
+    for (const pin of data.pins.slice(0, 100)) {
+      const item = el("button", "item");
+      item.type = "button";
+      item.dataset.pin = pin.id;
+      item.title = `${pin.title}\n${pin.url}`;
+      item.setAttribute("aria-label", pin.title);
+      item.append(siteIcon(pin), el("span", "label", pin.title));
+      item.onclick = (event) => open(pin, event);
+      item.onauxclick = (event) => {
+        if (event.button === 1) {
+          event.preventDefault();
+          open(pin, event);
+        }
+      };
+      list.append(item);
+    }
+    rail.append(list);
+    if (data.pins.length > 100) {
+      const more = el("button", "more", "+" + (data.pins.length - 100));
+      more.title = "Xem tất cả trong sidebar";
+      more.onclick = () =>
+        send("OPEN_PANEL").catch((error) => message(error.message));
+      rail.append(more);
+    }
+    const resizer = el("div", "resizer");
+    resizer.title = "Kéo để chỉnh độ rộng";
+    resizer.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      activeDrag?.abort();
+      rail.classList.remove("moving");
+      activeDrag = new AbortController();
+      const { signal } = activeDrag;
+      resizer.setPointerCapture(event.pointerId);
+      rail.classList.add("resizing");
+      let width = data.settings.overlayWidth;
+      resizer.addEventListener(
+        "pointermove",
+        (move) => {
+          const bounds = host.getBoundingClientRect();
+          width = Math.max(
+            160,
+            Math.min(
+              420,
+              Math.round(
+                rail.classList.contains("left")
+                  ? move.clientX - bounds.left
+                  : bounds.right - move.clientX,
+              ),
+            ),
+          );
+          rail.style.setProperty("--expanded", width + "px");
+        },
+        { signal },
+      );
+      function end(cancelled) {
+        rail?.classList.remove("resizing");
+        activeDrag?.abort();
+        activeDrag = null;
+        if (!cancelled)
+          send("OVERLAY_WIDTH", { width }).catch((error) =>
+            message(error.message),
+          );
+      }
+      resizer.addEventListener("pointerup", () => end(false), { signal });
+      resizer.addEventListener("pointercancel", () => end(true), { signal });
+      resizer.addEventListener("lostpointercapture", () => end(true), {
+        signal,
+      });
+    });
+    rail.append(resizer);
+    const notice = el("p", "notice");
+    notice.hidden = true;
+    notice.setAttribute("role", "status");
+    shadow.append(rail, notice);
+    (document.body || document.documentElement).append(host);
+    theme();
+    placeRail(
+      Number.isFinite(data.settings.overlayX)
+        ? data.settings.overlayX
+        : data.settings.overlaySide === "left"
+          ? DEFAULT_EDGE_INSET
+          : innerWidth - 48 - DEFAULT_EDGE_INSET,
+      Number.isFinite(data.settings.overlayY)
+        ? data.settings.overlayY
+        : innerHeight * 0.25,
+    );
+    if (previousFocus)
+      [...shadow.querySelectorAll("[data-pin]")]
+        .find((item) => item.dataset.pin === previousFocus)
+        ?.focus();
   }
-
-  // Cập nhật khi dữ liệu/cài đặt thay đổi.
-  chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === "sync" && (changes.pins || changes.settings)) refresh();
+  async function refresh() {
+    const id = ++refreshId;
+    try {
+      const data = await send("OVERLAY_STATE");
+      if (id === refreshId) build(data);
+    } catch {
+      remove();
+    }
+  }
+  // Some storefronts and single-page apps replace document.body after the
+  // extension has loaded. The old rail is removed with that body, so restore
+  // it once the page has finished its DOM update.
+  const bodyWatcher = new MutationObserver(() => {
+    if (repairTimer || !host || host.isConnected || !current?.settings.overlay)
+      return;
+    repairTimer = setTimeout(() => {
+      repairTimer = 0;
+      if (host && !host.isConnected && current?.settings.overlay) refresh();
+    }, 0);
   });
-
+  bodyWatcher.observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+  });
+  systemTheme.addEventListener("change", theme);
+  // Opening or closing Edge's native side panel changes the remaining page
+  // viewport. Re-clamp a previously saved position immediately so the rail
+  // does not cover the page scrollbar.
+  addEventListener("resize", () => {
+    if (host?.isConnected) placeRail(host.offsetLeft, host.offsetTop);
+  });
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message.type === "REFRESH_OVERLAY") refresh();
+  });
   refresh();
-}
+})();

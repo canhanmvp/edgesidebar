@@ -1,50 +1,37 @@
 {
   "manifest_version": 3,
   "name": "Pinned Sidebar",
-  "version": "1.2.0",
-  "description": "Luôn hiển thị thanh sidebar với các icon website đã ghim, mở xem ngay trong sidebar kiểu mobile. Tái tạo tính năng sidebar cũ của Edge.",
+  "version": "2.1.5",
+  "minimum_chrome_version": "120",
+  "description": "Góc làm việc gọn gàng: ghim website, sắp xếp thư mục và mở nhanh trong sidebar.",
   "permissions": [
     "sidePanel",
     "storage",
     "tabs",
     "contextMenus",
-    "declarativeNetRequest"
+    "alarms",
+    "declarativeNetRequestWithHostAccess"
   ],
-  "host_permissions": ["<all_urls>"],
-  "action": {
-    "default_title": "Mở/đóng Pinned Sidebar"
-  },
-  "background": {
-    "service_worker": "background.js"
-  },
-  "side_panel": {
-    "default_path": "sidebar.html"
-  },
+  "host_permissions": ["http://*/*", "https://*/*"],
+  "action": { "default_title": "Mở Pinned Sidebar" },
+  "background": { "service_worker": "background.js" },
+  "side_panel": { "default_path": "sidebar.html" },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": ["http://*/*", "https://*/*"],
       "js": ["content.js"],
-      "css": ["content.css"],
       "run_at": "document_idle",
       "all_frames": false
     }
   ],
+  "web_accessible_resources": [
+    { "resources": ["content.css"], "matches": ["http://*/*", "https://*/*"] }
+  ],
   "commands": {
     "_execute_action": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+Y"
-      },
-      "description": "Mở/đóng Pinned Sidebar"
+      "suggested_key": { "default": "Ctrl+Shift+Y" },
+      "description": "Mở Pinned Sidebar"
     }
-  },
-  "declarative_net_request": {
-    "rule_resources": [
-      {
-        "id": "frame_unlock",
-        "enabled": true,
-        "path": "rules.json"
-      }
-    ]
   },
   "icons": {
     "16": "icons/icon16.png",

@@ -1,95 +1,360 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="vi">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
     <title>Pinned Sidebar</title>
     <link rel="stylesheet" href="sidebar.css" />
+    <script src="core.js" defer></script>
+    <script src="icons.js" defer></script>
+    <script src="sidebar.js" defer></script>
   </head>
   <body>
-    <!-- Màn hình danh sách pin -->
-    <section id="list-view">
-      <header class="toolbar">
-        <span class="brand">Ghim</span>
-        <button id="search-btn" class="icon-btn" title="Tìm kiếm">🔍</button>
-        <button id="pin-current-btn" class="icon-btn" title="Ghim tab hiện tại">📌</button>
-        <button id="add-btn" class="icon-btn" title="Thêm trang">+</button>
-        <button id="menu-btn" class="icon-btn" title="Thêm tùy chọn">⋯</button>
-      </header>
-
-      <div id="search-bar" class="search-bar hidden">
-        <input id="search-input" type="text" placeholder="Lọc trang đã ghim..." />
-      </div>
-
-      <!-- Menu tùy chọn -->
-      <div id="menu" class="menu hidden">
-        <button id="menu-pin-current" class="menu-item">📌 Ghim tab hiện tại</button>
-        <button id="menu-new-folder" class="menu-item">📁 Tạo thư mục mới</button>
-        <button id="menu-compact" class="menu-item">▦ Chế độ chỉ icon</button>
-        <button id="menu-theme" class="menu-item">
-          🎨 Giao diện <span id="theme-tag" class="tag">Tự động</span>
-        </button>
-        <hr />
-        <button id="menu-overlay" class="menu-item">🧭 Thanh nổi trên trang</button>
-        <button id="menu-overlay-side" class="menu-item">↔ Đổi bên trái/phải</button>
-        <hr />
-        <button id="menu-export" class="menu-item">⬇ Xuất ra file</button>
-        <button id="menu-import" class="menu-item">⬆ Nhập từ file</button>
-      </div>
-
-      <ul id="pin-list" class="pin-list"></ul>
-
-      <p id="empty" class="empty hidden">
-        Chưa có trang nào được ghim.<br />Bấm <strong>+</strong> để thêm.
-      </p>
-    </section>
-
-    <!-- Màn hình xem website ngay trong sidebar (kiểu mobile) -->
-    <section id="viewer" class="viewer hidden">
-      <header class="toolbar viewer-bar">
-        <button id="back-btn" class="icon-btn" title="Quay lại danh sách">‹</button>
-        <span id="viewer-title" class="viewer-title"></span>
-        <button id="reload-btn" class="icon-btn" title="Tải lại">⟳</button>
-        <button id="open-tab-btn" class="icon-btn" title="Mở trong tab mới">↗</button>
-      </header>
-      <div class="viewer-body">
-        <iframe id="viewer-frame" class="viewer-frame" referrerpolicy="no-referrer"></iframe>
-        <div id="viewer-loading" class="viewer-loading">
-          <div class="spinner" aria-label="Đang tải"></div>
+    <div id="app">
+      <header class="app-header">
+        <a class="brand" href="#" id="home-btn" aria-label="Về danh sách ghim"
+          ><span class="brand-mark" data-icon="panel"></span
+          ><span>pinned<span class="brand-dot">.</span></span></a
+        >
+        <div class="header-actions">
+          <button
+            class="icon-button"
+            id="compact-btn"
+            title="Chế độ chỉ biểu tượng"
+            aria-label="Chế độ chỉ biểu tượng"
+            aria-pressed="false"
+            data-icon="grid"
+          ></button>
+          <button
+            class="icon-button"
+            id="settings-btn"
+            title="Cài đặt"
+            aria-label="Cài đặt"
+            data-icon="settings"
+          ></button>
         </div>
-      </div>
-    </section>
-
-    <!-- Form thêm/sửa -->
-    <div id="dialog" class="dialog hidden">
-      <div class="dialog-box">
-        <h3 id="dialog-title">Thêm trang</h3>
-        <label>
-          Tên
-          <input id="field-title" type="text" placeholder="Ví dụ: Gmail" />
-        </label>
-        <label>
-          URL
-          <input id="field-url" type="text" placeholder="https://..." />
-        </label>
-        <label>
-          Thư mục (tùy chọn)
-          <input id="field-folder" type="text" list="folder-options" placeholder="Để trống nếu không phân nhóm" />
-          <datalist id="folder-options"></datalist>
-        </label>
-        <div class="dialog-actions">
-          <button id="cancel-btn" class="btn">Hủy</button>
-          <button id="save-btn" class="btn primary">Lưu</button>
+      </header>
+      <main id="list-view">
+        <section class="intro">
+          <p class="eyebrow">
+            <span class="live-dot"></span> KHÔNG GIAN CỦA BẠN
+          </p>
+          <h1>Mọi thứ, ngay bên cạnh.</h1>
+          <p class="intro-copy">Những trang quen thuộc. Một góc thật gọn.</p>
+        </section>
+        <div class="search-wrap">
+          <span data-icon="search"></span>
+          <input
+            id="search"
+            type="search"
+            placeholder="Tìm trang hoặc thư mục…"
+            aria-label="Tìm trang hoặc thư mục"
+            autocomplete="off"
+          />
+          <kbd title="Phím tắt tìm kiếm">/</kbd>
         </div>
-      </div>
+        <div class="quick-actions">
+          <button class="button primary" id="pin-current">
+            <span data-icon="pin"></span>Ghim tab hiện tại
+          </button>
+          <button
+            class="button add-button"
+            id="add-pin"
+            title="Thêm website"
+            aria-label="Thêm website"
+            data-icon="plus"
+          ></button>
+        </div>
+        <div class="collection-heading">
+          <span>BỘ SƯU TẬP <span id="pin-count" class="count">0</span></span
+          ><button class="text-button" id="add-folder">
+            <span data-icon="folder-plus"></span>Thư mục mới
+          </button>
+        </div>
+        <p id="loading-state" class="notice" role="status">
+          Đang mở không gian của bạn…
+        </p>
+        <div id="pin-list" aria-label="Các trang đã ghim"></div>
+        <section id="empty-state" class="empty-state" hidden>
+          <span class="empty-icon" data-icon="pin"></span>
+          <h2 id="empty-title">Một góc mới cho bạn</h2>
+          <p id="empty-copy">Ghim trang đang xem hoặc thêm website đầu tiên.</p>
+          <button class="button" id="empty-action">Thêm website</button>
+        </section>
+        <p class="list-hint" id="list-hint">
+          <span data-icon="grip"></span>Kéo website hoặc dấu chấm để sắp xếp ·
+          Bấm ⋯ để quản lý
+        </p>
+      </main>
+      <section id="viewer" hidden aria-label="Website trong sidebar">
+        <div class="viewer-toolbar">
+          <button
+            class="icon-button"
+            id="viewer-back"
+            aria-label="Về danh sách"
+            title="Về danh sách"
+            data-icon="arrow-left"
+          ></button>
+          <div class="viewer-info">
+            <strong id="viewer-title"></strong><span id="viewer-host"></span>
+          </div>
+          <button
+            class="icon-button"
+            id="viewer-reset"
+            title="Tải lại trang ghim ban đầu"
+            aria-label="Tải lại trang ghim ban đầu"
+            data-icon="reload"
+          ></button
+          ><button
+            class="icon-button"
+            id="viewer-tab"
+            title="Mở liên kết ghim trong tab mới"
+            aria-label="Mở liên kết ghim trong tab mới"
+            data-icon="external"
+          ></button>
+        </div>
+        <div class="viewer-note">
+          <span id="viewer-status" role="status">Đang tải trang…</span>
+        </div>
+        <div id="frame-container">
+          <iframe
+            id="viewer-frame"
+            title="Website đã ghim"
+            referrerpolicy="no-referrer"
+            sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-downloads"
+          ></iframe>
+          <section id="translator" hidden aria-label="Dịch nhanh">
+            <div class="translator-controls">
+              <label
+                >Từ<select id="translator-source">
+                  <option value="auto">Tự nhận diện</option>
+                  <option value="vi">Tiếng Việt</option>
+                  <option value="en">Tiếng Anh</option>
+                  <option value="zh-CN">Tiếng Trung</option>
+                </select></label
+              ><label
+                >Sang<select id="translator-target">
+                  <option value="vi">Tiếng Việt</option>
+                  <option value="en">Tiếng Anh</option>
+                  <option value="zh-CN">Tiếng Trung</option>
+                </select></label
+              >
+            </div>
+            <label class="translator-field"
+              ><span>Văn bản cần dịch</span
+              ><textarea
+                id="translator-input"
+                maxlength="5000"
+                placeholder="Nhập hoặc dán văn bản vào đây…"
+              ></textarea>
+            </label>
+            <button class="button primary full-width" id="translator-run">
+              Dịch văn bản
+            </button>
+            <p id="translator-status" class="subtle" role="status"></p>
+            <section id="translator-output" aria-live="polite" hidden></section>
+          </section>
+          <div class="load-line" id="load-line"></div>
+        </div>
+      </section>
+      <footer class="app-footer">
+        <button id="storage-status" class="storage-status">
+          <span class="status-dot"></span
+          ><span id="storage-label">Lưu trên thiết bị</span></button
+        ><span class="version">V2.1.5</span>
+      </footer>
     </div>
-
-    <!-- input ẩn cho chức năng nhập file -->
-    <input id="import-file" type="file" accept="application/json,.json" class="hidden" />
-
-    <!-- Vùng hiện thông báo nổi (toast) -->
-    <div id="toast-wrap" class="toast-wrap"></div>
-
-    <script src="sidebar.js"></script>
+    <div id="item-menu" class="item-menu" role="menu" hidden></div>
+    <dialog id="pin-dialog" aria-labelledby="pin-dialog-title">
+      <form id="pin-form">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">BỘ SƯU TẬP CỦA BẠN</p>
+            <h2 id="pin-dialog-title">Thêm website</h2>
+          </div>
+          <button
+            type="button"
+            class="icon-button"
+            data-close
+            aria-label="Đóng"
+            data-icon="close"
+          ></button>
+        </div>
+        <label
+          >Địa chỉ website<input
+            id="pin-url"
+            name="url"
+            required
+            maxlength="4096"
+            placeholder="https://example.com"
+            autocomplete="url"
+            autofocus
+        /></label>
+        <label
+          >Tên hiển thị<input
+            id="pin-title"
+            name="title"
+            maxlength="180"
+            placeholder="Để trống để dùng tên miền"
+        /></label>
+        <label>Thư mục<select id="pin-folder" name="folder"></select></label>
+        <p class="form-error" id="pin-error" role="alert"></p>
+        <div class="dialog-actions">
+          <button type="button" class="button" data-close>Hủy</button
+          ><button class="button primary" id="pin-save" type="submit">
+            Lưu website
+          </button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="folder-dialog" aria-labelledby="folder-dialog-title">
+      <form id="folder-form">
+        <div class="dialog-heading">
+          <h2 id="folder-dialog-title">Thư mục mới</h2>
+          <button
+            type="button"
+            class="icon-button"
+            data-close
+            aria-label="Đóng"
+            data-icon="close"
+          ></button>
+        </div>
+        <label
+          >Tên thư mục<input
+            id="folder-name"
+            required
+            maxlength="80"
+            placeholder="Ví dụ: Công việc"
+            autofocus
+        /></label>
+        <p class="form-error" id="folder-error" role="alert"></p>
+        <div class="dialog-actions">
+          <button type="button" class="button" data-close>Hủy</button
+          ><button class="button primary" type="submit">Lưu thư mục</button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="settings-dialog" aria-labelledby="settings-title">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">THEO CÁCH CỦA BẠN</p>
+          <h2 id="settings-title">Cài đặt</h2>
+        </div>
+        <button
+          class="icon-button"
+          data-close
+          aria-label="Đóng"
+          data-icon="close"
+        ></button>
+      </div>
+      <section class="settings-section">
+        <h3>Giao diện & thao tác</h3>
+        <label class="setting-row"
+          ><span>Giao diện</span
+          ><select id="setting-theme">
+            <option value="system">Theo hệ thống</option>
+            <option value="light">Sáng</option>
+            <option value="dark">Tối</option>
+            <option value="black">Đen</option>
+            <option value="pastel">Pastel</option>
+          </select></label
+        ><label class="setting-row"
+          ><span>Bấm vào website</span
+          ><select id="setting-openMode">
+            <option value="sidebar">Mở sidebar</option>
+            <option value="tab">Mở tab mới</option>
+          </select></label
+        ><label class="setting-row"
+          ><span>Chỉ hiện biểu tượng</span
+          ><input id="setting-compact" type="checkbox" role="switch"
+        /></label>
+      </section>
+      <section class="settings-section">
+        <h3>Thanh icon trên website</h3>
+        <label class="setting-row"
+          ><span>Hiện thanh icon dọc</span
+          ><input id="setting-overlay" type="checkbox" role="switch" /></label
+        ><label class="setting-row"
+          ><span>Vị trí mặc định</span
+          ><select id="setting-overlaySide">
+            <option value="right">Bên phải</option>
+            <option value="left">Bên trái</option>
+          </select></label
+        >
+        <p class="subtle">
+          Thanh thu gọn chỉ hiện icon như Cốc Cốc. Bấm icon để mở website; rê
+          chuột hoặc dùng bàn phím để xem tên. Kéo dấu ⠿ ở đầu thanh để di
+          chuyển, hoặc kéo mép để đổi độ rộng. Thay đổi áp dụng ngay trên các
+          trang đã tải extension.
+        </p>
+      </section>
+      <section class="settings-section">
+        <h3>Dữ liệu & đồng bộ</h3>
+        <label class="setting-row"
+          ><span>Đồng bộ qua trình duyệt</span
+          ><input id="setting-sync" type="checkbox" role="switch"
+        /></label>
+        <p class="subtle" id="sync-detail"></p>
+        <button class="button full-width" id="sync-now">
+          <span data-icon="cloud"></span>Đồng bộ ngay
+        </button>
+        <div id="sync-conflict" hidden>
+          <p class="subtle">
+            Hai thiết bị cùng thay đổi danh sách. Bản không được chọn sẽ được
+            lưu dự phòng trên máy này.
+          </p>
+          <div class="button-pair">
+            <button class="button" id="sync-local">Giữ bản trên máy</button
+            ><button class="button" id="sync-remote">Dùng bản tài khoản</button>
+          </div>
+        </div>
+        <div class="button-pair">
+          <button class="button" id="export-btn">
+            <span data-icon="download"></span>Xuất JSON</button
+          ><button class="button" id="import-btn">
+            <span data-icon="upload"></span>Nhập JSON
+          </button>
+        </div>
+        <button class="text-button" id="recovery-export">
+          Xuất bản dự phòng gần nhất
+        </button>
+        <p class="subtle">
+          Dữ liệu luôn được lưu trên máy trước. Đồng bộ cần bật trong tài khoản
+          Edge/Chrome và có giới hạn dung lượng.
+        </p>
+      </section>
+      <section class="settings-section">
+        <h3>Website cho phép nhúng</h3>
+        <p class="subtle">
+          Chỉ áp dụng khi chính sidebar mở website. Bạn có thể thu hồi từng
+          website bên dưới.
+        </p>
+        <div id="embed-list"></div>
+      </section>
+      <p class="settings-footnote">
+        Pinned Sidebar 2.0 · Ctrl + Shift + Y để mở
+      </p>
+    </dialog>
+    <dialog id="choice-dialog" aria-labelledby="choice-title">
+      <div class="dialog-heading">
+        <h2 id="choice-title"></h2>
+        <button
+          class="icon-button"
+          data-close
+          aria-label="Hủy"
+          data-icon="close"
+        ></button>
+      </div>
+      <p id="choice-copy" class="choice-copy"></p>
+      <div class="dialog-actions wrap" id="choice-actions"></div>
+    </dialog>
+    <input
+      type="file"
+      id="import-file"
+      accept="application/json,.json"
+      hidden
+    />
+    <div id="toasts" aria-live="polite" aria-relevant="additions"></div>
   </body>
 </html>

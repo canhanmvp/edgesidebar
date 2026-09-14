@@ -1,6 +1,6 @@
 {
   "name": "pinned-sidebar",
-  "version": "2.1.6",
+  "version": "2.1.7",
   "private": true,
   "description": "Local-first sidebar extension for Edge and Chrome",
   "scripts": {

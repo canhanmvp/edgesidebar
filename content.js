@@ -12,7 +12,8 @@
     current,
     refreshId = 0,
     activeDrag = null,
-    repairTimer = 0;
+    repairTimer = 0,
+    lastViewportWidth = innerWidth;
   const DEFAULT_EDGE_INSET = 24;
   const systemTheme = matchMedia("(prefers-color-scheme: dark)");
   function el(tag, className, text) {
@@ -353,11 +354,38 @@
     subtree: true,
   });
   systemTheme.addEventListener("change", theme);
-  // Opening or closing Edge's native side panel changes the remaining page
-  // viewport. Re-clamp a previously saved position immediately so the rail
-  // does not cover the page scrollbar.
+  // Opening Edge's native side panel narrows the web viewport. Its inverse
+  // widens it again, leaving a right- or left-docked rail stranded in the
+  // middle of the page. Snap only rails that were already against an edge;
+  // a deliberately free-positioned rail stays where the user put it.
   addEventListener("resize", () => {
-    if (host?.isConnected) placeRail(host.offsetLeft, host.offsetTop);
+    const previousWidth = lastViewportWidth;
+    lastViewportWidth = innerWidth;
+    if (!host?.isConnected || activeDrag) return;
+    const railWidth = 48;
+    const previousInset = Math.min(
+      DEFAULT_EDGE_INSET,
+      Math.max(8, Math.floor((previousWidth - railWidth) / 2)),
+    );
+    const left = host.offsetLeft;
+    const wasRightDocked =
+      current?.settings.overlaySide === "right" &&
+      left + railWidth >= previousWidth - previousInset - 4;
+    const wasLeftDocked =
+      current?.settings.overlaySide === "left" && left <= previousInset + 4;
+    if (innerWidth > previousWidth && (wasRightDocked || wasLeftDocked)) {
+      const position = placeRail(
+        wasRightDocked
+          ? innerWidth - railWidth - DEFAULT_EDGE_INSET
+          : DEFAULT_EDGE_INSET,
+        host.offsetTop,
+      );
+      send("OVERLAY_POSITION", {
+        x: position.left,
+        y: position.top,
+        side: wasRightDocked ? "right" : "left",
+      }).catch(() => {});
+    } else placeRail(left, host.offsetTop);
   });
   chrome.runtime.onMessage.addListener((message) => {
     if (message.type === "REFRESH_OVERLAY") refresh();

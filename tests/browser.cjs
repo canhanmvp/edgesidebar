@@ -379,6 +379,13 @@ async function waitState(page, count) {
     return rail && rail.getBoundingClientRect().right <= innerWidth - 20;
   });
   await site.setViewportSize({ width: 380, height: 850 });
+  await site.waitForFunction(() => {
+    const rail = document.querySelector("#pinned-sidebar-v2");
+    return (
+      rail &&
+      Math.abs(rail.getBoundingClientRect().right - (innerWidth - 24)) <= 2
+    );
+  });
   passed("icon rail can be dragged and remembers its position");
   await site.screenshot({
     path: path.join(out, "overlay.png"),

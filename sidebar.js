@@ -1189,6 +1189,7 @@ $("workspace-select").onchange = async () => {
 };
 $("add-workspace").onclick = () => workspaceDialog();
 $("workspace-more").onclick = (event) => {
+  event.stopPropagation();
   const workspace = state?.workspaces.find(
     (item) => item.id === activeWorkspaceId,
   );

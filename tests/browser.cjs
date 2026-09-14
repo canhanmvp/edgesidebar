@@ -93,7 +93,27 @@ async function waitState(page, count) {
   await page.waitForFunction(
     () => document.querySelector("#workspace-select").options.length === 2,
   );
-  await waitState(page, 0);
+  await page.locator("#workspace-more").click();
+  await page
+    .getByRole("menuitem", { name: "Đổi tên không gian", exact: true })
+    .click();
+  await page.locator("#workspace-name").fill("Cá nhân riêng");
+  await page.locator("#workspace-form button[type=submit]").click();
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll("#workspace-select option")].some(
+      (option) => option.textContent === "Cá nhân riêng",
+    ),
+  );
+  await page.locator("#workspace-more").click();
+  await page
+    .getByRole("menuitem", { name: "Xóa không gian", exact: true })
+    .click();
+  await page.locator("#choice-dialog[open]").waitFor();
+  await page.locator("#choice-actions button.danger").click();
+  await page.waitForFunction(
+    () => document.querySelector("#workspace-select").options.length === 1,
+  );
+  await waitState(page, 3);
   await page.locator("#workspace-select").selectOption("workspace-default");
   await waitState(page, 3);
   passed("workspaces isolate collections and can switch back");

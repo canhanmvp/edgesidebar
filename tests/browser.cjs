@@ -437,6 +437,24 @@ async function waitState(page, count) {
   });
   await panelSite.close();
   passed("clicking the collapsed rail opens the sidebar automatically");
+  const closeSite = await context.newPage();
+  await closeSite.goto(origin + "/");
+  await closeSite.waitForFunction(() =>
+    document.querySelector("#pinned-sidebar-v2"),
+  );
+  const closeRail = await closeSite.locator("#pinned-sidebar-v2").boundingBox();
+  assert.ok(closeRail);
+  await closeSite.mouse.move(closeRail.x + 24, closeRail.y + 25);
+  await closeSite.mouse.click(closeRail.x + 36, closeRail.y + 16);
+  await page.waitForFunction(async () => {
+    const data = await chrome.runtime.sendMessage({ type: "GET_STATE" });
+    return data.state.settings.overlay === false;
+  });
+  await closeSite.waitForFunction(
+    () => !document.querySelector("#pinned-sidebar-v2"),
+  );
+  await closeSite.close();
+  passed("small close button hides the floating rail and saves the choice");
   assert.deepEqual(errors, []);
   fs.writeFileSync(
     path.join(out, "browser-report.json"),

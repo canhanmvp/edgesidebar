@@ -99,6 +99,35 @@
   width: 100%;
   border-bottom: 1px solid var(--line) !important;
 }
+.close-rail {
+  position: absolute;
+  z-index: 3;
+  top: 7px;
+  right: 5px;
+  display: grid !important;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border-radius: 6px !important;
+  color: var(--muted) !important;
+  font-size: 17px !important;
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+}
+.rail:hover:not(.moving) .close-rail,
+.rail:focus-within .close-rail,
+.rail.resizing .close-rail,
+.rail.keep-open .close-rail {
+  opacity: 1;
+  pointer-events: auto;
+}
+.close-rail:hover,
+.close-rail:focus-visible {
+  color: var(--ink) !important;
+  background: var(--soft) !important;
+}
 .move-handle {
   position: absolute;
   z-index: 2;

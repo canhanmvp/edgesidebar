@@ -16,7 +16,7 @@ Bản 2.0 đọc `pins` và `settings` từ bộ nhớ sync cũ, chuyển thư m
 2. Chọn **Load unpacked**, trỏ tới thư mục chứa `manifest.json`.
 3. Bấm biểu tượng extension hoặc `Ctrl+Shift+Y` để mở sidebar.
 
-Bản đóng gói sạch ở `dist/pinned-sidebar/`; chỉ chứa các file chạy extension. File phát hành để chuyển máy là `dist/pinned-sidebar-2.1.5.zip`: giải nén ZIP trước, rồi chọn thư mục đã giải nén trong **Load unpacked**. Dùng Chromium 120+ hoặc phiên bản Edge tương ứng có Side Panel API. Người sử dụng không cần Node.js.
+Bản đóng gói sạch ở `dist/pinned-sidebar/`; chỉ chứa các file chạy extension. File phát hành để chuyển máy là `dist/pinned-sidebar-2.1.6.zip`: giải nén ZIP trước, rồi chọn thư mục đã giải nén trong **Load unpacked**. Dùng Chromium 120+ hoặc phiên bản Edge tương ứng có Side Panel API. Người sử dụng không cần Node.js.
 
 ## Sử dụng
 
@@ -28,7 +28,7 @@ Bản đóng gói sạch ở `dist/pinned-sidebar/`; chỉ chứa các file ch�
 - Dùng menu `⋯` hoặc `Alt+↑/↓` khi focus vào website để sắp xếp bằng bàn phím.
 - Bỏ ghim có nút **Hoàn tác** trong 10 giây.
 - Cài đặt cách mở mặc định: **sidebar** hoặc **tab mới**, áp dụng cho cả danh sách và thanh nổi. `Ctrl/Cmd+click` hoặc chuột giữa mở tab nền.
-- Thanh icon trên website dùng closed Shadow DOM để cách ly CSS; khi thu gọn chỉ hiện favicon/biểu tượng như Cốc Cốc. Bấm icon để mở website trong sidebar, rê chuột hoặc focus để xem tên. Thanh ở nửa phải bung sang trái, thanh ở nửa trái bung sang phải và luôn chừa khoảng cho thanh cuộn. Kéo dấu ⠿ ở đầu thanh để đặt ở bất kỳ vị trí nào, hoặc kéo mép để đổi rộng; vị trí được nhớ. Chọn trái/phải hoặc tắt ngay trong cài đặt. Thanh hiển thị tối đa 100 website, số còn lại truy cập trong sidebar.
+- Thanh icon trên website dùng closed Shadow DOM để cách ly CSS; khi thu gọn chỉ hiện favicon/biểu tượng như Cốc Cốc. Bấm icon để mở website trong sidebar, rê chuột hoặc focus để xem tên. Thanh ở nửa phải bung sang trái, thanh ở nửa trái bung sang phải và luôn chừa khoảng cho thanh cuộn. Rê chuột lên thanh rồi bấm × nhỏ để tắt; bật lại trong Cài đặt. Kéo dấu ⠿ ở đầu thanh để đặt ở bất kỳ vị trí nào, hoặc kéo mép để đổi rộng; vị trí được nhớ. Chọn trái/phải hoặc tắt ngay trong cài đặt. Thanh hiển thị tối đa 100 website, số còn lại truy cập trong sidebar.
 - Mỗi website có favicon theo chính URL của ghim, do dịch vụ favicon của Google trả về; khi không có favicon, extension hiển thị chữ cái dự phòng. Không tải script hoặc font bên ngoài.
 
 ## Lưu trữ, đồng bộ và phục hồi

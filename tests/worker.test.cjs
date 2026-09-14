@@ -167,6 +167,26 @@ test("content scripts cannot import, delete or change embed rules", async () => 
     assert.equal((await w.send(message, sender)).ok, false);
   }
 });
+test("content script can hide its own icon rail with a boolean setting", async () => {
+  const w = worker({ pins: [] });
+  const sender = {
+    id: w.chrome.runtime.id,
+    url: "https://example.com",
+    tab: { id: 1, windowId: 1 },
+  };
+  assert.equal(
+    (await w.send({ type: "OVERLAY_ENABLED", enabled: false }, sender)).ok,
+    true,
+  );
+  assert.equal(
+    (await w.send({ type: "GET_STATE" })).state.settings.overlay,
+    false,
+  );
+  assert.equal(
+    (await w.send({ type: "OVERLAY_ENABLED", enabled: "false" }, sender)).ok,
+    false,
+  );
+});
 test("replace import stores recovery copy and invalid import never commits", async () => {
   const w = worker({ pins: [{ url: "old.example" }] });
   await w.send({ type: "GET_STATE" });

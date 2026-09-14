@@ -300,6 +300,15 @@ async function handle(message, sender) {
     await commit({ type: "SETTINGS", patch: { overlayWidth: message.width } });
     return {};
   }
+  if (message.type === "OVERLAY_ENABLED") {
+    if (!sender.tab || typeof message.enabled !== "boolean")
+      throw new Error("Trạng thái thanh icon không hợp lệ.");
+    await commit({
+      type: "SETTINGS",
+      patch: { overlay: message.enabled },
+    });
+    return {};
+  }
   if (message.type === "OVERLAY_POSITION") {
     if (
       !sender.tab ||

@@ -180,6 +180,21 @@
     home.onclick = () =>
       send("OPEN_PANEL").catch((error) => message(error.message));
     rail.append(home);
+    const close = el("button", "close-rail", "×");
+    close.type = "button";
+    close.title = "Tắt thanh icon dọc";
+    close.setAttribute("aria-label", "Tắt thanh icon dọc");
+    close.onclick = async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      try {
+        await send("OVERLAY_ENABLED", { enabled: false });
+        remove();
+      } catch (error) {
+        message(error.message);
+      }
+    };
+    rail.append(close);
     const moveHandle = el("div", "move-handle", "⠿");
     moveHandle.title = "Kéo để di chuyển thanh icon";
     moveHandle.setAttribute("aria-label", "Kéo để di chuyển thanh icon");

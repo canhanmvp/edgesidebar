@@ -4,9 +4,13 @@ const C = Pinned;
 let state = null,
   syncStatus = {},
   embedOrigins = [],
-  windowId;
+  windowId,
+  activeWorkspaceId = null,
+  savedSessions = [];
+const SESSIONS_KEY = "savedSessions";
 let editingPin = null,
   editingFolder = null,
+  editingWorkspace = null,
   currentPin = null,
   drag = null,
   viewerTimer;
@@ -91,7 +95,17 @@ async function run(button, work, errorEl) {
 function accept(next) {
   if (!state || next.revision >= state.revision) {
     state = next;
+    if (!state.workspaces?.length)
+      state.workspaces = [
+        { id: "workspace-default", name: "Mặc định", color: "#b5ef55" },
+      ];
+    if (!state.workspaces.some((item) => item.id === activeWorkspaceId))
+      activeWorkspaceId =
+        state.workspaces.find((item) => item.id === state.settings.workspaceId)
+          ?.id || state.workspaces[0].id;
     applySettings();
+    renderWorkspaces();
+    renderSessions();
     render();
   }
 }
@@ -189,6 +203,136 @@ function applySettings() {
   }
   renderStatus();
 }
+function renderWorkspaces() {
+  if (!state) return;
+  const select = $("workspace-select");
+  select.replaceChildren(
+    ...state.workspaces.map((workspace) => {
+      const option = new Option(workspace.name, workspace.id);
+      option.style.color = workspace.color;
+      return option;
+    }),
+  );
+  select.value = activeWorkspaceId || state.workspaces[0]?.id || "";
+  select.style.borderColor =
+    state.workspaces.find((item) => item.id === select.value)?.color || "";
+}
+function cleanSessions(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item) => item && typeof item === "object")
+    .map((item) => ({
+      id: typeof item.id === "string" ? item.id : C.uid(),
+      name:
+        typeof item.name === "string" && item.name.trim()
+          ? item.name.trim().slice(0, 100)
+          : "Phiên làm việc",
+      workspaceId: typeof item.workspaceId === "string" ? item.workspaceId : "",
+      createdAt: Number.isFinite(item.createdAt) ? item.createdAt : Date.now(),
+      tabs: Array.isArray(item.tabs)
+        ? item.tabs
+            .filter((tab) => tab && typeof tab.url === "string")
+            .map((tab) => {
+              try {
+                return {
+                  title:
+                    typeof tab.title === "string" && tab.title.trim()
+                      ? tab.title.trim().slice(0, 180)
+                      : C.host(C.url(tab.url)),
+                  url: C.url(tab.url),
+                  faviconUrl:
+                    typeof tab.faviconUrl === "string"
+                      ? tab.faviconUrl.slice(0, 2048)
+                      : "",
+                };
+              } catch {
+                return null;
+              }
+            })
+            .filter(Boolean)
+            .slice(0, 100)
+        : [],
+    }))
+    .filter((item) => item.tabs.length)
+    .slice(0, 20);
+}
+function renderSessions() {
+  const list = $("session-list");
+  if (!list) return;
+  list.replaceChildren();
+  const workspaceSessions = savedSessions.filter(
+    (item) => !item.workspaceId || item.workspaceId === activeWorkspaceId,
+  );
+  if (!workspaceSessions.length) {
+    list.append(
+      element("p", "session-empty", "Lưu các tab đang mở để quay lại sau."),
+    );
+    return;
+  }
+  for (const session of workspaceSessions.slice(0, 4)) {
+    const chip = element("div", "session-chip");
+    const open = element("button", "session-open");
+    open.type = "button";
+    open.title = "Mở lại phiên này";
+    open.setAttribute("aria-label", `Mở lại ${session.name}`);
+    open.append(
+      element("span", "session-chip-name", session.name),
+      element("span", "session-chip-meta", `${session.tabs.length} tab`),
+    );
+    open.onclick = () =>
+      run(open, async () => {
+        for (const [index, tab] of session.tabs.entries())
+          await chrome.tabs.create({
+            url: tab.url,
+            windowId,
+            active: index === 0,
+          });
+        toast(`Đã mở ${session.tabs.length} tab từ phiên “${session.name}”.`);
+      });
+    const remove = iconButton(
+      "close",
+      `Xóa phiên ${session.name}`,
+      "session-remove",
+    );
+    remove.onclick = () =>
+      run(remove, async () => {
+        savedSessions = savedSessions.filter((item) => item.id !== session.id);
+        await chrome.storage.local.set({ [SESSIONS_KEY]: savedSessions });
+        renderSessions();
+        toast("Đã xóa phiên làm việc.");
+      });
+    chip.append(open, remove);
+    list.append(chip);
+  }
+}
+async function loadSessions() {
+  const local = await chrome.storage.local.get(SESSIONS_KEY);
+  savedSessions = cleanSessions(local[SESSIONS_KEY]);
+  renderSessions();
+}
+async function saveCurrentSession() {
+  const data = await request("GET_TABS", { windowId });
+  const tabs = cleanSessions([{ tabs: data.tabs }])[0]?.tabs || [];
+  if (!tabs.length) throw new Error("Không có tab website nào để lưu.");
+  const workspace = state.workspaces.find(
+    (item) => item.id === activeWorkspaceId,
+  );
+  const time = new Date().toLocaleString("vi-VN", {
+    dateStyle: "short",
+    timeStyle: "short",
+  });
+  const session = {
+    id: C.uid(),
+    name: `${workspace?.name || "Mặc định"} · ${time}`,
+    workspaceId: activeWorkspaceId,
+    createdAt: Date.now(),
+    tabs,
+  };
+  savedSessions = [session, ...savedSessions].slice(0, 20);
+  await chrome.storage.local.set({ [SESSIONS_KEY]: savedSessions });
+  renderSessions();
+  toast(`Đã lưu ${tabs.length} tab thành một phiên.`);
+}
 function renderStatus() {
   if (!state) return;
   const warning = !!(syncStatus.message || syncStatus.conflict);
@@ -255,13 +399,29 @@ function render() {
   const query = folded($("search").value.trim());
   const fragment = document.createDocumentFragment();
   let visibleCount = 0;
-  const groups = [{ id: "", name: "Chưa phân nhóm" }, ...state.folders];
+  const workspaceId = activeWorkspaceId || state.workspaces[0]?.id;
+  const groups = [
+    { id: "", name: "Chưa phân nhóm" },
+    ...state.folders.filter((folder) => folder.workspaceId === workspaceId),
+  ];
   for (const folder of groups) {
-    const all = state.pins.filter((p) => p.folderId === folder.id);
+    const all = state.pins.filter(
+      (p) => p.workspaceId === workspaceId && p.folderId === folder.id,
+    );
     const matching = all.filter(
       (p) =>
         !query ||
-        folded(p.title + " " + p.url + " " + folder.name).includes(query),
+        folded(
+          p.title +
+            " " +
+            p.url +
+            " " +
+            folder.name +
+            " " +
+            (p.tags || []).join(" ") +
+            " " +
+            (p.note || ""),
+        ).includes(query),
     );
     if ((!folder.id && !all.length) || (query && !matching.length)) continue;
     visibleCount += matching.length;
@@ -341,6 +501,7 @@ function render() {
             element("span", "site-title", pin.title),
             element("span", "site-domain", C.host(pin.url)),
           );
+          if (pin.favorite) copy.append(element("span", "favorite-mark", "★"));
           link.append(tile(pin), copy);
           link.onclick = (event) => {
             event.preventDefault();
@@ -385,12 +546,16 @@ function render() {
     fragment.append(group);
   }
   $("pin-list").replaceChildren(fragment);
+  const workspacePins = state.pins.filter(
+    (pin) => pin.workspaceId === workspaceId,
+  );
   $("pin-count").textContent = query
-    ? `${visibleCount}/${state.pins.length}`
-    : state.pins.length;
+    ? `${visibleCount}/${workspacePins.length}`
+    : workspacePins.length;
   $("empty-state").hidden = query
     ? visibleCount > 0
-    : state.pins.length > 0 || state.folders.length > 0;
+    : workspacePins.length > 0 ||
+      state.folders.some((folder) => folder.workspaceId === workspaceId);
   $("empty-title").textContent = query
     ? "Chưa tìm thấy trang phù hợp"
     : "Một góc mới cho bạn";
@@ -398,7 +563,7 @@ function render() {
     ? "Thử tên website, tên miền hoặc tên thư mục khác."
     : "Ghim trang đang xem hoặc thêm website đầu tiên.";
   $("empty-action").textContent = query ? "Xóa tìm kiếm" : "Thêm website";
-  $("list-hint").hidden = !state.pins.length || !!query;
+  $("list-hint").hidden = !workspacePins.length || !!query;
   if (activeId)
     [...document.querySelectorAll("[data-pin]")]
       .find((el) => el.dataset.pin === activeId)
@@ -461,6 +626,11 @@ function pinMenu(pin, trigger) {
       label: "Sửa / chuyển thư mục",
       icon: "edit",
       action: () => pinDialog(pin),
+    },
+    {
+      label: pin.favorite ? "Bỏ yêu thích" : "Đánh dấu yêu thích",
+      icon: "star",
+      action: () => toggleFavorite(pin),
     },
     { label: "Đưa lên trên", icon: "up", action: () => movePin(pin, -1) },
     { label: "Đưa xuống dưới", icon: "down", action: () => movePin(pin, 1) },
@@ -525,22 +695,33 @@ async function movePin(pin, direction) {
     beforeId: direction < 0 ? peers[index - 1].id : peers[index + 2]?.id || "",
   });
 }
+async function toggleFavorite(pin) {
+  await mutate({
+    type: "SAVE_PIN",
+    id: pin.id,
+    url: pin.url,
+    title: pin.title,
+    folderId: pin.folderId,
+    workspaceId: pin.workspaceId,
+    tags: pin.tags,
+    note: pin.note,
+    favorite: !pin.favorite,
+  });
+  toast(pin.favorite ? "Đã bỏ yêu thích." : "Đã thêm vào yêu thích.");
+}
 async function moveFolder(folder, direction) {
-  const index = state.folders.findIndex((item) => item.id === folder.id);
-  if (
-    index < 0 ||
-    index + direction < 0 ||
-    index + direction >= state.folders.length
-  )
+  const peers = state.folders.filter(
+    (item) => item.workspaceId === folder.workspaceId,
+  );
+  const index = peers.findIndex((item) => item.id === folder.id);
+  if (index < 0 || index + direction < 0 || index + direction >= peers.length)
     return;
   const previousOrder = state.folders.map((item) => item.id);
   await mutate({
     type: "REORDER_FOLDER",
     id: folder.id,
-    beforeId:
-      direction < 0
-        ? state.folders[index - 1].id
-        : state.folders[index + 2]?.id || "",
+    beforeId: direction < 0 ? peers[index - 1].id : peers[index + 2]?.id || "",
+    workspaceId: folder.workspaceId,
   });
   toast(`Đã sắp xếp bộ sưu tập “${folder.name}”.`, {
     undo: () => mutate({ type: "SET_FOLDER_ORDER", ids: previousOrder }),
@@ -559,9 +740,16 @@ function pinDialog(pin = null, folderId = "") {
   $("pin-dialog-title").textContent = pin ? "Sửa website" : "Thêm website";
   $("pin-url").value = pin?.url || "";
   $("pin-title").value = pin?.title || "";
+  $("pin-tags").value = (pin?.tags || []).join(", ");
+  $("pin-note").value = pin?.note || "";
+  $("pin-favorite").checked = pin?.favorite === true;
   $("pin-folder").replaceChildren(
     new Option("Chưa phân nhóm", ""),
-    ...state.folders.map((f) => new Option(f.name, f.id)),
+    ...state.folders
+      .filter(
+        (f) => f.workspaceId === (activeWorkspaceId || state.workspaces[0]?.id),
+      )
+      .map((f) => new Option(f.name, f.id)),
   );
   $("pin-folder").value = pin?.folderId || folderId;
   $("pin-error").textContent = "";
@@ -578,6 +766,17 @@ function folderDialog(folder = null) {
   showDialog($("folder-dialog"));
   $("folder-name").focus();
 }
+function workspaceDialog(workspace = null) {
+  editingWorkspace = workspace?.id || null;
+  $("workspace-dialog-title").textContent = workspace
+    ? "Đổi tên không gian"
+    : "Không gian mới";
+  $("workspace-name").value = workspace?.name || "";
+  $("workspace-color").value = workspace?.color || "#b5ef55";
+  $("workspace-error").textContent = "";
+  showDialog($("workspace-dialog"));
+  $("workspace-name").focus();
+}
 $("pin-form").onsubmit = (event) => {
   event.preventDefault();
   run(
@@ -589,6 +788,12 @@ $("pin-form").onsubmit = (event) => {
         url: $("pin-url").value,
         title: $("pin-title").value,
         folderId: $("pin-folder").value,
+        workspaceId: editingPin
+          ? state.pins.find((pin) => pin.id === editingPin)?.workspaceId
+          : activeWorkspaceId,
+        tags: $("pin-tags").value.split(","),
+        note: $("pin-note").value,
+        favorite: $("pin-favorite").checked,
       });
       $("pin-dialog").close();
       toast("Đã lưu website.");
@@ -605,11 +810,38 @@ $("folder-form").onsubmit = (event) => {
         type: "SAVE_FOLDER",
         id: editingFolder,
         name: $("folder-name").value,
+        workspaceId: activeWorkspaceId,
       });
       $("folder-dialog").close();
       toast("Đã lưu thư mục.");
     },
     $("folder-error"),
+  );
+};
+$("workspace-form").onsubmit = (event) => {
+  event.preventDefault();
+  run(
+    event.submitter,
+    async () => {
+      const workspaceId = C.uid();
+      await mutate({
+        type: "SAVE_WORKSPACE",
+        id: editingWorkspace,
+        workspaceId: editingWorkspace || workspaceId,
+        name: $("workspace-name").value,
+        color: $("workspace-color").value,
+      });
+      if (!editingWorkspace) activeWorkspaceId = workspaceId;
+      await chrome.storage.local.set({ activeWorkspaceId });
+      $("workspace-dialog").close();
+      renderWorkspaces();
+      renderSessions();
+      render();
+      toast(
+        editingWorkspace ? "Đã cập nhật không gian." : "Đã tạo không gian mới.",
+      );
+    },
+    $("workspace-error"),
   );
 };
 function clearDrop() {
@@ -686,13 +918,16 @@ $("pin-list").addEventListener("drop", (event) => {
     if (!group?.dataset.folder || group.dataset.folder === currentDrag.id)
       return;
     const bounds = group.getBoundingClientRect();
-    const targetIndex = state.folders.findIndex(
+    const peers = state.folders.filter(
+      (item) => item.workspaceId === activeWorkspaceId,
+    );
+    const targetIndex = peers.findIndex(
       (item) => item.id === group.dataset.folder,
     );
     const beforeId =
       event.clientY < bounds.top + bounds.height / 2
         ? group.dataset.folder
-        : state.folders[targetIndex + 1]?.id || "";
+        : peers[targetIndex + 1]?.id || "";
     const folder = state.folders.find((item) => item.id === currentDrag.id);
     const previousOrder = state.folders.map((item) => item.id);
     if (!folder) return;
@@ -701,6 +936,7 @@ $("pin-list").addEventListener("drop", (event) => {
         type: "REORDER_FOLDER",
         id: currentDrag.id,
         beforeId,
+        workspaceId: activeWorkspaceId,
       });
       toast(`Đã sắp xếp bộ sưu tập “${folder.name}”.`, {
         undo: () => mutate({ type: "SET_FOLDER_ORDER", ids: previousOrder }),
@@ -944,6 +1180,48 @@ for (const key of [
       }
     });
 }
+$("workspace-select").onchange = async () => {
+  activeWorkspaceId = $("workspace-select").value;
+  await chrome.storage.local.set({ activeWorkspaceId });
+  renderWorkspaces();
+  renderSessions();
+  render();
+};
+$("add-workspace").onclick = () => workspaceDialog();
+$("workspace-more").onclick = (event) => {
+  const workspace = state?.workspaces.find(
+    (item) => item.id === activeWorkspaceId,
+  );
+  if (!workspace) return;
+  showMenu(event.currentTarget, [
+    {
+      label: "Đổi tên không gian",
+      icon: "edit",
+      action: () => workspaceDialog(workspace),
+    },
+    {
+      label: "Xóa không gian",
+      icon: "trash",
+      danger: true,
+      action: async () => {
+        const result = await choose(
+          "Xóa không gian?",
+          `Xóa “${workspace.name}” sẽ xóa các thư mục và website bên trong. Hãy xuất bản sao trước nếu cần.`,
+          [{ label: "Xóa không gian", value: "delete", danger: true }],
+        );
+        if (result !== "delete") return;
+        await mutate({ type: "DELETE_WORKSPACE", id: workspace.id });
+        activeWorkspaceId = state.settings.workspaceId;
+        await chrome.storage.local.set({ activeWorkspaceId });
+        renderWorkspaces();
+        renderSessions();
+        render();
+        toast("Đã xóa không gian và dữ liệu bên trong.");
+      },
+    },
+  ]);
+};
+$("save-session").onclick = () => run($("save-session"), saveCurrentSession);
 $("compact-btn").onclick = () =>
   state &&
   run($("compact-btn"), () =>
@@ -986,8 +1264,9 @@ function download(data, name = "pinned-sidebar") {
 $("export-btn").onclick = () => {
   if (state)
     download({
-      schema: 2,
+      schema: 3,
       exportedAt: new Date().toISOString(),
+      workspaces: state.workspaces,
       pins: state.pins,
       folders: state.folders,
     });
@@ -999,8 +1278,13 @@ $("recovery-export").onclick = () =>
       "importBackup",
       "conflictBackup",
       "legacyBackup",
+      "workspaceBackup",
     ]);
-    const candidates = [data.importBackup, data.conflictBackup]
+    const candidates = [
+      data.importBackup,
+      data.conflictBackup,
+      data.workspaceBackup,
+    ]
       .filter(Boolean)
       .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
     const backup =
@@ -1052,7 +1336,10 @@ $("empty-action").onclick = () => {
 };
 $("pin-current").onclick = () =>
   run($("pin-current"), async () => {
-    const data = await request("PIN_CURRENT", { windowId });
+    const data = await request("PIN_CURRENT", {
+      windowId,
+      workspaceId: activeWorkspaceId,
+    });
     accept(data.state);
     toast("Đã ghim tab hiện tại.");
   });
@@ -1104,7 +1391,6 @@ document.addEventListener("keydown", (event) => {
   }
 });
 addEventListener("resize", () => closeMenu());
-addEventListener("scroll", () => closeMenu(), true);
 async function viewRequest(value) {
   if (!value || value.nonce === latestViewNonce) return;
   latestViewNonce = value.nonce;
@@ -1124,6 +1410,10 @@ chrome.storage.onChanged.addListener((changes, area) => {
       embedOrigins = changes.embedOrigins.newValue || [];
       renderEmbeds();
     }
+    if (changes[SESSIONS_KEY]) {
+      savedSessions = cleanSessions(changes[SESSIONS_KEY].newValue);
+      renderSessions();
+    }
   }
   if (area === "session" && windowId != null && changes["viewer." + windowId])
     run(null, () => viewRequest(changes["viewer." + windowId].newValue));
@@ -1132,7 +1422,11 @@ async function reloadState() {
   const data = await request("GET_STATE");
   syncStatus = data.syncStatus || {};
   embedOrigins = data.embedOrigins || [];
+  const local = await chrome.storage.local.get("activeWorkspaceId");
+  activeWorkspaceId =
+    local.activeWorkspaceId || data.state.settings.workspaceId;
   accept(data.state);
+  await loadSessions();
   return data;
 }
 (async () => {

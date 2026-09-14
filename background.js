@@ -61,7 +61,27 @@ function initialize() {
         accessLevel: "TRUSTED_CONTEXTS",
       });
       const local = await chrome.storage.local.get(STATE_KEY);
-      if (local[STATE_KEY]) return;
+      if (local[STATE_KEY]) {
+        // A local-first install can already have durable v2 data when the
+        // extension is upgraded. Normalize it once before any new writes so
+        // the UI and the sync worker always operate on schema 3.
+        if (local[STATE_KEY].schema !== 3) {
+          const converted = C.parse(local[STATE_KEY], { migration: true });
+          await chrome.storage.local.set({
+            [STATE_KEY]: converted.state,
+            migration:
+              `Đã nâng dữ liệu lên bản mới. Giữ lại ${converted.state.pins.length} trang` +
+              (converted.skipped
+                ? `; bỏ qua ${converted.skipped} mục trùng hoặc không hợp lệ.`
+                : "."),
+            recoveryBackup: {
+              time: Date.now(),
+              data: local[STATE_KEY],
+            },
+          });
+        }
+        return;
+      }
       const legacy = await chrome.storage.sync.get(["pins", "settings"]);
       let state,
         migration = "";
@@ -131,7 +151,12 @@ async function commit(action) {
           importBackup: state,
           recoveryBackup: { time: Date.now(), data: state },
         }
-      : {}),
+      : action.type === "DELETE_WORKSPACE"
+        ? {
+            workspaceBackup: state,
+            recoveryBackup: { time: Date.now(), data: state },
+          }
+        : {}),
     syncStatus: { ...syncStatus, dirty: true, message: "" },
   });
   if (next.settings.sync) await scheduleSync();
@@ -340,6 +365,23 @@ async function handle(message, sender) {
       ])),
     };
   }
+  if (message.type === "GET_TABS") {
+    const targetWindowId = Number.isInteger(message.windowId)
+      ? message.windowId
+      : sender.tab?.windowId;
+    if (!Number.isInteger(targetWindowId))
+      throw new Error("Không đọc được cửa sổ hiện tại.");
+    const tabs = await chrome.tabs.query({ windowId: targetWindowId });
+    return {
+      tabs: tabs
+        .filter((tab) => /^https?:\/\//i.test(tab.url || ""))
+        .map((tab) => ({
+          title: tab.title || C.host(tab.url),
+          url: tab.url,
+          faviconUrl: tab.favIconUrl || "",
+        })),
+    };
+  }
   if (message.type === "MUTATE") return { state: await commit(message.action) };
   if (message.type === "PIN_CURRENT") {
     const [tab] = await chrome.tabs.query({
@@ -348,7 +390,12 @@ async function handle(message, sender) {
     });
     if (!tab?.url) throw new Error("Không đọc được tab hiện tại.");
     return {
-      state: await commit({ type: "SAVE_PIN", url: tab.url, title: tab.title }),
+      state: await commit({
+        type: "SAVE_PIN",
+        url: tab.url,
+        title: tab.title,
+        workspaceId: message.workspaceId,
+      }),
     };
   }
   if (message.type === "EMBED") {

@@ -43,6 +43,27 @@
           <h1>Mọi thứ, ngay bên cạnh.</h1>
           <p class="intro-copy">Những trang quen thuộc. Một góc thật gọn.</p>
         </section>
+        <div class="workspace-bar" aria-label="Không gian làm việc">
+          <label class="workspace-select-wrap">
+            <span class="workspace-label">KHÔNG GIAN</span>
+            <select id="workspace-select" aria-label="Chọn không gian"></select>
+          </label>
+          <button
+            class="icon-button"
+            id="add-workspace"
+            title="Tạo không gian mới"
+            aria-label="Tạo không gian mới"
+            data-icon="plus"
+          ></button>
+          <button
+            class="icon-button"
+            id="workspace-more"
+            title="Quản lý không gian hiện tại"
+            aria-label="Quản lý không gian hiện tại"
+            data-icon="more"
+            aria-haspopup="menu"
+          ></button>
+        </div>
         <div class="search-wrap">
           <span data-icon="search"></span>
           <input
@@ -66,6 +87,13 @@
             data-icon="plus"
           ></button>
         </div>
+        <section class="session-strip" aria-label="Phiên làm việc">
+          <div class="session-strip-heading">
+            <span>PHIÊN LÀM VIỆC</span>
+            <button class="text-button" id="save-session">Lưu các tab</button>
+          </div>
+          <div id="session-list" class="session-list"></div>
+        </section>
         <div class="collection-heading">
           <span>BỘ SƯU TẬP <span id="pin-count" class="count">0</span></span
           ><button class="text-button" id="add-folder">
@@ -162,7 +190,7 @@
         <button id="storage-status" class="storage-status">
           <span class="status-dot"></span
           ><span id="storage-label">Lưu trên thiết bị</span></button
-        ><span class="version">V2.1.8</span>
+        ><span class="version">V3.0.0</span>
       </footer>
     </div>
     <div id="item-menu" class="item-menu" role="menu" hidden></div>
@@ -199,6 +227,24 @@
             placeholder="Để trống để dùng tên miền"
         /></label>
         <label>Thư mục<select id="pin-folder" name="folder"></select></label>
+        <label
+          >Nhãn<input
+            id="pin-tags"
+            maxlength="400"
+            placeholder="công việc, tham khảo"
+        /></label>
+        <label
+          >Ghi chú<textarea
+            id="pin-note"
+            maxlength="500"
+            rows="3"
+            placeholder="Ghi chú ngắn cho website này…"
+          ></textarea>
+        </label>
+        <label class="setting-row"
+          ><span>Đánh dấu yêu thích</span
+          ><input id="pin-favorite" type="checkbox" role="switch"
+        /></label>
         <p class="form-error" id="pin-error" role="alert"></p>
         <div class="dialog-actions">
           <button type="button" class="button" data-close>Hủy</button
@@ -232,6 +278,39 @@
         <div class="dialog-actions">
           <button type="button" class="button" data-close>Hủy</button
           ><button class="button primary" type="submit">Lưu thư mục</button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="workspace-dialog" aria-labelledby="workspace-dialog-title">
+      <form id="workspace-form">
+        <div class="dialog-heading">
+          <h2 id="workspace-dialog-title">Không gian mới</h2>
+          <button
+            type="button"
+            class="icon-button"
+            data-close
+            aria-label="Đóng"
+            data-icon="close"
+          ></button>
+        </div>
+        <label
+          >Tên không gian<input
+            id="workspace-name"
+            required
+            maxlength="80"
+            placeholder="Ví dụ: Công việc"
+            autofocus
+        /></label>
+        <label
+          >Màu nhận diện<input
+            id="workspace-color"
+            type="color"
+            value="#b5ef55"
+        /></label>
+        <p class="form-error" id="workspace-error" role="alert"></p>
+        <div class="dialog-actions">
+          <button type="button" class="button" data-close>Hủy</button
+          ><button class="button primary" type="submit">Tạo không gian</button>
         </div>
       </form>
     </dialog>

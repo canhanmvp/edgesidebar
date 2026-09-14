@@ -87,6 +87,27 @@ async function waitState(page, count) {
     return data.state.folders[1]?.id === id;
   }, firstCollectionId);
   passed("collections reorder by dragging their grip");
+  await page.locator("#add-workspace").click();
+  await page.locator("#workspace-name").fill("Cá nhân");
+  await page.locator("#workspace-form button[type=submit]").click();
+  await page.waitForFunction(
+    () => document.querySelector("#workspace-select").options.length === 2,
+  );
+  await waitState(page, 0);
+  await page.locator("#workspace-select").selectOption("workspace-default");
+  await waitState(page, 3);
+  passed("workspaces isolate collections and can switch back");
+  const sessionTab = await context.newPage();
+  await sessionTab.goto(origin + "/session");
+  await page.locator("#save-session").click();
+  await page.getByRole("button", { name: /^Mở lại Mặc định ·/ }).waitFor();
+  const savedSessions = await page.evaluate(
+    async () => (await chrome.storage.local.get("savedSessions")).savedSessions,
+  );
+  assert.equal(savedSessions.length, 1);
+  assert.ok(savedSessions[0].tabs.some((tab) => tab.url.endsWith("/session")));
+  await sessionTab.close();
+  passed("saved tab sessions persist locally and show in the active workspace");
   const translate = await page.evaluate(() =>
     chrome.runtime.sendMessage({
       type: "MUTATE",
@@ -191,7 +212,7 @@ async function waitState(page, count) {
   await page
     .getByRole("button", { name: "Tùy chọn Trang thử nghiệm", exact: true })
     .click();
-  await page.getByRole("menuitem", { name: "Bỏ ghim", exact: true }).click();
+  await page.locator("#item-menu button.danger").click();
   await waitState(page, 3);
   await page
     .getByRole("button", { name: "Hoàn tác", exact: true })

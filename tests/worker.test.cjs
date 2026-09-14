@@ -225,6 +225,28 @@ test("replace import stores recovery copy and invalid import never commits", asy
     "https://new.example/",
   );
 });
+test("deleting a workspace keeps a recovery copy before destructive change", async () => {
+  const w = worker({ pins: [{ url: "kept.example" }] });
+  const initial = await w.send({ type: "GET_STATE" });
+  const created = await w.send({
+    type: "MUTATE",
+    action: {
+      type: "SAVE_WORKSPACE",
+      workspaceId: "temporary-work",
+      name: "Tạm thời",
+    },
+  });
+  assert.equal(created.ok, true);
+  const deleted = await w.send({
+    type: "MUTATE",
+    action: { type: "DELETE_WORKSPACE", id: "temporary-work" },
+  });
+  assert.equal(deleted.ok, true);
+  assert.equal(
+    w.chrome.storage.local.data.workspaceBackup.pins[0].url,
+    initial.state.pins[0].url,
+  );
+});
 test("80-pin sync exceeds old key quota but uploads in safe chunks", async () => {
   const w = worker({ pins: [] });
   await w.send({ type: "GET_STATE" });

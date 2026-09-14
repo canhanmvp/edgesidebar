@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Pinned Sidebar",
-  "version": "2.1.8",
+  "version": "3.0.0",
   "minimum_chrome_version": "120",
-  "description": "Góc làm việc gọn gàng: ghim website, sắp xếp thư mục và mở nhanh trong sidebar.",
+  "description": "Không gian làm việc bên cạnh trình duyệt: ghim, tìm, sắp xếp website và lưu phiên tab.",
   "permissions": [
     "sidePanel",
     "storage",

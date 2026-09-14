@@ -1,6 +1,14 @@
-# Pinned Sidebar 2.0
+# Pinned Sidebar 3.0
 
-Extension Manifest V3 cho Edge/Chrome: ghim website, sắp xếp thư mục và mở nhanh trong sidebar. Giao diện tiếng Việt có Sáng, Tối, Đen, Pastel hoặc theo hệ thống; có chế độ chỉ biểu tượng.
+Extension Manifest V3 cho Edge/Chrome: biến sidebar thành không gian làm việc cá nhân để ghim, tìm, sắp xếp website và lưu lại các phiên tab. Giao diện tiếng Việt có Sáng, Tối, Đen, Pastel hoặc theo hệ thống; có chế độ chỉ biểu tượng.
+
+## Có gì mới trong 3.0
+
+- **Không gian làm việc:** tách website và thư mục theo từng ngữ cảnh như Công việc, Cá nhân hoặc Dự án. Có thể tạo, đổi tên, đổi màu và xóa không gian; thao tác xóa yêu cầu xác nhận.
+- **Quản lý website:** thêm nhãn, ghi chú ngắn và đánh dấu yêu thích; tìm kiếm không dấu bao gồm tên, miền, thư mục, nhãn và ghi chú.
+- **Phiên làm việc:** lưu tối đa 20 phiên, mỗi phiên tối đa 100 tab HTTP/HTTPS. Phiên chỉ lưu trên thiết bị này để tránh đưa danh sách tab cá nhân lên bộ nhớ đồng bộ; bấm một lần để mở lại.
+- **Dữ liệu bền vững:** schema 3 giữ ID ổn định cho website, thư mục và không gian; bản nâng cấp tự chuyển dữ liệu cũ và giữ bản dự phòng trước khi ghi.
+- **Trải nghiệm sidebar:** kéo sắp xếp bộ sưu tập theo từng không gian, hoàn tác xóa, favicon theo URL và thanh icon nổi có thể kéo, đổi rộng, bám góc hoặc tắt.
 
 ## Cập nhật từ bản 1.2.0
 
@@ -16,14 +24,17 @@ Bản 2.0 đọc `pins` và `settings` từ bộ nhớ sync cũ, chuyển thư m
 2. Chọn **Load unpacked**, trỏ tới thư mục chứa `manifest.json`.
 3. Bấm biểu tượng extension hoặc `Ctrl+Shift+Y` để mở sidebar.
 
-Bản đóng gói sạch ở `dist/pinned-sidebar/`; chỉ chứa các file chạy extension. File phát hành để chuyển máy là `dist/pinned-sidebar-2.1.8.zip`: giải nén ZIP trước, rồi chọn thư mục đã giải nén trong **Load unpacked**. Dùng Chromium 120+ hoặc phiên bản Edge tương ứng có Side Panel API. Người sử dụng không cần Node.js.
+Bản đóng gói sạch ở `dist/pinned-sidebar/`; chỉ chứa các file chạy extension. File phát hành để chuyển máy là `dist/pinned-sidebar-3.0.0.zip`: giải nén ZIP trước, rồi chọn thư mục đã giải nén trong **Load unpacked**. Khi cập nhật, chọn đúng thư mục cài cũ và bấm **Reload** để giữ extension ID và dữ liệu local. Dùng Chromium 120+ hoặc phiên bản Edge tương ứng có Side Panel API. Người sử dụng không cần Node.js.
 
 ## Sử dụng
 
 - **Ghim tab hiện tại**, thêm bằng URL, hoặc dùng menu chuột phải trên trang/liên kết HTTP/HTTPS.
 - Website trùng URL được ngăn ở mọi luồng nhập và ghim. Tên và URL được kiểm tra trước khi lưu.
+- Chọn không gian ở đầu sidebar. Nút `⋯` cạnh bộ chọn cho phép đổi tên, đổi màu hoặc xóa không gian sau khi xác nhận; nút `+` tạo không gian mới.
 - Tạo thư mục rỗng, đổi tên, chuyển website và xóa thư mục mà giữ lại website. Kéo cụm chấm trước tên bộ sưu tập để sắp xếp lên/xuống; menu `⋯` cũng có lệnh đưa lên hoặc xuống và hoàn tác.
+- Khi thêm hoặc sửa website, có thể nhập nhãn phân tách bằng dấu phẩy, ghi chú tối đa 500 ký tự và đánh dấu yêu thích. Menu website có lệnh bật/tắt yêu thích.
 - Tìm theo tên, URL hoặc thư mục; hỗ trợ gõ tiếng Việt không dấu. Nhấn `/` để tìm nhanh.
+- Bấm **Lưu các tab** để lưu các tab website đang mở thành phiên của không gian hiện tại. Phiên được giữ local, có thể xóa từng phiên hoặc bấm tên phiên để mở lại.
 - Kéo thả để đổi thứ tự/chuyển thư mục. Dữ liệu chỉ được ghi khi thả. Khi đang lọc, dùng menu để chuyển vị trí.
 - Dùng menu `⋯` hoặc `Alt+↑/↓` khi focus vào website để sắp xếp bằng bàn phím.
 - Bỏ ghim có nút **Hoàn tác** trong 10 giây.
@@ -33,7 +44,7 @@ Bản đóng gói sạch ở `dist/pinned-sidebar/`; chỉ chứa các file ch�
 
 ## Lưu trữ, đồng bộ và phục hồi
 
-`chrome.storage.local` là nguồn dữ liệu chính. Service worker xếp hàng mọi thay đổi để tránh hai cửa sổ cùng đọc rồi ghi đè danh sách. Giao diện nhận trạng thái sau khi lưu thành công; lỗi lưu hiện rõ và không thay bản dữ liệu đã lưu trước đó.
+`chrome.storage.local` là nguồn dữ liệu chính. Service worker xếp hàng mọi thay đổi để tránh hai cửa sổ cùng đọc rồi ghi đè danh sách. Giao diện nhận trạng thái sau khi lưu thành công; lỗi lưu hiện rõ và không thay bản dữ liệu đã lưu trước đó. Danh sách website, không gian, thư mục, nhãn, ghi chú và yêu thích dùng schema 3; ID ổn định giúp giữ liên kết khi gộp dữ liệu. Phiên tab nằm ở khóa local riêng và không gửi lên cloud.
 
 Đồng bộ tự động gửi bản chụp sau khoảng 30 giây ngừng chỉnh sửa, thông qua alarm có thể đánh thức service worker. Dữ liệu được chia thành tối đa 12 phần, mỗi phần tối đa khoảng 7.000 byte JSON, thay vì đặt cả danh sách vào một khóa 8 KB. SHA-256 kiểm tra bản chụp đã nhận đủ trước khi áp dụng. Dung lượng local tối đa theo trình duyệt; extension giới hạn 5.000 website và 500 thư mục. Danh sách lớn có thể vượt dung lượng cloud nhưng vẫn lưu được trên máy.
 
@@ -43,7 +54,7 @@ Khi nhận một bản cloud khác trong lúc máy có chỉnh sửa chưa gửi
 
 Nhập JSON hỗ trợ file 1.x, file 2.0 hoặc mảng các website. Có ba lựa chọn độc lập: **Hủy**, **Gộp thêm**, **Thay thế**. Escape/bấm ra ngoài luôn hủy. Thay thế lưu bản dự phòng trong cùng lần ghi dữ liệu. File lỗi bị từ chối trước khi thay đổi danh sách. Giới hạn file nhập là 5 MB.
 
-**Xuất JSON** sao lưu website và thư mục. **Xuất bản dự phòng gần nhất** lấy bản trước lần thay thế/xử lý xung đột hoặc bản dữ liệu 1.x khi chuyển đổi. Có thể nhập file dự phòng như bình thường.
+**Xuất JSON** sao lưu website, không gian và thư mục. **Xuất bản dự phòng gần nhất** lấy bản trước lần thay thế/xử lý xung đột hoặc bản dữ liệu 1.x khi chuyển đổi. Phiên tab không nằm trong JSON xuất để tránh vô tình chia sẻ lịch sử tab; có thể nhập file dự phòng như bình thường.
 
 ## Xem website trong sidebar
 
@@ -82,7 +93,7 @@ npm run test:browser
 npm run build
 ```
 
-- `core.js`: schema, validation, migration, reducer bất biến và chia dữ liệu cloud.
+- `core.js`: schema 3, workspace/session metadata, validation, migration, reducer bất biến và chia dữ liệu cloud.
 - `background.js`: một đầu mối ghi dữ liệu, sync, context menu, message và quy tắc nhúng.
 - `sidebar.html`, `sidebar.js`, `sidebar.css`, `icons.js`: giao diện, dialog native, keyboard, drag/drop, viewer.
 - `content.js`, `content.css`: thanh nổi cách ly CSS.

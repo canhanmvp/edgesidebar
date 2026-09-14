@@ -239,6 +239,130 @@ h1 {
   padding: 0 12px;
   color: var(--muted);
 }
+.workspace-bar {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.workspace-select-wrap {
+  display: grid;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+.workspace-label {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+}
+#workspace-select {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 30px 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font:
+    600 12px Segoe UI,
+    system-ui,
+    sans-serif;
+}
+.workspace-bar > .icon-button {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  flex: 0 0 36px;
+}
+.session-strip {
+  margin: 0 0 14px;
+  padding: 10px 11px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.session-strip-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+}
+.session-strip-heading .text-button {
+  padding: 0;
+  font-size: 10px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.session-list {
+  display: flex;
+  gap: 5px;
+  margin-top: 7px;
+  overflow-x: auto;
+}
+.session-chip {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  max-width: 145px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--bg);
+  overflow: hidden;
+}
+.session-chip:hover {
+  border-color: var(--accent);
+}
+.session-open {
+  min-width: 0;
+  padding: 5px 8px;
+  color: var(--ink);
+  text-align: left;
+  font:
+    10px Segoe UI,
+    system-ui,
+    sans-serif;
+}
+.session-open:hover {
+  color: var(--accent);
+}
+.session-chip-name,
+.session-chip-meta {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.session-chip-name {
+  font-weight: 650;
+}
+.session-chip-meta {
+  color: var(--muted);
+  font-size: 9px;
+  margin-top: 1px;
+}
+.session-remove {
+  width: 25px;
+  height: 30px;
+  flex-basis: 25px;
+  border-left: 1px solid var(--line);
+  border-radius: 0;
+}
+.session-remove svg {
+  width: 12px;
+  height: 12px;
+}
+.session-empty {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+}
 .search-wrap:focus-within {
   border-color: var(--accent);
 }
@@ -502,6 +626,11 @@ h1 {
   font-size: 10px;
   color: var(--muted);
   line-height: 1.6;
+}
+.favorite-mark {
+  flex: 0 0 auto;
+  color: var(--accent);
+  font-size: 14px;
 }
 .row-more {
   margin-right: 4px;

@@ -68,6 +68,44 @@ test("empty folders and untrusted markup survive as plain data", () => {
   assert.equal(data.folders[0].name, "<img src=x>");
   assert.equal(data.pins.length, 0);
 });
+test("workspace data keeps stable unique IDs and pin metadata", () => {
+  const data = C.parse({
+    schema: 3,
+    workspaces: [
+      { id: "work", name: "Công việc", color: "#b5ef55" },
+      { id: "personal", name: "Cá nhân", color: "#c9b6ff" },
+    ],
+    folders: [
+      { id: "inbox-work", name: "Inbox", workspaceId: "work" },
+      { id: "inbox-personal", name: "Inbox", workspaceId: "personal" },
+    ],
+    pins: [
+      {
+        id: "duplicate",
+        url: "work.example",
+        folderId: "inbox-work",
+        workspaceId: "work",
+        tags: ["  ưu tiên ", "ưu tiên", "tham khảo"],
+        note: "Ghi chú",
+        favorite: true,
+      },
+      {
+        id: "duplicate",
+        url: "personal.example",
+        folderId: "inbox-personal",
+        workspaceId: "personal",
+      },
+    ],
+    settings: { workspaceId: "personal" },
+  }).state;
+  assert.equal(data.schema, 3);
+  assert.equal(data.settings.workspaceId, "personal");
+  assert.equal(data.folders.length, 2);
+  assert.equal(new Set(data.pins.map((pin) => pin.id)).size, 2);
+  assert.deepEqual(data.pins[0].tags, ["ưu tiên", "tham khảo"]);
+  assert.equal(data.pins[0].favorite, true);
+  assert.equal(data.pins[1].workspaceId, "personal");
+});
 test("mutations are immutable and reject duplicate URLs", () => {
   const original = C.empty();
   const next = C.reduce(original, { type: "SAVE_PIN", url: "example.com" });
@@ -170,6 +208,41 @@ test("merge deduplicates URLs and merges folders by name", () => {
   assert.equal(state.pins[0].folderId, state.pins[1].folderId);
   assert.throws(() =>
     C.reduce(state, { type: "IMPORT", mode: "cancel", data: { pins: [] } }),
+  );
+});
+test("workspace merge remaps colliding IDs without crossing collections", () => {
+  let state = C.parse({
+    schema: 3,
+    workspaces: [{ id: "w", name: "Công việc" }],
+    folders: [{ id: "f", name: "Inbox", workspaceId: "w" }],
+    pins: [{ id: "p", url: "local.example", folderId: "f", workspaceId: "w" }],
+  }).state;
+  state = C.reduce(state, {
+    type: "IMPORT",
+    mode: "merge",
+    data: {
+      schema: 3,
+      workspaces: [
+        { id: "w", name: "Cá nhân" },
+        { id: "w2", name: "Công việc" },
+      ],
+      folders: [
+        { id: "f", name: "Inbox", workspaceId: "w" },
+        { id: "f2", name: "Inbox", workspaceId: "w2" },
+      ],
+      pins: [
+        { id: "p", url: "remote.example", folderId: "f", workspaceId: "w" },
+        { id: "p2", url: "other.example", folderId: "f2", workspaceId: "w2" },
+      ],
+    },
+  });
+  assert.equal(state.pins.length, 3);
+  assert.equal(state.workspaces.length, 2);
+  assert.equal(new Set(state.workspaces.map((item) => item.id)).size, 2);
+  assert.equal(new Set(state.folders.map((item) => item.id)).size, 2);
+  assert.equal(
+    state.pins.find((pin) => pin.url.includes("remote")).workspaceId,
+    state.workspaces.find((item) => item.name === "Cá nhân").id,
   );
 });
 test("Unicode, quotes and backslashes split into sync-safe chunks without corruption", () => {

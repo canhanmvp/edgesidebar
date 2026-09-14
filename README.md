@@ -6,7 +6,7 @@ Extension Manifest V3 cho Edge/Chrome: biến sidebar thành không gian làm vi
 
 - **Không gian làm việc:** tách website và thư mục theo từng ngữ cảnh như Công việc, Cá nhân hoặc Dự án. Có thể tạo, đổi tên, đổi màu và xóa không gian; thao tác xóa yêu cầu xác nhận.
 - **Quản lý website:** thêm nhãn, ghi chú ngắn và đánh dấu yêu thích; tìm kiếm không dấu bao gồm tên, miền, thư mục, nhãn và ghi chú.
-- **Phiên làm việc:** lưu tối đa 20 phiên, mỗi phiên tối đa 100 tab HTTP/HTTPS. Phiên chỉ lưu trên thiết bị này để tránh đưa danh sách tab cá nhân lên bộ nhớ đồng bộ; bấm một lần để mở lại.
+- **Phiên làm việc:** lưu tối đa 20 phiên, mỗi phiên tối đa 100 tab HTTP/HTTPS. Phiên chỉ lưu trên thiết bị này để tránh đưa danh sách tab cá nhân lên bộ nhớ đồng bộ; bấm một lần để mở lại hoặc xuất/nhập file phiên riêng.
 - **Dữ liệu bền vững:** schema 3 giữ ID ổn định cho website, thư mục và không gian; bản nâng cấp tự chuyển dữ liệu cũ và giữ bản dự phòng trước khi ghi.
 - **Trải nghiệm sidebar:** kéo sắp xếp bộ sưu tập theo từng không gian, hoàn tác xóa, favicon theo URL và thanh icon nổi có thể kéo, đổi rộng, bám góc hoặc tắt.
 
@@ -34,7 +34,7 @@ Bản đóng gói sạch ở `dist/pinned-sidebar/`; chỉ chứa các file ch�
 - Tạo thư mục rỗng, đổi tên, chuyển website và xóa thư mục mà giữ lại website. Kéo cụm chấm trước tên bộ sưu tập để sắp xếp lên/xuống; menu `⋯` cũng có lệnh đưa lên hoặc xuống và hoàn tác.
 - Khi thêm hoặc sửa website, có thể nhập nhãn phân tách bằng dấu phẩy, ghi chú tối đa 500 ký tự và đánh dấu yêu thích. Menu website có lệnh bật/tắt yêu thích.
 - Tìm theo tên, URL hoặc thư mục; hỗ trợ gõ tiếng Việt không dấu. Nhấn `/` để tìm nhanh.
-- Bấm **Lưu các tab** để lưu các tab website đang mở thành phiên của không gian hiện tại. Phiên được giữ local, có thể xóa từng phiên hoặc bấm tên phiên để mở lại.
+- Bấm **Lưu các tab** để lưu các tab website đang mở thành phiên của không gian hiện tại. Phiên được giữ local, có thể xóa từng phiên, bấm tên phiên để mở lại, hoặc dùng **Xuất phiên / Nhập phiên** trong Cài đặt.
 - Kéo thả để đổi thứ tự/chuyển thư mục. Dữ liệu chỉ được ghi khi thả. Khi đang lọc, dùng menu để chuyển vị trí.
 - Dùng menu `⋯` hoặc `Alt+↑/↓` khi focus vào website để sắp xếp bằng bàn phím.
 - Bỏ ghim có nút **Hoàn tác** trong 10 giây.
@@ -54,7 +54,7 @@ Khi nhận một bản cloud khác trong lúc máy có chỉnh sửa chưa gửi
 
 Nhập JSON hỗ trợ file 1.x, file 2.0 hoặc mảng các website. Có ba lựa chọn độc lập: **Hủy**, **Gộp thêm**, **Thay thế**. Escape/bấm ra ngoài luôn hủy. Thay thế lưu bản dự phòng trong cùng lần ghi dữ liệu. File lỗi bị từ chối trước khi thay đổi danh sách. Giới hạn file nhập là 5 MB.
 
-**Xuất JSON** sao lưu website, không gian và thư mục. **Xuất bản dự phòng gần nhất** lấy bản trước lần thay thế/xử lý xung đột hoặc bản dữ liệu 1.x khi chuyển đổi. Phiên tab không nằm trong JSON xuất để tránh vô tình chia sẻ lịch sử tab; có thể nhập file dự phòng như bình thường.
+**Xuất JSON** sao lưu website, không gian và thư mục. **Xuất phiên** tạo file riêng cho lịch sử tab; file này không đi qua đồng bộ trình duyệt. **Xuất bản dự phòng gần nhất** lấy bản trước lần thay thế/xử lý xung đột hoặc bản dữ liệu 1.x khi chuyển đổi. Phiên tab không nằm trong JSON website để tránh vô tình chia sẻ lịch sử tab; có thể nhập từng loại file bằng đúng nút tương ứng.
 
 ## Xem website trong sidebar
 

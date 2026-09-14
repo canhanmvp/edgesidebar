@@ -106,8 +106,32 @@ async function waitState(page, count) {
   );
   assert.equal(savedSessions.length, 1);
   assert.ok(savedSessions[0].tabs.some((tab) => tab.url.endsWith("/session")));
+  await page.locator("#settings-btn").click();
+  const sessionDownload = await Promise.all([
+    page.waitForEvent("download"),
+    page.locator("#export-sessions-btn").click(),
+  ]);
+  const sessionFile = await sessionDownload[0].path();
+  const exportedSessions = JSON.parse(fs.readFileSync(sessionFile, "utf8"));
+  assert.equal(exportedSessions.type, "pinned-sidebar-sessions");
+  assert.equal(exportedSessions.sessions.length, 1);
+  await page.locator("#settings-dialog [data-close]").click();
+  await page.locator(".session-remove").click();
+  await page.waitForFunction(
+    async () =>
+      !(await chrome.storage.local.get("savedSessions")).savedSessions?.length,
+  );
+  await page.locator("#settings-btn").click();
+  await page.locator("#import-sessions-btn").click();
+  await page.locator("#import-sessions-file").setInputFiles({
+    name: "sessions.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(exportedSessions)),
+  });
+  await page.getByRole("button", { name: "Gộp thêm", exact: true }).click();
+  await page.getByRole("button", { name: /^Mở lại Mặc định ·/ }).waitFor();
   await sessionTab.close();
-  passed("saved tab sessions persist locally and show in the active workspace");
+  passed("saved tab sessions persist locally and can be exported/imported");
   const translate = await page.evaluate(() =>
     chrome.runtime.sendMessage({
       type: "MUTATE",

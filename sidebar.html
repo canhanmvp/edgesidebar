@@ -395,12 +395,20 @@
             <span data-icon="upload"></span>Nhập JSON
           </button>
         </div>
+        <div class="button-pair">
+          <button class="button" id="export-sessions-btn">
+            <span data-icon="download"></span>Xuất phiên</button
+          ><button class="button" id="import-sessions-btn">
+            <span data-icon="upload"></span>Nhập phiên
+          </button>
+        </div>
         <button class="text-button" id="recovery-export">
           Xuất bản dự phòng gần nhất
         </button>
         <p class="subtle">
           Dữ liệu luôn được lưu trên máy trước. Đồng bộ cần bật trong tài khoản
-          Edge/Chrome và có giới hạn dung lượng.
+          Edge/Chrome và có giới hạn dung lượng. Phiên tab chỉ lưu local, không
+          nằm trong đồng bộ website.
         </p>
       </section>
       <section class="settings-section">
@@ -412,7 +420,7 @@
         <div id="embed-list"></div>
       </section>
       <p class="settings-footnote">
-        Pinned Sidebar 2.0 · Ctrl + Shift + Y để mở
+        Pinned Sidebar 3.0 · Ctrl + Shift + Y để mở
       </p>
     </dialog>
     <dialog id="choice-dialog" aria-labelledby="choice-title">
@@ -431,6 +439,12 @@
     <input
       type="file"
       id="import-file"
+      accept="application/json,.json"
+      hidden
+    />
+    <input
+      type="file"
+      id="import-sessions-file"
       accept="application/json,.json"
       hidden
     />

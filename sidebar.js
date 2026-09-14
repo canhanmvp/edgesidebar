@@ -1271,6 +1271,19 @@ $("export-btn").onclick = () => {
       folders: state.folders,
     });
 };
+$("export-sessions-btn").onclick = () => {
+  if (savedSessions.length)
+    download(
+      {
+        schema: 1,
+        type: "pinned-sidebar-sessions",
+        exportedAt: new Date().toISOString(),
+        sessions: savedSessions,
+      },
+      "pinned-sessions",
+    );
+  else toast("Chưa có phiên tab để xuất.", { error: true });
+};
 $("recovery-export").onclick = () =>
   run($("recovery-export"), async () => {
     const data = await chrome.storage.local.get([
@@ -1300,6 +1313,58 @@ $("import-btn").onclick = () => {
   $("import-file").value = "";
   $("import-file").click();
 };
+$("import-sessions-btn").onclick = () => {
+  $("settings-dialog").close();
+  $("import-sessions-file").value = "";
+  $("import-sessions-file").click();
+};
+$("import-sessions-file").onchange = () =>
+  run(null, async () => {
+    const file = $("import-sessions-file").files[0];
+    if (!file) return;
+    if (file.size > 20 * 1024 * 1024)
+      throw new Error("File quá lớn. Giới hạn 20 MB.");
+    let data;
+    try {
+      data = JSON.parse(await file.text());
+    } catch {
+      throw new Error("File không phải JSON hợp lệ.");
+    }
+    const incoming = cleanSessions(Array.isArray(data) ? data : data?.sessions);
+    if (!incoming.length) throw new Error("File chưa có phiên tab hợp lệ.");
+    const mapped = incoming.map((session) => ({
+      ...session,
+      workspaceId: state.workspaces.some(
+        (workspace) => workspace.id === session.workspaceId,
+      )
+        ? session.workspaceId
+        : activeWorkspaceId,
+    }));
+    const result = await choose(
+      "Nhập phiên tab",
+      `Đã đọc ${mapped.length} phiên. Gộp thêm sẽ giữ phiên đang có; thay thế sẽ xóa danh sách phiên local hiện tại.`,
+      [
+        { label: "Thay thế", value: "replace", danger: true },
+        { label: "Gộp thêm", value: "merge" },
+      ],
+    );
+    if (result !== "merge" && result !== "replace") return;
+    if (result === "replace") savedSessions = mapped.slice(0, 20);
+    else {
+      const ids = new Set(savedSessions.map((session) => session.id));
+      const unique = mapped.map((session) => {
+        if (!ids.has(session.id)) {
+          ids.add(session.id);
+          return session;
+        }
+        return { ...session, id: C.uid() };
+      });
+      savedSessions = [...unique, ...savedSessions].slice(0, 20);
+    }
+    await chrome.storage.local.set({ [SESSIONS_KEY]: savedSessions });
+    renderSessions();
+    toast(`Đã nhập ${mapped.length} phiên tab.`);
+  });
 $("import-file").onchange = () =>
   run(null, async () => {
     const file = $("import-file").files[0];

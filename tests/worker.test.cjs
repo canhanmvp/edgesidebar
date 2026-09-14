@@ -187,6 +187,39 @@ test("content script can hide its own icon rail with a boolean setting", async (
     false,
   );
 });
+test("floating rail follows the active workspace without exposing other workspaces", async () => {
+  const w = worker({ pins: [{ url: "default.example" }] });
+  await w.send({ type: "GET_STATE" });
+  assert.equal(
+    (
+      await w.send({
+        type: "MUTATE",
+        action: {
+          type: "SAVE_WORKSPACE",
+          workspaceId: "private-work",
+          name: "Cá nhân",
+        },
+      })
+    ).ok,
+    true,
+  );
+  await w.send({
+    type: "MUTATE",
+    action: {
+      type: "SAVE_PIN",
+      url: "private.example",
+      workspaceId: "private-work",
+    },
+  });
+  await w.chrome.storage.local.set({ activeWorkspaceId: "private-work" });
+  const result = await w.send({
+    type: "OVERLAY_STATE",
+  });
+  assert.deepEqual(
+    result.pins.map((pin) => pin.url),
+    ["https://private.example/"],
+  );
+});
 test("replace import stores recovery copy and invalid import never commits", async () => {
   const w = worker({ pins: [{ url: "old.example" }] });
   await w.send({ type: "GET_STATE" });

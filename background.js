@@ -313,9 +313,17 @@ async function applyEmbedRules(origins) {
 async function handle(message, sender) {
   if (message.type === "OVERLAY_STATE") {
     const state = await readState();
+    const local = await chrome.storage.local.get("activeWorkspaceId");
+    const workspaceId = state.workspaces.some(
+      (workspace) => workspace.id === local.activeWorkspaceId,
+    )
+      ? local.activeWorkspaceId
+      : state.settings.workspaceId;
     return {
       pins: state.settings.overlay
-        ? state.pins.map(({ id, title, url }) => ({ id, title, url }))
+        ? state.pins
+            .filter((pin) => pin.workspaceId === workspaceId)
+            .map(({ id, title, url }) => ({ id, title, url }))
         : [],
       settings: state.settings,
     };
@@ -511,7 +519,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
     )
   )
     serial(receiveCloud).catch(syncError);
-  if (area === "local" && changes[STATE_KEY]) {
+  if (area === "local" && (changes[STATE_KEY] || changes.activeWorkspaceId)) {
     chrome.tabs
       .query({ url: ["http://*/*", "https://*/*"] })
       .then((tabs) => {

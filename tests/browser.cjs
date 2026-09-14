@@ -75,6 +75,10 @@ async function waitState(page, count) {
   const firstCollection = collections.nth(0);
   const secondCollection = collections.nth(1);
   const firstCollectionId = await firstCollection.getAttribute("data-folder");
+  assert.equal(
+    await firstCollection.locator(".collection-grip").getAttribute("draggable"),
+    "true",
+  );
   await firstCollection
     .locator(".collection-grip")
     .dragTo(secondCollection.locator(".collection-grip"));
@@ -189,7 +193,10 @@ async function waitState(page, count) {
     .click();
   await page.getByRole("menuitem", { name: "Bỏ ghim", exact: true }).click();
   await waitState(page, 3);
-  await page.getByRole("button", { name: "Hoàn tác", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Hoàn tác", exact: true })
+    .last()
+    .click();
   await waitState(page, 4);
   passed("delete and undo restore the pin");
   // Concurrent real pages write through one service worker.

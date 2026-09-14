@@ -16,7 +16,7 @@ Bản 2.0 đọc `pins` và `settings` từ bộ nhớ sync cũ, chuyển thư m
 2. Chọn **Load unpacked**, trỏ tới thư mục chứa `manifest.json`.
 3. Bấm biểu tượng extension hoặc `Ctrl+Shift+Y` để mở sidebar.
 
-Bản đóng gói sạch ở `dist/pinned-sidebar/`; chỉ chứa các file chạy extension. File phát hành để chuyển máy là `dist/pinned-sidebar-2.1.7.zip`: giải nén ZIP trước, rồi chọn thư mục đã giải nén trong **Load unpacked**. Dùng Chromium 120+ hoặc phiên bản Edge tương ứng có Side Panel API. Người sử dụng không cần Node.js.
+Bản đóng gói sạch ở `dist/pinned-sidebar/`; chỉ chứa các file chạy extension. File phát hành để chuyển máy là `dist/pinned-sidebar-2.1.8.zip`: giải nén ZIP trước, rồi chọn thư mục đã giải nén trong **Load unpacked**. Dùng Chromium 120+ hoặc phiên bản Edge tương ứng có Side Panel API. Người sử dụng không cần Node.js.
 
 ## Sử dụng
 

@@ -267,7 +267,6 @@ function render() {
     visibleCount += matching.length;
     const group = element("section", "group");
     group.dataset.folder = folder.id;
-    group.draggable = !!folder.id && !query;
     const heading = element("div", "group-heading");
     const collapsed = !query && state.settings.collapsed.includes(folder.id);
     const toggle = element("button", "folder-toggle");
@@ -288,6 +287,10 @@ function render() {
       run(toggle, () => mutate({ type: "TOGGLE_FOLDER", id: folder.id }));
     if (folder.id) {
       const grip = element("span", "collection-grip");
+      // Chromium only guarantees native dragstart on the element that is
+      // marked draggable. Keeping it on the grip prevents the folder header
+      // and its website links from swallowing the gesture in Edge.
+      grip.draggable = !query;
       grip.title = "Kéo để sắp xếp bộ sưu tập";
       grip.setAttribute("role", "img");
       grip.setAttribute("aria-label", "Kéo để sắp xếp bộ sưu tập");

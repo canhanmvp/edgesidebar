@@ -4,6 +4,7 @@ globalThis.PinnedIcons = {
   panel:
     '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M15 4v16m3-11h.01M18 12h.01M18 15h.01"/>',
   grid: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
+  history: '<path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5M12 7v5l3 2"/>',
   settings:
     '<path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path d="m9 3-.6 2-2 .9-2-.5-2 3.4 1.4 1.5v2.4L2.4 15l2 3.4 2-.5 2 .9L9 21h4l.6-2.2 2-.9 2 .5 2-3.4-1.4-1.3v-2.4L19.6 9l-2-3.4-2 .5-2-.9L13 3Z"/>',
   search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/>',

@@ -6,7 +6,9 @@ let state = null,
   embedOrigins = [],
   windowId,
   activeWorkspaceId = null,
-  savedSessions = [];
+  savedSessions = [],
+  activeView = "pins",
+  activeFilter = "all";
 const SESSIONS_KEY = "savedSessions";
 let editingPin = null,
   editingFolder = null,
@@ -106,6 +108,7 @@ function accept(next) {
     applySettings();
     renderWorkspaces();
     renderSessions();
+    renderViewState();
     render();
   }
 }
@@ -216,13 +219,45 @@ function renderWorkspaces() {
   select.value = activeWorkspaceId || state.workspaces[0]?.id || "";
   select.style.borderColor =
     state.workspaces.find((item) => item.id === select.value)?.color || "";
+  const workspaceId = select.value;
+  const pinCount = state.pins.filter(
+    (pin) => pin.workspaceId === workspaceId,
+  ).length;
+  const sessionCount = savedSessions.filter(
+    (session) => !session.workspaceId || session.workspaceId === workspaceId,
+  ).length;
+  $("pins-tab-count").textContent = pinCount;
+  $("sessions-tab-count").textContent = sessionCount;
+}
+function renderViewState() {
+  document.body.classList.toggle("sessions-focus", activeView === "sessions");
+  $("pins-tab").classList.toggle("is-active", activeView === "pins");
+  $("sessions-tab").classList.toggle("is-active", activeView === "sessions");
+  $("pins-tab").setAttribute("aria-selected", String(activeView === "pins"));
+  $("sessions-tab").setAttribute(
+    "aria-selected",
+    String(activeView === "sessions"),
+  );
+}
+function setActiveView(view) {
+  activeView = view === "sessions" ? "sessions" : "pins";
+  chrome.storage.local.set({ activeView }).catch(() => {});
+  renderViewState();
+  if (activeView === "sessions") {
+    $("session-strip").scrollIntoView({ block: "nearest", behavior: "smooth" });
+    setTimeout(
+      () => $("session-list")?.querySelector(".session-open")?.focus(),
+      120,
+    );
+  }
 }
 function cleanSessions(value) {
   if (!Array.isArray(value)) return [];
+  const ids = new Set();
   return value
     .filter((item) => item && typeof item === "object")
     .map((item) => ({
-      id: typeof item.id === "string" ? item.id : C.uid(),
+      id: typeof item.id === "string" && item.id.trim() ? item.id : C.uid(),
       name:
         typeof item.name === "string" && item.name.trim()
           ? item.name.trim().slice(0, 100)
@@ -250,10 +285,19 @@ function cleanSessions(value) {
               }
             })
             .filter(Boolean)
+            .filter(
+              (tab, index, tabs) =>
+                tabs.findIndex((item) => item.url === tab.url) === index,
+            )
             .slice(0, 100)
         : [],
     }))
     .filter((item) => item.tabs.length)
+    .map((item) => {
+      while (ids.has(item.id)) item.id = C.uid();
+      ids.add(item.id);
+      return item;
+    })
     .slice(0, 20);
 }
 function renderSessions() {
@@ -263,13 +307,19 @@ function renderSessions() {
   const workspaceSessions = savedSessions.filter(
     (item) => !item.workspaceId || item.workspaceId === activeWorkspaceId,
   );
+  if ($("sessions-tab-count"))
+    $("sessions-tab-count").textContent = workspaceSessions.length;
   if (!workspaceSessions.length) {
     list.append(
       element("p", "session-empty", "Lưu các tab đang mở để quay lại sau."),
     );
     return;
   }
-  for (const session of workspaceSessions.slice(0, 4)) {
+  const visibleSessions =
+    activeView === "sessions"
+      ? workspaceSessions
+      : workspaceSessions.slice(0, 4);
+  for (const session of visibleSessions) {
     const chip = element("div", "session-chip");
     const open = element("button", "session-open");
     open.type = "button";
@@ -281,29 +331,85 @@ function renderSessions() {
     );
     open.onclick = () =>
       run(open, async () => {
-        for (const [index, tab] of session.tabs.entries())
-          await chrome.tabs.create({
-            url: tab.url,
-            windowId,
-            active: index === 0,
-          });
-        toast(`Đã mở ${session.tabs.length} tab từ phiên “${session.name}”.`);
+        const existing = new Set(
+          (await chrome.tabs.query({ windowId }))
+            .map((tab) => tab.url)
+            .filter(Boolean),
+        );
+        let opened = 0;
+        let skipped = 0;
+        for (const tab of session.tabs) {
+          if (existing.has(tab.url)) {
+            skipped++;
+            continue;
+          }
+          try {
+            await chrome.tabs.create({
+              url: tab.url,
+              windowId,
+              active: opened === 0,
+            });
+            opened++;
+          } catch {
+            skipped++;
+          }
+        }
+        toast(
+          `Đã mở ${opened} tab từ phiên “${session.name}”.` +
+            (skipped ? ` Bỏ qua ${skipped} tab đã có hoặc không mở được.` : ""),
+        );
       });
+    const actions = iconButton(
+      "more",
+      `Tùy chọn phiên ${session.name}`,
+      "session-actions",
+    );
+    actions.setAttribute("aria-haspopup", "menu");
+    actions.onclick = (event) => {
+      event.stopPropagation();
+      showMenu(actions, [
+        {
+          label: "Đổi tên phiên",
+          icon: "edit",
+          action: async () => {
+            const name = window.prompt("Tên phiên tab", session.name);
+            if (!name?.trim()) return;
+            session.name = name.trim().slice(0, 100);
+            savedSessions = cleanSessions(savedSessions);
+            await chrome.storage.local.set({ [SESSIONS_KEY]: savedSessions });
+            renderSessions();
+          },
+        },
+        {
+          label: "Xóa phiên",
+          icon: "trash",
+          danger: true,
+          action: () => removeSession(session),
+        },
+      ]);
+    };
     const remove = iconButton(
       "close",
       `Xóa phiên ${session.name}`,
       "session-remove",
     );
-    remove.onclick = () =>
-      run(remove, async () => {
-        savedSessions = savedSessions.filter((item) => item.id !== session.id);
-        await chrome.storage.local.set({ [SESSIONS_KEY]: savedSessions });
-        renderSessions();
-        toast("Đã xóa phiên làm việc.");
-      });
-    chip.append(open, remove);
+    remove.onclick = () => run(remove, () => removeSession(session));
+    chip.append(open, actions, remove);
     list.append(chip);
   }
+}
+async function removeSession(session) {
+  const previous = savedSessions;
+  savedSessions = savedSessions.filter((item) => item.id !== session.id);
+  await chrome.storage.local.set({ [SESSIONS_KEY]: savedSessions });
+  renderSessions();
+  toast(`Đã xóa phiên “${session.name}”.`, {
+    undo: async () => {
+      savedSessions = previous;
+      await chrome.storage.local.set({ [SESSIONS_KEY]: savedSessions });
+      renderSessions();
+    },
+  });
 }
 async function loadSessions() {
   const local = await chrome.storage.local.get(SESSIONS_KEY);
@@ -397,6 +503,7 @@ function render() {
     ? ".row-more"
     : ".pin-link";
   const query = folded($("search").value.trim());
+  const hasFilter = activeFilter !== "all";
   const fragment = document.createDocumentFragment();
   let visibleCount = 0;
   const workspaceId = activeWorkspaceId || state.workspaces[0]?.id;
@@ -410,20 +517,25 @@ function render() {
     );
     const matching = all.filter(
       (p) =>
-        !query ||
-        folded(
-          p.title +
-            " " +
-            p.url +
-            " " +
-            folder.name +
-            " " +
-            (p.tags || []).join(" ") +
-            " " +
-            (p.note || ""),
-        ).includes(query),
+        (activeFilter === "all" || p.favorite) &&
+        (!query ||
+          folded(
+            p.title +
+              " " +
+              p.url +
+              " " +
+              folder.name +
+              " " +
+              (p.tags || []).join(" ") +
+              " " +
+              (p.note || ""),
+          ).includes(query)),
     );
-    if ((!folder.id && !all.length) || (query && !matching.length)) continue;
+    if (
+      (!folder.id && !all.length) ||
+      ((query || hasFilter) && !matching.length)
+    )
+      continue;
     visibleCount += matching.length;
     const group = element("section", "group");
     group.dataset.folder = folder.id;
@@ -549,21 +661,32 @@ function render() {
   const workspacePins = state.pins.filter(
     (pin) => pin.workspaceId === workspaceId,
   );
-  $("pin-count").textContent = query
-    ? `${visibleCount}/${workspacePins.length}`
-    : workspacePins.length;
-  $("empty-state").hidden = query
-    ? visibleCount > 0
-    : workspacePins.length > 0 ||
-      state.folders.some((folder) => folder.workspaceId === workspaceId);
-  $("empty-title").textContent = query
-    ? "Chưa tìm thấy trang phù hợp"
-    : "Một góc mới cho bạn";
-  $("empty-copy").textContent = query
-    ? "Thử tên website, tên miền hoặc tên thư mục khác."
-    : "Ghim trang đang xem hoặc thêm website đầu tiên.";
-  $("empty-action").textContent = query ? "Xóa tìm kiếm" : "Thêm website";
-  $("list-hint").hidden = !workspacePins.length || !!query;
+  $("pin-count").textContent =
+    query || hasFilter
+      ? `${visibleCount}/${workspacePins.length}`
+      : workspacePins.length;
+  $("pins-tab-count").textContent = workspacePins.length;
+  $("filter-all").classList.toggle("is-active", activeFilter === "all");
+  $("filter-favorites").classList.toggle(
+    "is-active",
+    activeFilter === "favorites",
+  );
+  $("empty-state").hidden =
+    query || hasFilter
+      ? visibleCount > 0
+      : workspacePins.length > 0 ||
+        state.folders.some((folder) => folder.workspaceId === workspaceId);
+  $("empty-title").textContent =
+    query || hasFilter ? "Chưa tìm thấy trang phù hợp" : "Một góc mới cho bạn";
+  $("empty-copy").textContent =
+    query || hasFilter
+      ? hasFilter && !query
+        ? "Chưa có website yêu thích trong không gian này."
+        : "Thử tên website, tên miền hoặc tên thư mục khác."
+      : "Ghim trang đang xem hoặc thêm website đầu tiên.";
+  $("empty-action").textContent =
+    query || hasFilter ? "Hiện tất cả" : "Thêm website";
+  $("list-hint").hidden = !workspacePins.length || !!query || hasFilter;
   if (activeId)
     [...document.querySelectorAll("[data-pin]")]
       .find((el) => el.dataset.pin === activeId)
@@ -885,6 +1008,13 @@ $("pin-list").addEventListener("dragstart", (event) => {
 });
 $("pin-list").addEventListener("dragover", (event) => {
   if (!drag) return;
+  const scrollTarget = document.scrollingElement;
+  if (scrollTarget) {
+    const edge = 48;
+    if (event.clientY < edge) scrollTarget.scrollTop -= 14;
+    else if (event.clientY > window.innerHeight - edge)
+      scrollTarget.scrollTop += 14;
+  }
   const group = event.target.closest("[data-folder]");
   if (!group) return;
   if (drag.type === "folder") {
@@ -1222,6 +1352,16 @@ $("workspace-more").onclick = (event) => {
     },
   ]);
 };
+$("pins-tab").onclick = () => setActiveView("pins");
+$("sessions-tab").onclick = () => setActiveView("sessions");
+$("filter-all").onclick = () => {
+  activeFilter = "all";
+  render();
+};
+$("filter-favorites").onclick = () => {
+  activeFilter = "favorites";
+  render();
+};
 $("save-session").onclick = () => run($("save-session"), saveCurrentSession);
 $("compact-btn").onclick = () =>
   state &&
@@ -1394,8 +1534,9 @@ $("import-file").onchange = () =>
 $("add-pin").onclick = () => pinDialog();
 $("add-folder").onclick = () => state && folderDialog();
 $("empty-action").onclick = () => {
-  if ($("search").value) {
+  if ($("search").value || activeFilter !== "all") {
     $("search").value = "";
+    activeFilter = "all";
     render();
     $("search").focus();
   } else pinDialog();
@@ -1488,9 +1629,13 @@ async function reloadState() {
   const data = await request("GET_STATE");
   syncStatus = data.syncStatus || {};
   embedOrigins = data.embedOrigins || [];
-  const local = await chrome.storage.local.get("activeWorkspaceId");
+  const local = await chrome.storage.local.get([
+    "activeWorkspaceId",
+    "activeView",
+  ]);
   activeWorkspaceId =
     local.activeWorkspaceId || data.state.settings.workspaceId;
+  activeView = local.activeView === "sessions" ? "sessions" : "pins";
   accept(data.state);
   await loadSessions();
   return data;

@@ -203,10 +203,6 @@
       try {
         if (!item || typeof item !== "object") fail("Trang ghim không hợp lệ.");
         const address = url(item.url);
-        if (seen.has(address)) {
-          skipped++;
-          return;
-        }
         const requestedWorkspaceId = workspaceIds.has(item.workspaceId)
           ? item.workspaceId
           : "";
@@ -222,6 +218,11 @@
         );
         const workspaceId =
           requestedWorkspaceId || folderItem?.workspaceId || defaultWorkspaceId;
+        const dedupeKey = workspaceId + "\0" + address;
+        if (seen.has(dedupeKey)) {
+          skipped++;
+          return;
+        }
         let pinId = id(item.id, uid);
         while (pinIdsSeen.has(pinId)) pinId = uid();
         pinIdsSeen.add(pinId);
@@ -235,7 +236,7 @@
           note: label(item.note, 500),
           favorite: item.favorite === true,
         });
-        seen.add(address);
+        seen.add(dedupeKey);
       } catch (error) {
         if (migration) skipped++;
         else fail(`Trang số ${index + 1}: ${error.message}`);
@@ -274,7 +275,19 @@
     switch (action.type) {
       case "SAVE_PIN": {
         const address = url(action.url);
-        if (next.pins.some((p) => p.url === address && p.id !== action.id))
+        const workspaceForDuplicate = next.workspaces.some(
+          (item) => item.id === action.workspaceId,
+        )
+          ? action.workspaceId
+          : next.workspaces[0]?.id || DEFAULT_WORKSPACE_ID;
+        if (
+          next.pins.some(
+            (p) =>
+              p.url === address &&
+              p.workspaceId === workspaceForDuplicate &&
+              p.id !== action.id,
+          )
+        )
           fail("Website này đã được ghim.");
         const workspaceId = next.workspaces.some(
           (item) => item.id === action.workspaceId,
@@ -308,7 +321,20 @@
         break;
       case "RESTORE_PIN": {
         const p = action.pin;
-        if (!p || next.pins.some((item) => item.url === url(p.url)))
+        const restoredUrl = p && url(p.url);
+        const restoredWorkspace = next.workspaces.some(
+          (w) => w.id === p?.workspaceId,
+        )
+          ? p.workspaceId
+          : next.workspaces[0]?.id || DEFAULT_WORKSPACE_ID;
+        if (
+          !p ||
+          next.pins.some(
+            (item) =>
+              item.url === restoredUrl &&
+              item.workspaceId === restoredWorkspace,
+          )
+        )
           fail("Trang đã có trong danh sách.");
         next.pins.splice(
           Math.max(0, Math.min(next.pins.length, action.index || 0)),
@@ -316,13 +342,13 @@
           {
             id: uid(),
             title: label(p.title, 180, host(url(p.url))),
-            url: url(p.url),
+            url: restoredUrl,
             folderId: next.folders.some((f) => f.id === p.folderId)
               ? p.folderId
               : "",
             workspaceId: next.workspaces.some((w) => w.id === p.workspaceId)
               ? p.workspaceId
-              : next.workspaces[0]?.id || DEFAULT_WORKSPACE_ID,
+              : restoredWorkspace,
             tags: tags(p.tags),
             note: label(p.note, 500),
             favorite: p.favorite === true,
@@ -538,10 +564,15 @@
               ids.set(f.id, folderId);
             }
           }
-          const urls = new Set(next.pins.map((p) => p.url));
+          const urls = new Set(
+            next.pins.map((p) => p.workspaceId + "\0" + p.url),
+          );
           const pinIds = new Set(next.pins.map((item) => item.id));
-          for (const p of incoming.pins)
-            if (!urls.has(p.url)) {
+          for (const p of incoming.pins) {
+            const workspaceId =
+              workspaces.get(p.workspaceId) || next.workspaces[0].id;
+            const key = workspaceId + "\0" + p.url;
+            if (!urls.has(key)) {
               let pinId = id(p.id, uid);
               while (pinIds.has(pinId)) pinId = uid();
               pinIds.add(pinId);
@@ -549,11 +580,11 @@
                 ...p,
                 id: pinId,
                 folderId: ids.get(p.folderId) || "",
-                workspaceId:
-                  workspaces.get(p.workspaceId) || next.workspaces[0].id,
+                workspaceId,
               });
-              urls.add(p.url);
+              urls.add(key);
             }
+          }
         }
         break;
       }

@@ -146,9 +146,17 @@
   function build(data) {
     const previousFocus = shadow?.activeElement?.dataset.pin;
     const expanded = rail?.matches(":hover") || !!previousFocus;
+    const oldHost = host;
+    activeDrag?.abort();
+    activeDrag = null;
     current = data;
-    remove();
-    if (!data.settings.overlay) return;
+    if (!data.settings.overlay) {
+      oldHost?.remove();
+      host = null;
+      shadow = null;
+      rail = null;
+      return;
+    }
     host = document.createElement("div");
     host.id = "pinned-sidebar-v2";
     // Reset only our host. The host never reserves or changes the page layout.
@@ -328,14 +336,17 @@
       [...shadow.querySelectorAll("[data-pin]")]
         .find((item) => item.dataset.pin === previousFocus)
         ?.focus();
+    oldHost?.remove();
   }
   async function refresh() {
     const id = ++refreshId;
     try {
       const data = await send("OVERLAY_STATE");
       if (id === refreshId) build(data);
-    } catch {
-      remove();
+    } catch (error) {
+      // A transient service-worker restart must not make the rail disappear;
+      // keep the last rendered controls and retry on the next state event.
+      message(error.message);
     }
   }
   // Some storefronts and single-page apps replace document.body after the

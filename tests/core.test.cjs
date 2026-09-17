@@ -116,6 +116,31 @@ test("mutations are immutable and reject duplicate URLs", () => {
     /đã được ghim/,
   );
 });
+test("the same website can be pinned once in each workspace", () => {
+  let state = C.parse({
+    schema: 3,
+    workspaces: [
+      { id: "work", name: "Công việc" },
+      { id: "personal", name: "Cá nhân" },
+    ],
+    pins: [{ url: "example.com", workspaceId: "work" }],
+  }).state;
+  state = C.reduce(state, {
+    type: "SAVE_PIN",
+    url: "example.com",
+    workspaceId: "personal",
+  });
+  assert.equal(state.pins.length, 2);
+  assert.throws(
+    () =>
+      C.reduce(state, {
+        type: "SAVE_PIN",
+        url: "example.com",
+        workspaceId: "work",
+      }),
+    /đã được ghim/,
+  );
+});
 test("move before/end and transfer between folders keeps unique IDs", () => {
   let state = C.parse({
     pins: [

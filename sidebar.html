@@ -35,6 +35,26 @@
           ></button>
         </div>
       </header>
+      <nav class="view-switcher" aria-label="Nội dung sidebar">
+        <button
+          class="view-tab is-active"
+          id="pins-tab"
+          type="button"
+          aria-selected="true"
+        >
+          <span data-icon="grid"></span>Trang ghim
+          <span class="view-tab-count" id="pins-tab-count">0</span>
+        </button>
+        <button
+          class="view-tab"
+          id="sessions-tab"
+          type="button"
+          aria-selected="false"
+        >
+          <span data-icon="history"></span>Phiên tab
+          <span class="view-tab-count" id="sessions-tab-count">0</span>
+        </button>
+      </nav>
       <main id="list-view">
         <section class="intro">
           <p class="eyebrow">
@@ -87,7 +107,19 @@
             data-icon="plus"
           ></button>
         </div>
-        <section class="session-strip" aria-label="Phiên làm việc">
+        <div class="filter-bar" aria-label="Bộ lọc trang ghim">
+          <button class="filter-button is-active" id="filter-all" type="button">
+            Tất cả
+          </button>
+          <button class="filter-button" id="filter-favorites" type="button">
+            <span aria-hidden="true">★</span> Yêu thích
+          </button>
+        </div>
+        <section
+          class="session-strip"
+          id="session-strip"
+          aria-label="Phiên làm việc"
+        >
           <div class="session-strip-heading">
             <span>PHIÊN LÀM VIỆC</span>
             <button class="text-button" id="save-session">Lưu các tab</button>
@@ -190,7 +222,7 @@
         <button id="storage-status" class="storage-status">
           <span class="status-dot"></span
           ><span id="storage-label">Lưu trên thiết bị</span></button
-        ><span class="version">V3.0.0</span>
+        ><span class="version">V4.0.0</span>
       </footer>
     </div>
     <div id="item-menu" class="item-menu" role="menu" hidden></div>
@@ -420,7 +452,7 @@
         <div id="embed-list"></div>
       </section>
       <p class="settings-footnote">
-        Pinned Sidebar 3.0 · Ctrl + Shift + Y để mở
+        Pinned Sidebar 4.0 · Ctrl + M hoặc Ctrl + Shift + Y để mở
       </p>
     </dialog>
     <dialog id="choice-dialog" aria-labelledby="choice-title">

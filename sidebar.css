@@ -148,9 +148,48 @@ p {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 22px 22px 19px;
+  padding: 16px 18px 14px;
   border-bottom: 1px solid var(--line);
   gap: 8px;
+}
+.view-switcher {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 8px 18px 0;
+  border-bottom: 1px solid var(--line);
+}
+.view-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 0;
+  min-height: 35px;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  font-size: 11px;
+  font-weight: 650;
+}
+.view-tab:hover,
+.view-tab.is-active {
+  color: var(--accent);
+}
+.view-tab.is-active {
+  border-bottom-color: var(--accent);
+}
+.view-tab svg {
+  width: 14px;
+  height: 14px;
+}
+.view-tab-count {
+  min-width: 18px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--muted);
+  font-size: 9px;
+  text-align: center;
 }
 .brand {
   display: flex;
@@ -200,7 +239,7 @@ p {
   flex: 1;
 }
 .intro {
-  padding: 28px 0 22px;
+  padding: 20px 0 16px;
 }
 .eyebrow {
   display: flex;
@@ -238,6 +277,31 @@ h1 {
   border-radius: 10px;
   padding: 0 12px;
   color: var(--muted);
+}
+.filter-bar {
+  display: flex;
+  gap: 6px;
+  margin-top: 9px;
+}
+.filter-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 4px 10px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.filter-button:hover {
+  background: var(--soft);
+  color: var(--ink);
+}
+.filter-button.is-active {
+  color: var(--ink);
+  border-color: var(--line);
+  background: var(--surface);
 }
 .workspace-bar {
   display: flex;
@@ -305,6 +369,54 @@ h1 {
   gap: 5px;
   margin-top: 7px;
   overflow-x: auto;
+}
+.sessions-focus .session-strip {
+  margin-top: 8px;
+  padding: 14px;
+}
+.sessions-focus .intro,
+.sessions-focus .search-wrap,
+.sessions-focus .quick-actions,
+.sessions-focus .filter-bar,
+.sessions-focus .collection-heading,
+.sessions-focus #loading-state,
+.sessions-focus #pin-list,
+.sessions-focus #empty-state,
+.sessions-focus #list-hint {
+  display: none;
+}
+.sessions-focus #list-view {
+  padding-top: 10px;
+}
+.sessions-focus .session-strip-heading {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+.sessions-focus .session-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 7px;
+  overflow: visible;
+}
+.sessions-focus .session-chip {
+  width: 100%;
+  max-width: none;
+  min-height: 48px;
+}
+.sessions-focus .session-open {
+  flex: 1;
+  padding: 8px 10px;
+}
+.session-actions {
+  width: 30px;
+  height: 36px;
+  flex-basis: 30px;
+  border-left: 1px solid var(--line);
+  border-radius: 0;
+}
+.session-actions svg {
+  width: 14px;
+  height: 14px;
 }
 .session-chip {
   display: inline-flex;
@@ -425,7 +537,7 @@ h1 {
   align-items: center;
   justify-content: space-between;
   gap: 6px;
-  margin: 27px 0 16px;
+  margin: 20px 0 12px;
   font-size: 9px;
   letter-spacing: 1.2px;
   font-weight: 750;

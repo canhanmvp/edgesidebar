@@ -1,8 +1,13 @@
-# Pinned Sidebar 3.0
+# Pinned Sidebar 4.0
 
 Extension Manifest V3 cho Edge/Chrome: biến sidebar thành không gian làm việc cá nhân để ghim, tìm, sắp xếp website và lưu lại các phiên tab. Giao diện tiếng Việt có Sáng, Tối, Đen, Pastel hoặc theo hệ thống; có chế độ chỉ biểu tượng.
 
-## Có gì mới trong 3.0
+## Có gì mới trong 4.0
+
+- **Điều hướng hai khu vực:** chuyển nhanh giữa Trang ghim và Phiên tab; phiên có thể mở rộng thành danh sách riêng, đổi tên, xóa và hoàn tác.
+- **Bộ lọc nhanh:** lọc website yêu thích, tìm kiếm không dấu theo tên, miền, thư mục, nhãn và ghi chú.
+- **Không gian độc lập:** một website có thể xuất hiện một lần trong mỗi không gian; vẫn ngăn trùng URL trong cùng không gian.
+- **Thanh nổi ổn định:** không biến mất khi service worker khởi động lại hoặc khi đang lưu vị trí kéo thả.
 
 - **Không gian làm việc:** tách website và thư mục theo từng ngữ cảnh như Công việc, Cá nhân hoặc Dự án. Có thể tạo, đổi tên, đổi màu và xóa không gian; thao tác xóa yêu cầu xác nhận.
 - **Quản lý website:** thêm nhãn, ghi chú ngắn và đánh dấu yêu thích; tìm kiếm không dấu bao gồm tên, miền, thư mục, nhãn và ghi chú.
@@ -22,9 +27,9 @@ Bản 2.0 đọc `pins` và `settings` từ bộ nhớ sync cũ, chuyển thư m
 
 1. Mở `edge://extensions` hoặc `chrome://extensions`, bật **Developer mode**.
 2. Chọn **Load unpacked**, trỏ tới thư mục chứa `manifest.json`.
-3. Bấm biểu tượng extension hoặc `Ctrl+Shift+Y` để mở sidebar.
+3. Bấm biểu tượng extension, `Ctrl+M` hoặc `Ctrl+Shift+Y` để mở sidebar. Nếu Edge giữ phím `Ctrl+M` cho chức năng hệ thống, vào `edge://extensions/shortcuts` để đổi phím.
 
-Bản đóng gói sạch ở `dist/pinned-sidebar/`; chỉ chứa các file chạy extension. File phát hành để chuyển máy là `dist/pinned-sidebar-3.0.0.zip`: giải nén ZIP trước, rồi chọn thư mục đã giải nén trong **Load unpacked**. Khi cập nhật, chọn đúng thư mục cài cũ và bấm **Reload** để giữ extension ID và dữ liệu local. Dùng Chromium 120+ hoặc phiên bản Edge tương ứng có Side Panel API. Người sử dụng không cần Node.js.
+Bản đóng gói sạch ở `dist/pinned-sidebar/`; chỉ chứa các file chạy extension. File phát hành để chuyển máy là `dist/pinned-sidebar-4.0.0.zip`: giải nén ZIP trước, rồi chọn thư mục đã giải nén trong **Load unpacked**. Khi cập nhật, chọn đúng thư mục cài cũ và bấm **Reload** để giữ extension ID và dữ liệu local. Dùng Chromium 120+ hoặc phiên bản Edge tương ứng có Side Panel API. Người sử dụng không cần Node.js.
 
 ## Sử dụng
 

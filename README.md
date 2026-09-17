@@ -27,7 +27,7 @@ Bản 2.0 đọc `pins` và `settings` từ bộ nhớ sync cũ, chuyển thư m
 
 1. Mở `edge://extensions` hoặc `chrome://extensions`, bật **Developer mode**.
 2. Chọn **Load unpacked**, trỏ tới thư mục chứa `manifest.json`.
-3. Bấm biểu tượng extension hoặc `Ctrl+Shift+Y` để mở sidebar.
+3. Bấm biểu tượng extension, `Ctrl+M` hoặc `Ctrl+Shift+Y` để mở sidebar. Nếu Edge giữ phím `Ctrl+M` cho chức năng hệ thống, vào `edge://extensions/shortcuts` để đổi phím.
 
 Bản đóng gói sạch ở `dist/pinned-sidebar/`; chỉ chứa các file chạy extension. File phát hành để chuyển máy là `dist/pinned-sidebar-4.0.0.zip`: giải nén ZIP trước, rồi chọn thư mục đã giải nén trong **Load unpacked**. Khi cập nhật, chọn đúng thư mục cài cũ và bấm **Reload** để giữ extension ID và dữ liệu local. Dùng Chromium 120+ hoặc phiên bản Edge tương ứng có Side Panel API. Người sử dụng không cần Node.js.
 

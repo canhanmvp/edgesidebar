@@ -31,6 +31,10 @@
     "_execute_action": {
       "suggested_key": { "default": "Ctrl+Shift+Y" },
       "description": "Mở Pinned Sidebar"
+    },
+    "open-sidebar": {
+      "suggested_key": { "default": "Ctrl+M" },
+      "description": "Mở Pinned Sidebar nhanh"
     }
   },
   "icons": {

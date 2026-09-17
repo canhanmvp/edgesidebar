@@ -511,6 +511,16 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
   );
   return true;
 });
+chrome.commands?.onCommand?.addListener((command) => {
+  if (command !== "open-sidebar") return;
+  chrome.windows
+    .getCurrent()
+    .then((window) => {
+      if (!window?.id) throw new Error("Không xác định được cửa sổ hiện tại.");
+      return chrome.sidePanel.open({ windowId: window.id });
+    })
+    .catch(() => {});
+});
 chrome.storage.onChanged.addListener((changes, area) => {
   if (
     area === "sync" &&

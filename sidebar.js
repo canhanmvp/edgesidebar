@@ -223,8 +223,8 @@ function renderWorkspaces() {
   const pinCount = state.pins.filter(
     (pin) => pin.workspaceId === workspaceId,
   ).length;
-  const sessionCount = savedSessions.filter(
-    (session) => !session.workspaceId || session.workspaceId === workspaceId,
+  const sessionCount = savedSessions.filter((session) =>
+    sessionInWorkspace(session, workspaceId),
   ).length;
   $("pins-tab-count").textContent = pinCount;
   $("sessions-tab-count").textContent = sessionCount;
@@ -300,12 +300,21 @@ function cleanSessions(value) {
     })
     .slice(0, 20);
 }
+// Sessions of a deleted workspace stay visible everywhere instead of silently
+// occupying one of the 20 session slots.
+function sessionInWorkspace(session, workspaceId) {
+  return (
+    !session.workspaceId ||
+    session.workspaceId === workspaceId ||
+    !state?.workspaces.some((item) => item.id === session.workspaceId)
+  );
+}
 function renderSessions() {
   const list = $("session-list");
   if (!list) return;
   list.replaceChildren();
-  const workspaceSessions = savedSessions.filter(
-    (item) => !item.workspaceId || item.workspaceId === activeWorkspaceId,
+  const workspaceSessions = savedSessions.filter((item) =>
+    sessionInWorkspace(item, activeWorkspaceId),
   );
   if ($("sessions-tab-count"))
     $("sessions-tab-count").textContent = workspaceSessions.length;
@@ -808,15 +817,12 @@ function folderMenu(folder, trigger) {
   ]);
 }
 async function movePin(pin, direction) {
-  const peers = state.pins.filter((p) => p.folderId === pin.folderId);
+  const peers = state.pins.filter(
+    (p) => p.workspaceId === pin.workspaceId && p.folderId === pin.folderId,
+  );
   const index = peers.findIndex((p) => p.id === pin.id);
   if (index + direction < 0 || index + direction >= peers.length) return;
-  await mutate({
-    type: "REORDER",
-    id: pin.id,
-    folderId: pin.folderId,
-    beforeId: direction < 0 ? peers[index - 1].id : peers[index + 2]?.id || "",
-  });
+  await mutate({ type: "MOVE_PIN", id: pin.id, direction });
 }
 async function toggleFavorite(pin) {
   await mutate({

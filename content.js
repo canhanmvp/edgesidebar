@@ -13,6 +13,7 @@
     refreshId = 0,
     activeDrag = null,
     repairTimer = 0,
+    resizeSaveTimer = 0,
     lastViewportWidth = innerWidth;
   const DEFAULT_EDGE_INSET = 24;
   const systemTheme = matchMedia("(prefers-color-scheme: dark)");
@@ -391,11 +392,15 @@
           : DEFAULT_EDGE_INSET,
         host.offsetTop,
       );
-      send("OVERLAY_POSITION", {
-        x: position.left,
-        y: position.top,
-        side: wasRightDocked ? "right" : "left",
-      }).catch(() => {});
+      // Resize fires continuously; persist only once the viewport settles.
+      clearTimeout(resizeSaveTimer);
+      resizeSaveTimer = setTimeout(() => {
+        send("OVERLAY_POSITION", {
+          x: position.left,
+          y: position.top,
+          side: wasRightDocked ? "right" : "left",
+        }).catch(() => {});
+      }, 400);
     } else placeRail(left, host.offsetTop);
   });
   chrome.runtime.onMessage.addListener((message) => {

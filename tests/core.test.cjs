@@ -291,3 +291,75 @@ test("large local collection is independent of sync per-key quota", () => {
   assert.equal(state.pins.length, 1200);
   assert.ok(Buffer.byteLength(JSON.stringify(state)) > 8192);
 });
+test("move up/down only swaps pins visible together in the same workspace", () => {
+  let state = C.parse({
+    workspaces: [
+      { id: "A", name: "A" },
+      { id: "B", name: "B" },
+    ],
+    pins: [
+      { id: "a1", url: "a1.example", workspaceId: "A" },
+      { id: "b1", url: "b1.example", workspaceId: "B" },
+      { id: "a2", url: "a2.example", workspaceId: "A" },
+    ],
+  }).state;
+  const order = (s, ws) =>
+    s.pins.filter((p) => p.workspaceId === ws).map((p) => p.id);
+  state = C.reduce(state, { type: "MOVE_PIN", id: "a2", direction: -1 });
+  assert.deepEqual(order(state, "A"), ["a2", "a1"]);
+  assert.deepEqual(order(state, "B"), ["b1"]);
+  state = C.reduce(state, { type: "MOVE_PIN", id: "a2", direction: 1 });
+  assert.deepEqual(order(state, "A"), ["a1", "a2"]);
+  const edge = C.reduce(state, { type: "MOVE_PIN", id: "a1", direction: -1 });
+  assert.deepEqual(order(edge, "A"), ["a1", "a2"]);
+  assert.throws(
+    () => C.reduce(state, { type: "MOVE_PIN", id: "a1", direction: 2 }),
+    /không hợp lệ/,
+  );
+});
+test("folder names are unique per workspace, not across workspaces", () => {
+  let state = C.parse({
+    workspaces: [
+      { id: "A", name: "A" },
+      { id: "B", name: "B" },
+    ],
+    pins: [],
+  }).state;
+  state = C.reduce(state, {
+    type: "SAVE_FOLDER",
+    name: "Work",
+    workspaceId: "A",
+  });
+  state = C.reduce(state, {
+    type: "SAVE_FOLDER",
+    name: "work",
+    workspaceId: "B",
+  });
+  assert.equal(state.folders.length, 2);
+  assert.throws(
+    () =>
+      C.reduce(state, { type: "SAVE_FOLDER", name: "WORK", workspaceId: "A" }),
+    /đã tồn tại/,
+  );
+  const inB = state.folders.find((f) => f.workspaceId === "B");
+  state = C.reduce(state, { type: "SAVE_FOLDER", id: inB.id, name: "Việc B" });
+  assert.equal(state.folders.find((f) => f.id === inB.id).workspaceId, "B");
+});
+test("merge import cannot exceed the workspace limit that parse enforces", () => {
+  const state = C.parse({
+    workspaces: Array.from({ length: 15 }, (_, i) => ({ name: "L" + i })),
+    pins: [],
+  }).state;
+  assert.throws(
+    () =>
+      C.reduce(state, {
+        type: "IMPORT",
+        mode: "merge",
+        data: {
+          workspaces: Array.from({ length: 10 }, (_, i) => ({ name: "R" + i })),
+          pins: [],
+        },
+      }),
+    /Tối đa 20 không gian/,
+  );
+});

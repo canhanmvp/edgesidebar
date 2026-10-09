@@ -73,7 +73,20 @@ function worker(initial = {}) {
       async create() {},
     },
     alarms: { onAlarm: event(), async create() {}, async clear() {} },
-    sidePanel: { async open() {}, async setPanelBehavior() {} },
+    sidePanel: {
+      opened: [],
+      open(options) {
+        this.opened.push(options);
+        return Promise.resolve();
+      },
+      async setPanelBehavior() {},
+    },
+    commands: { onCommand: event() },
+    windows: {
+      async getLastFocused() {
+        return { id: 9 };
+      },
+    },
     contextMenus: { onClicked: event(), async removeAll() {}, create() {} },
     action: { async setBadgeText() {}, async setTitle() {} },
     declarativeNetRequest: {
@@ -414,7 +427,12 @@ test("Perplexity's documented www redirect receives the same narrow embed except
 
 async function cloudSnapshot(pins) {
   const C = require("../core.js");
-  const text = JSON.stringify(C.parse({ pins }).state);
+  return cloudSnapshotOf(C.parse({ pins }).state);
+}
+// Writes `data` verbatim, so tests can deliver snapshots parse() rejects.
+async function cloudSnapshotOf(data) {
+  const C = require("../core.js");
+  const text = JSON.stringify(data);
   const parts = C.chunks(text);
   const digest = Buffer.from(
     await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)),
@@ -495,4 +513,97 @@ test("keeping local data on cloud conflict writes the chosen list", async () => 
     w.chrome.storage.local.data.recoveryBackup.data.pins[0].url,
     "https://remote.example/",
   );
+});
+test("an unreadable cloud snapshot never blocks a fresh device", async () => {
+  // A valid hash over data that parse() rejects (too many workspaces).
+  const w = worker(
+    await cloudSnapshotOf({
+      workspaces: Array.from({ length: 25 }, (_, i) => ({ name: "W" + i })),
+      pins: [{ url: "remote.example" }],
+    }),
+  );
+  const result = await w.send({ type: "GET_STATE" });
+  assert.equal(result.ok, true, result.error);
+  assert.equal(result.state.workspaces.length, 1);
+});
+test("moving the rail is device-local and does not raise a sync conflict", async () => {
+  const w = worker({ pins: [{ url: "local.example" }] });
+  await w.send({ type: "GET_STATE" });
+  await w.send({ type: "SYNC_NOW" });
+  await w.idle();
+  let scheduled = 0;
+  w.chrome.alarms.create = async () => scheduled++;
+  const tab = {
+    id: w.chrome.runtime.id,
+    url: "https://example.com",
+    tab: { id: 1, windowId: 1 },
+  };
+  const moved = await w.send(
+    { type: "OVERLAY_POSITION", x: 10, y: 20, side: "left" },
+    tab,
+  );
+  assert.equal(moved.ok, true, moved.error);
+  await w.send({ type: "OVERLAY_WIDTH", width: 300 }, tab);
+  await w.send({ type: "MUTATE", action: { type: "TOGGLE_FOLDER", id: "" } });
+  assert.equal(w.chrome.storage.local.data.syncStatus.dirty, false);
+  assert.equal(scheduled, 0);
+  await w.chrome.storage.sync.set(
+    await cloudSnapshot([{ url: "remote.example" }]),
+  );
+  await w.idle();
+  const local = w.chrome.storage.local.data;
+  assert.notEqual(local.syncStatus.conflict, true);
+  assert.equal(local["pinned.v2"].pins[0].url, "https://remote.example/");
+  assert.equal(local["pinned.v2"].settings.overlayX, 10);
+});
+test("context menu pins into the active workspace", async () => {
+  const w = worker({ pins: [] });
+  await w.send({ type: "GET_STATE" });
+  await w.send({
+    type: "MUTATE",
+    action: { type: "SAVE_WORKSPACE", workspaceId: "second", name: "Hai" },
+  });
+  await w.chrome.storage.local.set({ activeWorkspaceId: "second" });
+  w.chrome.contextMenus.onClicked.listeners[0](
+    { menuItemId: "pin-to-sidebar", pageUrl: "https://menu.example/" },
+    { id: 3, title: "Menu" },
+  );
+  await w.idle();
+  const pin = w.chrome.storage.local.data["pinned.v2"].pins.find(
+    (item) => item.url === "https://menu.example/",
+  );
+  assert.equal(pin.workspaceId, "second");
+});
+test("Ctrl+M opens the side panel synchronously to keep the user gesture", async () => {
+  const w = worker({ pins: [] });
+  w.chrome.commands.onCommand.emit("open-sidebar", { id: 4, windowId: 7 });
+  assert.equal(JSON.stringify(w.chrome.sidePanel.opened), '[{"windowId":7}]');
+});
+test("only overlay-visible changes refresh every open tab", async () => {
+  const w = worker({ pins: [{ url: "rail.example" }] });
+  await w.send({ type: "GET_STATE" });
+  await w.idle();
+  const sent = [];
+  w.chrome.tabs.query = async () => [
+    { id: 1, url: "https://a.example/" },
+    { id: 2, url: "https://b.example/", discarded: true },
+  ];
+  w.chrome.tabs.sendMessage = async (id) => sent.push(id);
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 10));
+  const pin = (await w.send({ type: "GET_STATE" })).state.pins[0];
+  await w.send({
+    type: "MUTATE",
+    action: { type: "SAVE_PIN", id: pin.id, url: pin.url, note: "riêng tư" },
+  });
+  await settle();
+  assert.deepEqual(sent, []);
+  await w.send({
+    type: "MUTATE",
+    action: { type: "SAVE_PIN", id: pin.id, url: pin.url, title: "Mới" },
+  });
+  await settle();
+  assert.deepEqual(sent, [1]);
+  const overlay = await w.send({ type: "OVERLAY_STATE" });
+  assert.equal(overlay.settings.sync, undefined);
+  assert.equal(overlay.settings.theme, "system");
 });

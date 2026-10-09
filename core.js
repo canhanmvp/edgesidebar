@@ -359,28 +359,31 @@
       case "SAVE_FOLDER": {
         const name = label(action.name, 80);
         if (!name) fail("Hãy nhập tên thư mục.");
+        const existing = action.id
+          ? next.folders.find((f) => f.id === action.id) ||
+            fail("Thư mục không còn tồn tại.")
+          : null;
+        // Folder names are unique per workspace, matching parse() and IMPORT.
+        const workspaceId =
+          existing?.workspaceId ||
+          (next.workspaces.some((item) => item.id === action.workspaceId)
+            ? action.workspaceId
+            : next.workspaces[0]?.id || DEFAULT_WORKSPACE_ID);
         if (
           next.folders.some(
             (f) =>
+              f.workspaceId === workspaceId &&
               f.name.toLocaleLowerCase("vi") === name.toLocaleLowerCase("vi") &&
               f.id !== action.id,
           )
         )
           fail("Tên thư mục đã tồn tại.");
-        if (action.id) {
-          const item =
-            next.folders.find((f) => f.id === action.id) ||
-            fail("Thư mục không còn tồn tại.");
-          item.name = name;
-        } else
+        if (existing) existing.name = name;
+        else
           next.folders.push({
             id: id(action.folderId, uid),
             name,
-            workspaceId: next.workspaces.some(
-              (item) => item.id === action.workspaceId,
-            )
-              ? action.workspaceId
-              : next.workspaces[0]?.id || DEFAULT_WORKSPACE_ID,
+            workspaceId,
           });
         break;
       }
@@ -504,6 +507,23 @@
         next.pins.splice(index, 0, pin);
         break;
       }
+      case "MOVE_PIN": {
+        // Peers are the pins shown together: same workspace and same folder.
+        const pin = findPin(action.id);
+        if (![-1, 1].includes(action.direction))
+          fail("Hướng di chuyển không hợp lệ.");
+        const peers = next.pins.filter(
+          (p) =>
+            p.workspaceId === pin.workspaceId && p.folderId === pin.folderId,
+        );
+        const target = peers[peers.indexOf(pin) + action.direction];
+        if (!target) break;
+        const from = next.pins.indexOf(pin);
+        const to = next.pins.indexOf(target);
+        next.pins[from] = target;
+        next.pins[to] = pin;
+        break;
+      }
       case "SETTINGS":
         next.settings = settings({ ...next.settings, ...action.patch });
         break;
@@ -593,6 +613,9 @@
     }
     if (next.pins.length > MAX_PINS || next.folders.length > 500)
       fail("Đã đạt giới hạn 5.000 trang hoặc 500 thư mục.");
+    // parse() rejects larger states, so another device could never read them.
+    if (next.workspaces.length > MAX_WORKSPACES)
+      fail(`Tối đa ${MAX_WORKSPACES} không gian.`);
     next.revision = state.revision + 1;
     next.updatedAt = Date.now();
     return next;

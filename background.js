@@ -49,7 +49,14 @@ async function readCloud() {
   if (parts.some((p) => typeof p !== "string")) return null;
   const text = parts.join("");
   if ((await hash(text)) !== manifest.hash) return null;
-  return { state: C.parse(JSON.parse(text)).state, manifest };
+  // An unreadable snapshot must never block startup on a fresh device; treat
+  // it like a missing one so the next upload replaces it with valid data.
+  try {
+    return { state: C.parse(JSON.parse(text)).state, manifest };
+  } catch (error) {
+    console.warn("Ignoring invalid cloud snapshot:", error);
+    return null;
+  }
 }
 function initialize() {
   if (!initialized)
@@ -140,10 +147,15 @@ async function readState() {
   await initialize();
   return (await chrome.storage.local.get(STATE_KEY))[STATE_KEY];
 }
+// Settings are per device: receiveCloud keeps local settings, so changing them
+// (theme, rail position, collapsed folders…) must not mark the list dirty and
+// later raise a false sync conflict.
+const DEVICE_ONLY_ACTIONS = new Set(["SETTINGS", "TOGGLE_FOLDER"]);
 async function commit(action) {
   const state = await readState();
   const next = C.reduce(state, action);
   const { syncStatus = {} } = await chrome.storage.local.get("syncStatus");
+  const deviceOnly = DEVICE_ONLY_ACTIONS.has(action.type);
   await chrome.storage.local.set({
     [STATE_KEY]: next,
     ...(action.type === "IMPORT" && action.mode === "replace"
@@ -157,10 +169,13 @@ async function commit(action) {
             recoveryBackup: { time: Date.now(), data: state },
           }
         : {}),
-    syncStatus: { ...syncStatus, dirty: true, message: "" },
+    ...(deviceOnly
+      ? {}
+      : { syncStatus: { ...syncStatus, dirty: true, message: "" } }),
   });
-  if (next.settings.sync) await scheduleSync();
-  else await chrome.alarms.clear("pinned-sync");
+  if (!next.settings.sync) await chrome.alarms.clear("pinned-sync");
+  else if (!deviceOnly || (!state.settings.sync && syncStatus.dirty))
+    await scheduleSync();
   return next;
 }
 async function upload(force = false) {
@@ -310,24 +325,41 @@ async function applyEmbedRules(origins) {
     addRules,
   });
 }
+// The only settings content.js reads.
+const OVERLAY_SETTINGS = [
+  "theme",
+  "openMode",
+  "overlay",
+  "overlaySide",
+  "overlayX",
+  "overlayY",
+  "overlayWidth",
+];
+async function activeWorkspace(state) {
+  const local = await chrome.storage.local.get("activeWorkspaceId");
+  return state.workspaces.some(
+    (workspace) => workspace.id === local.activeWorkspaceId,
+  )
+    ? local.activeWorkspaceId
+    : state.settings.workspaceId;
+}
+function overlayView(state, workspaceId) {
+  return {
+    pins: state.settings.overlay
+      ? state.pins
+          .filter((pin) => pin.workspaceId === workspaceId)
+          .map(({ id, title, url }) => ({ id, title, url }))
+      : [],
+    settings: Object.fromEntries(
+      OVERLAY_SETTINGS.map((key) => [key, state.settings[key]]),
+    ),
+  };
+}
+async function overlayState() {
+  const state = await readState();
+  return overlayView(state, await activeWorkspace(state));
+}
 async function handle(message, sender) {
-  if (message.type === "OVERLAY_STATE") {
-    const state = await readState();
-    const local = await chrome.storage.local.get("activeWorkspaceId");
-    const workspaceId = state.workspaces.some(
-      (workspace) => workspace.id === local.activeWorkspaceId,
-    )
-      ? local.activeWorkspaceId
-      : state.settings.workspaceId;
-    return {
-      pins: state.settings.overlay
-        ? state.pins
-            .filter((pin) => pin.workspaceId === workspaceId)
-            .map(({ id, title, url }) => ({ id, title, url }))
-        : [],
-      settings: state.settings,
-    };
-  }
   if (message.type === "OVERLAY_WIDTH") {
     if (!sender.tab) throw new Error("Nguồn yêu cầu không hợp lệ.");
     await commit({ type: "SETTINGS", patch: { overlayWidth: message.width } });
@@ -468,6 +500,16 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
     typeof message.type !== "string"
   )
     return false;
+  if (message.type === "OVERLAY_STATE") {
+    // Read-only and requested by every tab after each change: keep it out of
+    // the write queue so it never delays the user's own edits. A storage.local
+    // write is atomic, so reads always see a complete state.
+    overlayState().then(
+      (data) => reply({ ok: true, ...data }),
+      (error) => reply({ ok: false, error: error.message }),
+    );
+    return true;
+  }
   if (message.type === "OPEN_PANEL" && sender.tab) {
     // Preserve user activation: open before awaiting storage or the mutation queue.
     const opening = chrome.sidePanel.open({ windowId: sender.tab.windowId });
@@ -511,16 +553,44 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
   );
   return true;
 });
-chrome.commands?.onCommand?.addListener((command) => {
+chrome.commands?.onCommand?.addListener((command, tab) => {
   if (command !== "open-sidebar") return;
+  // sidePanel.open() needs the shortcut's user gesture, which is lost after
+  // any await. Open synchronously with the tab Chrome passes to the listener.
+  if (Number.isInteger(tab?.windowId)) {
+    chrome.sidePanel
+      .open({ windowId: tab.windowId })
+      .catch((error) => console.warn("Cannot open side panel:", error));
+    return;
+  }
   chrome.windows
-    .getCurrent()
-    .then((window) => {
-      if (!window?.id) throw new Error("Không xác định được cửa sổ hiện tại.");
-      return chrome.sidePanel.open({ windowId: window.id });
-    })
-    .catch(() => {});
+    .getLastFocused()
+    .then((window) => chrome.sidePanel.open({ windowId: window.id }))
+    .catch((error) => console.warn("Cannot open side panel:", error));
 });
+// Only overlay-visible data should wake every open tab: notes, tags, folders
+// and other workspaces never reach the rail.
+async function overlaySignature(state) {
+  return state
+    ? JSON.stringify(overlayView(state, await activeWorkspace(state)))
+    : "";
+}
+async function refreshOverlays(changes) {
+  const change = changes[STATE_KEY];
+  if (
+    !changes.activeWorkspaceId &&
+    change?.oldValue &&
+    (await overlaySignature(change.oldValue)) ===
+      (await overlaySignature(change.newValue))
+  )
+    return;
+  const tabs = await chrome.tabs.query({ url: ["http://*/*", "https://*/*"] });
+  for (const tab of tabs)
+    if (!tab.discarded)
+      chrome.tabs
+        .sendMessage(tab.id, { type: "REFRESH_OVERLAY" })
+        .catch(() => {});
+}
 chrome.storage.onChanged.addListener((changes, area) => {
   if (
     area === "sync" &&
@@ -529,17 +599,8 @@ chrome.storage.onChanged.addListener((changes, area) => {
     )
   )
     serial(receiveCloud).catch(syncError);
-  if (area === "local" && (changes[STATE_KEY] || changes.activeWorkspaceId)) {
-    chrome.tabs
-      .query({ url: ["http://*/*", "https://*/*"] })
-      .then((tabs) => {
-        for (const tab of tabs)
-          chrome.tabs
-            .sendMessage(tab.id, { type: "REFRESH_OVERLAY" })
-            .catch(() => {});
-      })
-      .catch(() => {});
-  }
+  if (area === "local" && (changes[STATE_KEY] || changes.activeWorkspaceId))
+    refreshOverlays(changes).catch(() => {});
 });
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === "pinned-sync") serial(() => upload()).catch(syncError);
@@ -566,11 +627,12 @@ chrome.runtime.onInstalled.addListener(() =>
 chrome.runtime.onStartup.addListener(() => serial(setup).catch(console.error));
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId !== "pin-to-sidebar") return;
-  serial(() =>
+  serial(async () =>
     commit({
       type: "SAVE_PIN",
       url: info.linkUrl || info.pageUrl,
       title: info.linkUrl ? "" : tab?.title,
+      workspaceId: await activeWorkspace(await readState()),
     }),
   )
     .then(async () => {

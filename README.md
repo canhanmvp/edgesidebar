@@ -105,6 +105,16 @@ npm run build
 - `tests/`: unit/integration tests và kiểm thử extension thật bằng Chromium với profile tách biệt.
 - `scripts/build.cjs`: sao chép đúng các file runtime sang `dist/pinned-sidebar`.
 
+### CI với runner Docker trên máy
+
+`.github/workflows/test.yml` chạy `npm test` khi push lên `main` và khi có pull request, trên runner tự host có nhãn `edgesidebar`. Runner là container chính thức `ghcr.io/actions/actions-runner` trong `ci/runner/`:
+
+1. Lấy token: repo **Settings → Actions → Runners → New self-hosted runner**, chép giá trị sau `--token` (cần quyền Admin, hết hạn sau 1 giờ, chỉ dùng một lần).
+2. Chép `ci/runner/.env.example` thành `ci/runner/.env` và điền `RUNNER_TOKEN`. File `.env` không được commit.
+3. `docker compose -f ci/runner/compose.yml up -d`. Đăng ký được giữ trong volume `runner-home`, khởi động lại máy không cần token mới. Gỡ hẳn: `docker compose -f ci/runner/compose.yml down -v` rồi xóa runner trong Settings.
+
+Repo công khai nên workflow bỏ qua pull request từ fork, và container không có Docker socket hay `sudo`. Nên bật thêm **Settings → Actions → General → Fork pull request workflows → Require approval for all outside collaborators**, vì fork có thể sửa chính file workflow.
+
 Bộ kiểm thử browser không đăng nhập tài khoản cá nhân; dùng HTTP server local có fixture chặn iframe. Ảnh QA và báo cáo nằm trong `test-results/`. Sync giữa hai tài khoản/thiết bị Edge thực tế cần kiểm tra thủ công; các bài tự động kiểm tra API, quota, bản chụp chưa đủ và xung đột trong môi trường kiểm thử.
 
 Tài liệu tham chiếu: [Side Panel](https://developer.chrome.com/docs/extensions/reference/api/sidePanel), [Storage](https://developer.chrome.com/docs/extensions/reference/api/storage), [Declarative Net Request](https://developer.chrome.com/docs/extensions/reference/api/declarativeNetRequest), [Playwright extension testing](https://playwright.dev/docs/chrome-extensions).

@@ -230,15 +230,15 @@
 .move-handle {
   position: absolute;
   z-index: 2;
-  top: 1px;
-  left: 8px;
-  width: 32px;
-  height: 9px;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 12px;
   color: var(--muted);
   cursor: grab;
   text-align: center;
   font-size: 10px;
-  line-height: 8px;
+  line-height: 11px;
   letter-spacing: 1px;
   opacity: 0;
   touch-action: none;
@@ -383,4 +383,13 @@
   * {
     transition: none !important;
   }
+}
+
+.home {
+  cursor: grab !important;
+}
+.rail.moving,
+.rail.moving * {
+  cursor: grabbing !important;
+  user-select: none;
 }

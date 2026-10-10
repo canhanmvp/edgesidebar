@@ -485,6 +485,40 @@ async function waitState(page, count) {
     );
   });
   passed("icon rail can be dragged and remembers its position");
+  // Drag from anywhere on the rail (an icon, then the logo) and snap to a side.
+  const stateX = () =>
+    page.evaluate(async () => {
+      const data = await chrome.runtime.sendMessage({ type: "GET_STATE" });
+      return data.state.settings;
+    });
+  const railPoint = () =>
+    site.evaluate(() => {
+      const r = document
+        .querySelector("#pinned-sidebar-v2")
+        .getBoundingClientRect();
+      return { x: r.x, y: r.y };
+    });
+  let box = await railPoint();
+  await site.mouse.move(box.x + 24, box.y + 80);
+  await site.mouse.down();
+  await site.mouse.move(180, 300, { steps: 8 });
+  await site.mouse.up();
+  await page.waitForFunction(async () => {
+    const data = await chrome.runtime.sendMessage({ type: "GET_STATE" });
+    const { overlayX } = data.state.settings;
+    return overlayX > 100 && overlayX < 250;
+  });
+  assert.equal((await stateX()).overlaySide, "left");
+  box = await railPoint();
+  await site.mouse.move(box.x + 24, box.y + 25);
+  await site.mouse.down();
+  await site.mouse.move(14, 200, { steps: 8 });
+  await site.mouse.up();
+  await page.waitForFunction(async () => {
+    const data = await chrome.runtime.sendMessage({ type: "GET_STATE" });
+    return data.state.settings.overlayX === 24;
+  });
+  passed("rail drags from icons and logo, and snaps to the nearest side");
   await site.screenshot({
     path: path.join(out, "overlay.png"),
     fullPage: true,

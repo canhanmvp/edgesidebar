@@ -207,40 +207,80 @@
     const moveHandle = el("div", "move-handle", "⠿");
     moveHandle.title = "Kéo để di chuyển thanh icon";
     moveHandle.setAttribute("aria-label", "Kéo để di chuyển thanh icon");
-    moveHandle.addEventListener("pointerdown", (event) => {
-      if (event.button !== 0) return;
-      event.preventDefault();
+    // Any part of the rail can be dragged: a press that travels more than a
+    // few pixels becomes a move (and swallows the click it would trigger);
+    // a press that stays put is still an ordinary click on the icon.
+    const DRAG_THRESHOLD = 5;
+    const SNAP_DISTANCE = 96;
+    rail.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0 || event.target.closest(".close-rail, .resizer"))
+        return;
       activeDrag?.abort();
       rail.classList.remove("resizing");
       activeDrag = new AbortController();
       const { signal } = activeDrag;
       const start = { left: host.offsetLeft, top: host.offsetTop };
       const pointer = { x: event.clientX, y: event.clientY };
-      moveHandle.setPointerCapture(event.pointerId);
-      rail.classList.add("moving");
-      const move = (next) =>
-        placeRail(
-          start.left + next.clientX - pointer.x,
-          start.top + next.clientY - pointer.y,
-        );
+      const onHandle = event.target.closest(".move-handle");
+      let dragging = false;
+      if (onHandle) event.preventDefault();
+      const begin = () => {
+        dragging = true;
+        rail.classList.add("moving");
+        try {
+          rail.setPointerCapture(event.pointerId);
+        } catch {}
+      };
+      if (onHandle) begin();
       const end = (cancelled) => {
         rail?.classList.remove("moving");
         activeDrag?.abort();
         activeDrag = null;
-        if (cancelled) return;
-        const position = clampPosition(host.offsetLeft, host.offsetTop);
-        placeRail(position.left, position.top);
+        if (!dragging) return;
+        // Swallow the click that follows a drag, then stop listening.
+        const swallow = (click) => {
+          click.preventDefault();
+          click.stopImmediatePropagation();
+        };
+        rail?.addEventListener("click", swallow, { capture: true, once: true });
+        setTimeout(() => rail?.removeEventListener("click", swallow, true), 0);
+        if (cancelled || !host) return;
+        // Dropping near a side docks the rail against it.
+        let { left, top } = clampPosition(host.offsetLeft, host.offsetTop);
+        if (left < SNAP_DISTANCE) left = 0;
+        else if (left + 48 > innerWidth - SNAP_DISTANCE) left = innerWidth;
+        const position = placeRail(left, top);
         send("OVERLAY_POSITION", {
           x: position.left,
           y: position.top,
           side: position.left < innerWidth / 2 ? "left" : "right",
         }).catch((error) => message(error.message));
       };
-      moveHandle.addEventListener("pointermove", move, { signal });
-      moveHandle.addEventListener("pointerup", () => end(false), { signal });
-      moveHandle.addEventListener("pointercancel", () => end(true), { signal });
-      moveHandle.addEventListener("lostpointercapture", () => end(true), {
+      addEventListener(
+        "pointermove",
+        (next) => {
+          if (!dragging) {
+            if (
+              Math.hypot(next.clientX - pointer.x, next.clientY - pointer.y) <
+              DRAG_THRESHOLD
+            )
+              return;
+            begin();
+          }
+          placeRail(
+            start.left + next.clientX - pointer.x,
+            start.top + next.clientY - pointer.y,
+          );
+        },
+        { signal, capture: true },
+      );
+      addEventListener("pointerup", () => end(false), {
         signal,
+        capture: true,
+      });
+      addEventListener("pointercancel", () => end(true), {
+        signal,
+        capture: true,
       });
     });
     rail.append(moveHandle);

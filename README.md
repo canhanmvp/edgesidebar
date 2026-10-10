@@ -1,6 +1,6 @@
 # Pinned Sidebar 4.0
 
-Extension Manifest V3 cho Edge/Chrome: biến sidebar thành không gian làm việc cá nhân để ghim, tìm, sắp xếp website và lưu lại các phiên tab. Giao diện tiếng Việt có Sáng, Tối, Đen, Pastel hoặc theo hệ thống; có chế độ chỉ biểu tượng.
+Extension Manifest V3 cho Edge/Chrome: biến sidebar thành không gian làm việc cá nhân để ghim, tìm, sắp xếp website và lưu lại các phiên tab. Giao diện tiếng Việt gọn trong một màn hình (thanh công cụ cố định, chỉ danh sách cuộn), 16 giao diện màu: theo hệ thống, Sáng, Tối, Đen, Pastel, Đại dương, Hoàng hôn, Oải hương, Hồng đào, Cát, Nửa đêm, Rừng, Nord, Mocha, Mận, Dracula; có chế độ chỉ biểu tượng.
 
 ## Có gì mới trong 4.0
 

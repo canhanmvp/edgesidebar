@@ -36,21 +36,21 @@
 }
 .rail[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #1d2924;
-  --surface: #24332c;
+  --bg: #151e1b;
+  --surface: #1d2924;
   --ink: #e2ece5;
   --muted: #a0b2a6;
-  --line: #3b4c41;
-  --soft: #2b4335;
+  --line: #314139;
+  --soft: #24332c;
 }
 .rail[data-theme="black"] {
   color-scheme: dark;
-  --bg: #121212;
-  --surface: #202020;
+  --bg: #080808;
+  --surface: #121212;
   --ink: #f5f5f5;
   --muted: #b7b7b7;
-  --line: #383838;
-  --soft: #282828;
+  --line: #333;
+  --soft: #202020;
 }
 .rail[data-theme="pastel"] {
   color-scheme: light;
@@ -60,6 +60,105 @@
   --muted: #827487;
   --line: #ebddea;
   --soft: #f8edf8;
+}
+.rail[data-theme="ocean"] {
+  color-scheme: light;
+  --bg: #f3f8fc;
+  --surface: #fff;
+  --ink: #1b3347;
+  --muted: #5f7a90;
+  --line: #d6e3ee;
+  --soft: #e6f0f8;
+}
+.rail[data-theme="sunset"] {
+  color-scheme: light;
+  --bg: #fff8f2;
+  --surface: #fff;
+  --ink: #46291c;
+  --muted: #8a6a58;
+  --line: #f1ddd0;
+  --soft: #fdeede;
+}
+.rail[data-theme="lavender"] {
+  color-scheme: light;
+  --bg: #f7f5fd;
+  --surface: #fff;
+  --ink: #2f2a4a;
+  --muted: #766f94;
+  --line: #e0dbf1;
+  --soft: #ece8f8;
+}
+.rail[data-theme="rose"] {
+  color-scheme: light;
+  --bg: #fff6f7;
+  --surface: #fff;
+  --ink: #4a2230;
+  --muted: #8f6674;
+  --line: #f3d9df;
+  --soft: #fde8ec;
+}
+.rail[data-theme="sand"] {
+  color-scheme: light;
+  --bg: #f8f4ea;
+  --surface: #fffdf7;
+  --ink: #3a3326;
+  --muted: #7b7260;
+  --line: #e3dac2;
+  --soft: #efe8d6;
+}
+.rail[data-theme="midnight"] {
+  color-scheme: dark;
+  --bg: #0d1424;
+  --surface: #141d33;
+  --ink: #e3eaf8;
+  --muted: #93a3c4;
+  --line: #26345a;
+  --soft: #1b2742;
+}
+.rail[data-theme="forest"] {
+  color-scheme: dark;
+  --bg: #0f1a14;
+  --surface: #16241c;
+  --ink: #e4f0e6;
+  --muted: #9ab3a2;
+  --line: #284233;
+  --soft: #1d3125;
+}
+.rail[data-theme="nord"] {
+  color-scheme: dark;
+  --bg: #2e3440;
+  --surface: #3b4252;
+  --ink: #eceff4;
+  --muted: #a9b4c8;
+  --line: #4c566a;
+  --soft: #434c5e;
+}
+.rail[data-theme="mocha"] {
+  color-scheme: dark;
+  --bg: #1e1714;
+  --surface: #2a201b;
+  --ink: #f1e6dc;
+  --muted: #b9a392;
+  --line: #46372c;
+  --soft: #34281f;
+}
+.rail[data-theme="plum"] {
+  color-scheme: dark;
+  --bg: #1a1224;
+  --surface: #251a33;
+  --ink: #efe6f8;
+  --muted: #b2a0c8;
+  --line: #41305a;
+  --soft: #2f2142;
+}
+.rail[data-theme="dracula"] {
+  color-scheme: dark;
+  --bg: #282a36;
+  --surface: #343746;
+  --ink: #f8f8f2;
+  --muted: #aab0cf;
+  --line: #4b4f66;
+  --soft: #3d4052;
 }
 .rail:hover:not(.moving),
 .rail:focus-within,

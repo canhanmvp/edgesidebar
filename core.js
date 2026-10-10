@@ -14,6 +14,24 @@
     workspaceId: "workspace-default",
     collapsed: [],
   });
+  const THEMES = Object.freeze([
+    ["system", "Theo hệ thống"],
+    ["light", "Sáng"],
+    ["dark", "Tối"],
+    ["black", "Đen"],
+    ["pastel", "Pastel"],
+    ["ocean", "Đại dương"],
+    ["sunset", "Hoàng hôn"],
+    ["lavender", "Oải hương"],
+    ["rose", "Hồng đào"],
+    ["sand", "Cát"],
+    ["midnight", "Nửa đêm"],
+    ["forest", "Rừng"],
+    ["nord", "Nord"],
+    ["mocha", "Mocha"],
+    ["plum", "Mận"],
+    ["dracula", "Dracula"],
+  ]);
   const DEFAULT_WORKSPACE_ID = "workspace-default";
   const MAX_PINS = 5000;
   const MAX_WORKSPACES = 20;
@@ -85,7 +103,7 @@
     for (const key of ["compact", "overlay", "sync"])
       if (typeof input[key] === "boolean") result[key] = input[key];
     for (const [key, choices] of Object.entries({
-      theme: ["system", "light", "dark", "black", "pastel"],
+      theme: THEMES.map(([id]) => id),
       overlaySide: ["left", "right"],
       openMode: ["sidebar", "tab"],
     })) {
@@ -640,6 +658,7 @@
   }
   const api = {
     DEFAULTS,
+    THEMES,
     MAX_PINS,
     uid,
     url,

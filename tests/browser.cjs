@@ -64,7 +64,7 @@ async function waitState(page, count) {
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(`chrome-extension://${id}/sidebar.html`);
   await waitState(page, 3);
-  assert.equal(await page.locator("h1").innerText(), "Mọi thứ, ngay bên cạnh.");
+  assert.equal(await page.locator("#search").isVisible(), true);
   assert.match(
     await page.locator(".site-favicon").first().getAttribute("src"),
     /^https:\/\/www\.google\.com\/s2\/favicons\?sz=64&domain_url=/,

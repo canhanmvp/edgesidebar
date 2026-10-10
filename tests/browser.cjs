@@ -356,6 +356,32 @@ async function waitState(page, count) {
   });
   await page.locator("#compact-btn").click();
   passed("black, pastel, light/dark/compact layouts and 280px viewport");
+  // Theme swatches: click, roving focus + arrow keys; header fits at 280px.
+  await page.locator("#settings-btn").click();
+  await page.locator('.theme-swatch[data-theme="ocean"]').click();
+  await page.waitForFunction(
+    () => document.documentElement.dataset.theme === "ocean",
+  );
+  assert.equal(await page.locator('.theme-swatch[tabindex="0"]').count(), 1);
+  await page.keyboard.press("ArrowRight");
+  await page.waitForFunction(
+    () => document.documentElement.dataset.theme === "sunset",
+  );
+  assert.equal(
+    await page.locator(".theme-swatch.is-selected").getAttribute("data-theme"),
+    "sunset",
+  );
+  await page.locator("#settings-dialog [data-close]").click();
+  await page.setViewportSize({ width: 280, height: 700 });
+  assert.ok(
+    await page.evaluate(
+      () =>
+        document.querySelector("#settings-btn").getBoundingClientRect().right <=
+        innerWidth,
+    ),
+  );
+  await page.setViewportSize({ width: 380, height: 850 });
+  passed("theme swatches support click and arrow keys; header fits 280px");
   // Native DNR matching is enabled automatically; allowed only for sidebar initiator.
   await page.getByRole("link", { name: /^Trang thử nghiệm —/ }).click();
   await page.locator("#viewer:not([hidden])").waitFor();

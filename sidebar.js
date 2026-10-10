@@ -210,10 +210,24 @@ function renderThemePicker() {
     }),
   );
 }
+$("theme-grid").addEventListener("keydown", (event) => {
+  const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[
+    event.key
+  ];
+  if (!step) return;
+  const swatches = [...$("theme-grid").children];
+  const index = swatches.indexOf(document.activeElement);
+  if (index < 0) return;
+  event.preventDefault();
+  const next = swatches[(index + step + swatches.length) % swatches.length];
+  next.focus();
+  next.click();
+});
 function markThemePicker(theme) {
   for (const swatch of $("theme-grid").children) {
     const on = swatch.dataset.theme === theme;
     swatch.setAttribute("aria-checked", String(on));
+    swatch.tabIndex = on ? 0 : -1;
     swatch.classList.toggle("is-selected", on);
   }
 }

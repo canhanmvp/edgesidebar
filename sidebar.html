@@ -17,6 +17,30 @@
           ><span class="brand-mark" data-icon="panel"></span
           ><span>pinned<span class="brand-dot">.</span></span></a
         >
+        <nav class="view-switcher" aria-label="Nội dung sidebar">
+          <button
+            class="view-tab is-active"
+            id="pins-tab"
+            type="button"
+            aria-selected="true"
+            title="Trang ghim"
+          >
+            <span data-icon="grid"></span
+            ><span class="view-tab-label">Ghim</span>
+            <span class="view-tab-count" id="pins-tab-count">0</span>
+          </button>
+          <button
+            class="view-tab"
+            id="sessions-tab"
+            type="button"
+            aria-selected="false"
+            title="Phiên tab"
+          >
+            <span data-icon="history"></span
+            ><span class="view-tab-label">Phiên</span>
+            <span class="view-tab-count" id="sessions-tab-count">0</span>
+          </button>
+        </nav>
         <div class="header-actions">
           <button
             class="icon-button"
@@ -35,85 +59,77 @@
           ></button>
         </div>
       </header>
-      <nav class="view-switcher" aria-label="Nội dung sidebar">
-        <button
-          class="view-tab is-active"
-          id="pins-tab"
-          type="button"
-          aria-selected="true"
-        >
-          <span data-icon="grid"></span>Trang ghim
-          <span class="view-tab-count" id="pins-tab-count">0</span>
-        </button>
-        <button
-          class="view-tab"
-          id="sessions-tab"
-          type="button"
-          aria-selected="false"
-        >
-          <span data-icon="history"></span>Phiên tab
-          <span class="view-tab-count" id="sessions-tab-count">0</span>
-        </button>
-      </nav>
       <main id="list-view">
-        <section class="intro">
-          <p class="eyebrow">
-            <span class="live-dot"></span> KHÔNG GIAN CỦA BẠN
-          </p>
-          <h1>Mọi thứ, ngay bên cạnh.</h1>
-          <p class="intro-copy">Những trang quen thuộc. Một góc thật gọn.</p>
-        </section>
-        <div class="workspace-bar" aria-label="Không gian làm việc">
-          <label class="workspace-select-wrap">
-            <span class="workspace-label">KHÔNG GIAN</span>
-            <select id="workspace-select" aria-label="Chọn không gian"></select>
-          </label>
-          <button
-            class="icon-button"
-            id="add-workspace"
-            title="Tạo không gian mới"
-            aria-label="Tạo không gian mới"
-            data-icon="plus"
-          ></button>
-          <button
-            class="icon-button"
-            id="workspace-more"
-            title="Quản lý không gian hiện tại"
-            aria-label="Quản lý không gian hiện tại"
-            data-icon="more"
-            aria-haspopup="menu"
-          ></button>
-        </div>
-        <div class="search-wrap">
-          <span data-icon="search"></span>
-          <input
-            id="search"
-            type="search"
-            placeholder="Tìm trang hoặc thư mục…"
-            aria-label="Tìm trang hoặc thư mục"
-            autocomplete="off"
-          />
-          <kbd title="Phím tắt tìm kiếm">/</kbd>
-        </div>
-        <div class="quick-actions">
-          <button class="button primary" id="pin-current">
-            <span data-icon="pin"></span>Ghim tab hiện tại
-          </button>
-          <button
-            class="button add-button"
-            id="add-pin"
-            title="Thêm website"
-            aria-label="Thêm website"
-            data-icon="plus"
-          ></button>
-        </div>
-        <div class="filter-bar" aria-label="Bộ lọc trang ghim">
-          <button class="filter-button is-active" id="filter-all" type="button">
-            Tất cả
-          </button>
-          <button class="filter-button" id="filter-favorites" type="button">
-            <span aria-hidden="true">★</span> Yêu thích
-          </button>
+        <div class="toolbar">
+          <div class="toolbar-row">
+            <div class="search-wrap">
+              <span data-icon="search"></span>
+              <input
+                id="search"
+                type="search"
+                placeholder="Tìm trang hoặc thư mục…"
+                aria-label="Tìm trang hoặc thư mục"
+                autocomplete="off"
+              />
+              <kbd title="Phím tắt tìm kiếm">/</kbd>
+            </div>
+            <button
+              class="button primary pin-button"
+              id="pin-current"
+              title="Ghim tab hiện tại"
+              aria-label="Ghim tab hiện tại"
+            >
+              <span data-icon="pin"></span><span class="pin-label">Ghim</span>
+            </button>
+            <button
+              class="icon-button bordered"
+              id="add-pin"
+              title="Thêm website"
+              aria-label="Thêm website"
+              data-icon="plus"
+            ></button>
+          </div>
+          <div
+            class="toolbar-row workspace-bar"
+            aria-label="Không gian làm việc"
+          >
+            <label class="workspace-select-wrap">
+              <span class="visually-hidden">Không gian</span>
+              <select
+                id="workspace-select"
+                aria-label="Chọn không gian"
+                title="Không gian làm việc"
+              ></select>
+            </label>
+            <div class="filter-bar" aria-label="Bộ lọc trang ghim">
+              <button
+                class="filter-button is-active"
+                id="filter-all"
+                type="button"
+              >
+                Tất cả
+              </button>
+              <button class="filter-button" id="filter-favorites" type="button">
+                <span aria-hidden="true">★</span
+                ><span class="filter-label"> Thích</span>
+              </button>
+            </div>
+            <button
+              class="icon-button bordered"
+              id="add-workspace"
+              title="Tạo không gian mới"
+              aria-label="Tạo không gian mới"
+              data-icon="plus"
+            ></button>
+            <button
+              class="icon-button bordered"
+              id="workspace-more"
+              title="Quản lý không gian hiện tại"
+              aria-label="Quản lý không gian hiện tại"
+              data-icon="more"
+              aria-haspopup="menu"
+            ></button>
+          </div>
         </div>
         <section
           class="session-strip"
@@ -121,15 +137,21 @@
           aria-label="Phiên làm việc"
         >
           <div class="session-strip-heading">
-            <span>PHIÊN LÀM VIỆC</span>
-            <button class="text-button" id="save-session">Lưu các tab</button>
+            <span>PHIÊN</span>
+            <div id="session-list" class="session-list"></div>
+            <button
+              class="text-button"
+              id="save-session"
+              title="Lưu các tab đang mở thành một phiên"
+            >
+              <span data-icon="plus"></span>Lưu tab
+            </button>
           </div>
-          <div id="session-list" class="session-list"></div>
         </section>
         <div class="collection-heading">
           <span>BỘ SƯU TẬP <span id="pin-count" class="count">0</span></span
           ><button class="text-button" id="add-folder">
-            <span data-icon="folder-plus"></span>Thư mục mới
+            <span data-icon="folder-plus"></span>Thư mục
           </button>
         </div>
         <p id="loading-state" class="notice" role="status">
@@ -361,16 +383,22 @@
       </div>
       <section class="settings-section">
         <h3>Giao diện & thao tác</h3>
+        <div class="setting-block">
+          <span class="setting-title">Màu giao diện</span>
+          <div
+            class="theme-grid"
+            id="theme-grid"
+            role="radiogroup"
+            aria-label="Chọn giao diện"
+          ></div>
+          <select
+            id="setting-theme"
+            class="visually-hidden"
+            tabindex="-1"
+            aria-hidden="true"
+          ></select>
+        </div>
         <label class="setting-row"
-          ><span>Giao diện</span
-          ><select id="setting-theme">
-            <option value="system">Theo hệ thống</option>
-            <option value="light">Sáng</option>
-            <option value="dark">Tối</option>
-            <option value="black">Đen</option>
-            <option value="pastel">Pastel</option>
-          </select></label
-        ><label class="setting-row"
           ><span>Bấm vào website</span
           ><select id="setting-openMode">
             <option value="sidebar">Mở sidebar</option>
@@ -394,10 +422,7 @@
           </select></label
         >
         <p class="subtle">
-          Thanh thu gọn chỉ hiện icon như Cốc Cốc. Bấm icon để mở website; rê
-          chuột hoặc dùng bàn phím để xem tên. Kéo dấu ⠿ ở đầu thanh để di
-          chuyển, hoặc kéo mép để đổi độ rộng. Thay đổi áp dụng ngay trên các
-          trang đã tải extension.
+          Rê chuột để xem tên, kéo ⠿ để di chuyển, kéo mép để đổi độ rộng.
         </p>
       </section>
       <section class="settings-section">

@@ -20,6 +20,11 @@ test("URL validation rejects executable schemes, credentials and invalid hosts",
   assert.equal(C.url("localhost:8080/path"), "https://localhost:8080/path");
   assert.equal(C.url("https://EXAMPLE.com:443"), "https://example.com/");
 });
+test("every listed theme is accepted by settings", () => {
+  assert.ok(C.THEMES.length >= 16);
+  for (const [id] of C.THEMES)
+    assert.equal(C.settings({ theme: id }).theme, id);
+});
 test("theme settings accept black and pastel palettes", () => {
   assert.equal(C.settings({ theme: "black" }).theme, "black");
   assert.equal(C.settings({ theme: "pastel" }).theme, "pastel");

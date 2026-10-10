@@ -13,8 +13,8 @@ const files = [
   "sidebar.css",
   "content.js",
   "content.css",
-  "README.md",
   "icons/icon16.png",
+  "icons/icon32.png",
   "icons/icon48.png",
   "icons/icon128.png",
 ];

@@ -187,9 +187,41 @@ function folded(text) {
     .replace(/Đ/g, "D")
     .toLocaleLowerCase("vi");
 }
+function renderThemePicker() {
+  const select = $("setting-theme");
+  const grid = $("theme-grid");
+  select.replaceChildren(
+    ...C.THEMES.map(([id, label]) => new Option(label, id)),
+  );
+  grid.replaceChildren(
+    ...C.THEMES.map(([id, label]) => {
+      const swatch = element("button", "theme-swatch");
+      swatch.type = "button";
+      swatch.dataset.theme = id;
+      swatch.title = label;
+      swatch.setAttribute("role", "radio");
+      swatch.setAttribute("aria-label", label);
+      swatch.append(element("span", "theme-swatch-dot"));
+      swatch.onclick = () => {
+        select.value = id;
+        select.dispatchEvent(new Event("change"));
+      };
+      return swatch;
+    }),
+  );
+}
+function markThemePicker(theme) {
+  for (const swatch of $("theme-grid").children) {
+    const on = swatch.dataset.theme === theme;
+    swatch.setAttribute("aria-checked", String(on));
+    swatch.classList.toggle("is-selected", on);
+  }
+}
+renderThemePicker();
 function applySettings() {
   const s = state.settings;
   document.documentElement.dataset.theme = s.theme;
+  markThemePicker(s.theme);
   document.body.classList.toggle("compact", s.compact);
   $("compact-btn").setAttribute("aria-pressed", String(s.compact));
   for (const key of [
@@ -310,9 +342,7 @@ function renderSessions() {
   if ($("sessions-tab-count"))
     $("sessions-tab-count").textContent = workspaceSessions.length;
   if (!workspaceSessions.length) {
-    list.append(
-      element("p", "session-empty", "Lưu các tab đang mở để quay lại sau."),
-    );
+    list.append(element("p", "session-empty", "Chưa có phiên nào được lưu."));
     return;
   }
   const visibleSessions =

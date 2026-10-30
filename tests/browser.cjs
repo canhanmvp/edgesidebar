@@ -682,6 +682,11 @@ async function waitState(page, count) {
   passed("a tab group saves as a session and reopens as the same group");
   await bm.evaluate(
     async ([workspaceId, origin]) => {
+      // Its own workspace: the default one holds 1000 unreachable test pins.
+      await chrome.runtime.sendMessage({
+        type: "MUTATE",
+        action: { type: "SAVE_WORKSPACE", workspaceId, name: "Dọn dẹp" },
+      });
       for (const [path, title] of [
         ["/gone", "Đã mất"],
         ["/moved", "Đã chuyển"],
@@ -691,9 +696,9 @@ async function waitState(page, count) {
           action: { type: "SAVE_PIN", url: origin + path, title, workspaceId },
         });
     },
-    ["workspace-default", origin],
+    ["cleanup", origin],
   );
-  await bm.locator("#workspace-select").selectOption("workspace-default");
+  await bm.locator("#workspace-select").selectOption("cleanup");
   await bm.locator("#settings-btn").click();
   await bm.locator("#cleanup-btn").click();
   await bm.locator("#cleanup-run").click();
@@ -714,6 +719,73 @@ async function waitState(page, count) {
   await bm.locator("#cleanup-dialog [data-close]").click();
   await bm.locator(".check-mark").first().waitFor();
   passed("cleanup finds dead and moved links and updates the address");
+
+  const sortId = await sw.evaluate(async (origin) => {
+    const folder = await chrome.bookmarks.create({
+      parentId: "2",
+      title: "Sắp xếp",
+    });
+    for (const title of ["A", "B", "C"])
+      await chrome.bookmarks.create({
+        parentId: folder.id,
+        title,
+        url: `${origin}/${title}`,
+      });
+    await chrome.bookmarks.create({ parentId: folder.id, title: "Con" });
+    return folder.id;
+  }, origin);
+  const titles = (id) =>
+    sw.evaluate(
+      async (id) =>
+        (await chrome.bookmarks.getChildren(id)).map((node) => node.title),
+      id,
+    );
+  const waitTitles = async (id, expected) => {
+    for (let i = 0; i < 40; i++) {
+      if (JSON.stringify(await titles(id)) === JSON.stringify(expected)) return;
+      await bm.waitForTimeout(100);
+    }
+    assert.deepEqual(await titles(id), expected);
+  };
+  const bmRow = (title) =>
+    bm.locator("#bm-list .pin-row", {
+      has: bm.locator(".site-title", { hasText: new RegExp(`^${title}$`) }),
+    });
+  await bm.locator("#bookmarks-tab").click();
+  await bm
+    .locator("#bm-crumbs")
+    .getByRole("button", { name: "Bookmark", exact: true })
+    .click();
+  await bm
+    .locator("#bm-list .pin-link", { hasText: "Other bookmarks" })
+    .click();
+  await bm.locator("#bm-list .pin-link", { hasText: "Sắp xếp" }).click();
+  await bmRow("C").waitFor();
+  await bmRow("C").dragTo(bmRow("A"), { targetPosition: { x: 40, y: 4 } });
+  await waitTitles(sortId, ["C", "A", "B", "Con"]);
+  await bmRow("B").waitFor();
+  const conBox = await bmRow("Con").boundingBox();
+  await bmRow("B").dragTo(bmRow("Con"), {
+    targetPosition: { x: 40, y: conBox.height / 2 },
+  });
+  await waitTitles(sortId, ["C", "A", "Con"]);
+  passed("bookmarks reorder and move into a folder by drag and drop");
+  await bmRow("C").locator(".pin-link").focus();
+  await bm.keyboard.press("Alt+ArrowDown");
+  await waitTitles(sortId, ["A", "C", "Con"]);
+  await bmRow("A").locator(".row-more").click();
+  await bm.getByRole("menuitem", { name: "Xóa bookmark", exact: true }).click();
+  await waitTitles(sortId, ["C", "Con"]);
+  await bm
+    .locator(".toast", { hasText: "Đã xóa “A”" })
+    .getByRole("button", { name: "Hoàn tác" })
+    .click();
+  await waitTitles(sortId, ["A", "C", "Con"]);
+  await bmRow("Con").locator(".row-more").click();
+  await bm.getByRole("menuitem", { name: "Xóa thư mục", exact: true }).click();
+  await bm.getByRole("button", { name: "Xóa thư mục", exact: true }).click();
+  await waitTitles(sortId, ["A", "C"]);
+  passed("bookmarks move by keyboard and delete with undo");
   await bm.close();
   assert.deepEqual(errors, []);
   fs.writeFileSync(

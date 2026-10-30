@@ -4,7 +4,7 @@ Extension Manifest V3 cho Edge/Chrome: biến sidebar thành không gian làm vi
 
 ## Có gì mới trong 4.1
 
-- **Tab Bookmark:** tab thứ ba cạnh Ghim/Phiên để duyệt bookmark (Favorites trên Edge) theo từng thư mục, tìm không dấu và ghim nhanh vào không gian đang chọn. Khi tìm ở tab Ghim, bookmark khớp hiện thêm trong nhóm **Từ bookmark**.
+- **Tab Bookmark:** tab thứ ba cạnh Ghim/Phiên để duyệt bookmark (Favorites trên Edge) theo từng thư mục, tìm không dấu và ghim nhanh vào không gian đang chọn. Khi tìm ở tab Ghim, bookmark khớp hiện thêm trong nhóm **Từ bookmark**. Kéo thả để sắp xếp bookmark, thả vào giữa một thư mục (hoặc vào tên thư mục trên thanh đường dẫn) để chuyển chỗ; `Alt+↑/↓` di chuyển bằng bàn phím. Xóa bookmark hoặc thư mục (phím `Delete` hoặc menu `⋯`) đều có **Hoàn tác**; xóa thư mục đang liên kết sẽ hủy liên kết trước, trang ghim được giữ. Thư mục gốc của trình duyệt và bookmark do tổ chức quản lý không sửa được.
 - **Liên kết sống hai chiều:** liên kết một thư mục bookmark với một không gian. Thêm, sửa, bỏ ghim hay sắp xếp trong sidebar sẽ cập nhật thư mục bookmark; sửa bookmark trong trình duyệt cũng cập nhật không gian. Nhãn, ghi chú và yêu thích vẫn được giữ. Có chế độ **Chỉ kéo về** và **Sao chép một lần**; không gian cũng **xuất ra bookmark** được.
 - **Omnibox:** gõ `p`, phím cách rồi từ khóa trên thanh địa chỉ để tìm và mở trang ghim của mọi không gian. Gõ `p +` để ghim tab hiện tại.
 - **Nhóm tab:** mở thư mục, không gian hoặc thư mục bookmark thành một nhóm tab có tên và màu theo không gian. Lưu cả cửa sổ hoặc chỉ một nhóm thành phiên; mở lại phiên thì nhóm tab cũng được tạo lại.

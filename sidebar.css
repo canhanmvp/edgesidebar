@@ -1794,3 +1794,18 @@ button.pin-link {
     grid-template-columns: repeat(4, 1fr);
   }
 }
+.bm-list .pin-row[draggable="true"] {
+  cursor: grab;
+}
+.pin-row.bm-drop-before {
+  box-shadow: 0 -2px 0 var(--accent);
+}
+.pin-row.bm-drop-after {
+  box-shadow: 0 2px 0 var(--accent);
+}
+.pin-row.bm-drop-into,
+.bm-crumbs button.bm-drop-into {
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px;
+  background: var(--accent-soft);
+}

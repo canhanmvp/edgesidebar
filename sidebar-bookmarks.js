@@ -116,6 +116,137 @@
     });
     toast(`Đã ghim “${node.title || C.host(C.url(node.url))}”.`);
   }
+  // Top-level containers (Bookmarks bar, Other…) and managed bookmarks are
+  // fixed by the browser: they cannot be moved, deleted or dropped beside.
+  function editable(node) {
+    return (
+      node.id !== "0" &&
+      node.parentId &&
+      node.parentId !== "0" &&
+      !node.unmodifiable
+    );
+  }
+  function countLinks(node) {
+    let count = 0;
+    (function walk(item) {
+      for (const child of item.children || [])
+        if (child.children) walk(child);
+        else count++;
+    })(node);
+    return count;
+  }
+  async function recreate(node, parentId, index) {
+    const created = await chrome.bookmarks.create({
+      parentId,
+      index,
+      title: node.title,
+      ...(node.url != null ? { url: node.url } : {}),
+    });
+    for (const [i, child] of (node.children || []).entries())
+      await recreate(child, created.id, i).catch(() => {});
+    return created;
+  }
+  async function deleteBookmark(node) {
+    if (!editable(node)) throw new Error("Không thể xóa mục này.");
+    const snapshot = flat?.get(node.id)?.node || node;
+    if (node.url == null) {
+      const inside = new Set();
+      (function walk(item) {
+        inside.add(item.id);
+        (item.children || []).forEach(walk);
+      })(snapshot);
+      const linked = bookmarkLinks.filter((link) => inside.has(link.rootId));
+      const names = linked
+        .map(
+          (link) =>
+            state.workspaces.find((item) => item.id === link.workspaceId)?.name,
+        )
+        .filter(Boolean);
+      const result = await choose(
+        "Xóa thư mục bookmark?",
+        `Xóa “${node.title || "Bookmark"}” và ${countLinks(snapshot)} bookmark bên trong.` +
+          (names.length
+            ? ` Liên kết với không gian ${names.map((n) => `“${n}”`).join(", ")} sẽ bị hủy; trang ghim vẫn được giữ.`
+            : "") +
+          " Có thể hoàn tác trong 10 giây.",
+        [{ label: "Xóa thư mục", value: "delete", danger: true }],
+      );
+      if (result !== "delete") return;
+      // Unlink first so the worker does not mirror the deletion into pins.
+      for (const link of linked)
+        await request("BOOKMARK_UNLINK", { workspaceId: link.workspaceId });
+      await chrome.bookmarks.removeTree(node.id);
+    } else await chrome.bookmarks.remove(node.id);
+    invalidate();
+    toast(`Đã xóa “${node.title || node.url || "Bookmark"}”.`, {
+      undo: async () => {
+        await recreate(snapshot, snapshot.parentId, snapshot.index);
+        invalidate();
+      },
+    });
+  }
+  // Moves a bookmark before/after a sibling or into a folder. Indexes follow
+  // chrome.bookmarks.move(): the position counted before the node is removed.
+  async function moveBookmark(id, target, place) {
+    const dragged = flat.get(id)?.node;
+    if (!dragged || !editable(dragged)) return;
+    const parentId = place === "into" ? target.id : target.parentId;
+    if (!parentId || parentId === "0") return;
+    for (let current = flat.get(parentId); current;) {
+      if (current.node.id === id)
+        throw new Error("Không thể đưa thư mục vào chính nó.");
+      current = current.node.parentId ? flat.get(current.node.parentId) : null;
+    }
+    const destination = { parentId };
+    if (place === "before") destination.index = target.index;
+    else if (place === "after") destination.index = target.index + 1;
+    await chrome.bookmarks.move(id, destination);
+    invalidate();
+  }
+  // Up/down among the rows shown (non-web links are hidden but keep slots).
+  async function step(node, direction) {
+    const parent = flat.get(node.parentId)?.node;
+    const siblings = (parent?.children || []).filter(
+      (child) => child.children || isWeb(child),
+    );
+    const i = siblings.findIndex((child) => child.id === node.id);
+    const target = siblings[i + direction];
+    if (!target || !editable(node)) return;
+    await moveBookmark(node.id, target, direction < 0 ? "before" : "after");
+    setTimeout(() => focusRow(node.id), 350);
+  }
+  function focusRow(id) {
+    [...$("bm-list").querySelectorAll("[data-bm]")]
+      .find((row) => row.dataset.bm === id)
+      ?.querySelector(".pin-link")
+      ?.focus();
+  }
+  function editEntries(node) {
+    if (!editable(node)) return [];
+    return [
+      null,
+      { label: "Đưa lên trên", icon: "up", action: () => step(node, -1) },
+      { label: "Đưa xuống dưới", icon: "down", action: () => step(node, 1) },
+      {
+        label: node.url == null ? "Xóa thư mục" : "Xóa bookmark",
+        icon: "trash",
+        danger: true,
+        action: () => deleteBookmark(node),
+      },
+    ];
+  }
+  function rowKeys(row, node) {
+    row.dataset.bm = node.id;
+    row.addEventListener("keydown", (event) => {
+      if (event.altKey && ["ArrowUp", "ArrowDown"].includes(event.key)) {
+        event.preventDefault();
+        run(null, () => step(node, event.key === "ArrowUp" ? -1 : 1));
+      } else if (event.key === "Delete" && editable(node)) {
+        event.preventDefault();
+        run(null, () => deleteBookmark(node));
+      }
+    });
+  }
   function asPin(node) {
     return {
       id: "bookmark:" + node.id,
@@ -179,8 +310,10 @@
           icon: "pin",
           action: () => pinBookmark(node),
         },
+        ...editEntries(node),
       ]);
     };
+    rowKeys(row, node);
     row.append(link, pin, more);
     return row;
   }
@@ -212,6 +345,8 @@
       event.stopPropagation();
       folderMenu(node, more);
     };
+    rowKeys(row, node);
+    row.classList.add("bm-folder-row");
     row.append(open, more);
     return row;
   }
@@ -259,6 +394,7 @@
             color: workspaceGroupColor(activeWorkspaceId),
           }),
       },
+      ...editEntries(node),
     ]);
   }
   function crumbs(id) {
@@ -277,6 +413,7 @@
         node.id === "0" ? "Bookmark" : node.title || "Bookmark",
       );
       button.type = "button";
+      button.dataset.bm = node.id;
       if (node.id === id) button.setAttribute("aria-current", "page");
       button.onclick = () => {
         currentId = node.id;
@@ -333,13 +470,97 @@
     $("bm-status").textContent = children.length
       ? currentId === "0"
         ? "Chọn một thư mục. Bấm ⋯ trên thư mục để liên kết với không gian."
-        : `${folders.length} thư mục · ${links.length} trang`
-      : "Thư mục trống.";
+        : `${folders.length} thư mục · ${links.length} trang · kéo thả để sắp xếp`
+      : "Thư mục trống. Kéo bookmark vào tên thư mục ở trên để chuyển chỗ.";
+    // Real bookmark order, so drag and drop matches the browser's own list.
     list.replaceChildren(
-      ...folders.map(folderRow),
-      ...links.map((child) => linkRow(child)),
+      ...children
+        .filter((child) => child.children || isWeb(child))
+        .map((child) => {
+          const row = child.children ? folderRow(child) : linkRow(child);
+          row.draggable = editable(child);
+          return row;
+        }),
     );
   }
+  let dragId = null;
+  function clearBookmarkDrop() {
+    document
+      .querySelectorAll(".bm-drop-before,.bm-drop-after,.bm-drop-into")
+      .forEach((el) =>
+        el.classList.remove("bm-drop-before", "bm-drop-after", "bm-drop-into"),
+      );
+  }
+  // Folder rows: middle half drops inside; edges drop beside. At the top
+  // level only "inside" is allowed, since roots are fixed by the browser.
+  function dropPlace(row, event) {
+    const target = flat?.get(row.dataset.bm)?.node;
+    if (!target || target.id === dragId) return null;
+    const box = row.getBoundingClientRect();
+    const y = (event.clientY - box.top) / box.height;
+    const canInto = !!target.children && !target.unmodifiable;
+    if (!editable(target)) return canInto ? "into" : null;
+    if (canInto && y > 0.25 && y < 0.75) return "into";
+    return y < 0.5 ? "before" : "after";
+  }
+  $("bm-list").addEventListener("dragstart", (event) => {
+    const row = event.target.closest?.("[data-bm]");
+    if (!row?.draggable || $("search").value.trim()) {
+      event.preventDefault();
+      return;
+    }
+    dragId = row.dataset.bm;
+    row.classList.add("dragging");
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", "bookmark:" + dragId);
+    closeMenu();
+  });
+  $("bm-list").addEventListener("dragover", (event) => {
+    if (!dragId) return;
+    const row = event.target.closest("[data-bm]");
+    clearBookmarkDrop();
+    if (!row) return;
+    const place = dropPlace(row, event);
+    if (!place) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    row.classList.add("bm-drop-" + place);
+  });
+  $("bm-list").addEventListener("drop", (event) => {
+    if (!dragId) return;
+    event.preventDefault();
+    const row = event.target.closest("[data-bm]");
+    const id = dragId;
+    const place = row && dropPlace(row, event);
+    dragId = null;
+    clearBookmarkDrop();
+    if (place)
+      run(null, () => moveBookmark(id, flat.get(row.dataset.bm).node, place));
+  });
+  $("bm-list").addEventListener("dragend", () => {
+    dragId = null;
+    clearBookmarkDrop();
+    document
+      .querySelectorAll("#bm-list .dragging")
+      .forEach((el) => el.classList.remove("dragging"));
+  });
+  // Dropping on a breadcrumb moves the bookmark up into that folder.
+  $("bm-crumbs").addEventListener("dragover", (event) => {
+    const button = event.target.closest("button[data-bm]");
+    clearBookmarkDrop();
+    if (!dragId || !button || button.dataset.bm === "0") return;
+    event.preventDefault();
+    button.classList.add("bm-drop-into");
+  });
+  $("bm-crumbs").addEventListener("drop", (event) => {
+    const button = event.target.closest("button[data-bm]");
+    const id = dragId;
+    dragId = null;
+    clearBookmarkDrop();
+    if (!id || !button || button.dataset.bm === "0") return;
+    event.preventDefault();
+    run(null, () => moveBookmark(id, flat.get(button.dataset.bm).node, "into"));
+  });
   // "Từ bookmark" group appended to the pin list while searching pins.
   function searchGroup(query) {
     if (!granted) return null;

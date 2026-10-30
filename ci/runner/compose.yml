@@ -1,0 +1,22 @@
+# Self-hosted GitHub Actions runner for this repository, in Docker.
+# Setup: copy .env.example to .env, fill in RUNNER_TOKEN, then
+#   docker compose -f ci/runner/compose.yml up -d
+services:
+  runner:
+    image: ghcr.io/actions/actions-runner:latest
+    restart: unless-stopped
+    env_file: .env
+    entrypoint: ["/bin/bash", "/start.sh"]
+    volumes:
+      - ./start.sh:/start.sh:ro
+      # Keeps the registration and the runner's self-updates across
+      # `docker compose down`, so the one-hour token is needed only once.
+      - runner-home:/home/runner
+    # Public repository: keep jobs contained. No Docker socket, no sudo.
+    security_opt:
+      - no-new-privileges:true
+    cpus: 2
+    mem_limit: 3g
+
+volumes:
+  runner-home:

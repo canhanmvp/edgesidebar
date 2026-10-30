@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Pinned Sidebar",
-  "version": "4.0.0",
+  "version": "4.1.0",
   "minimum_chrome_version": "120",
   "description": "Không gian làm việc bên cạnh trình duyệt: ghim, tìm, sắp xếp website và lưu phiên tab.",
   "permissions": [
@@ -9,12 +9,23 @@
     "storage",
     "contextMenus",
     "alarms",
-    "declarativeNetRequestWithHostAccess"
+    "declarativeNetRequestWithHostAccess",
+    "tabGroups"
   ],
   "host_permissions": ["http://*/*", "https://*/*"],
-  "action": { "default_title": "Mở Pinned Sidebar" },
-  "background": { "service_worker": "background.js" },
-  "side_panel": { "default_path": "sidebar.html" },
+  "optional_permissions": ["bookmarks"],
+  "action": {
+    "default_title": "Mở Pinned Sidebar"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "side_panel": {
+    "default_path": "sidebar.html"
+  },
+  "omnibox": {
+    "keyword": "p"
+  },
   "content_scripts": [
     {
       "matches": ["http://*/*", "https://*/*"],
@@ -24,15 +35,22 @@
     }
   ],
   "web_accessible_resources": [
-    { "resources": ["content.css"], "matches": ["http://*/*", "https://*/*"] }
+    {
+      "resources": ["content.css"],
+      "matches": ["http://*/*", "https://*/*"]
+    }
   ],
   "commands": {
     "_execute_action": {
-      "suggested_key": { "default": "Ctrl+Shift+Y" },
+      "suggested_key": {
+        "default": "Ctrl+Shift+Y"
+      },
       "description": "Mở Pinned Sidebar"
     },
     "open-sidebar": {
-      "suggested_key": { "default": "Ctrl+M" },
+      "suggested_key": {
+        "default": "Ctrl+M"
+      },
       "description": "Mở Pinned Sidebar nhanh"
     }
   },

@@ -8,8 +8,11 @@ Một mục đích duy nhất (single purpose): *Quản lý website ghim, bộ s
 | `storage` | Stores the user's pins, folders, workspaces, sessions and settings locally, and optionally via browser sync. |
 | `contextMenus` | Adds a right-click item to pin the current page / link. |
 | `alarms` | Debounces uploads to browser sync storage (30s) so frequent edits do not exceed sync quota. |
+| `tabGroups` | Saves a tab group as a session and reopens sessions, collections or bookmark folders as a titled, colored tab group. |
+| `bookmarks` (optional) | Requested only when the user opens the Bookmark tab and clicks "Allow". Shows the user's bookmarks in the side panel, pins one on click, and keeps a bookmark folder the user explicitly linked in sync with a workspace. Never requested at install. |
+| `omnibox` (keyword "p") | Lets the user search and open pinned sites from the address bar. No permission warning. |
 | `declarativeNetRequestWithHostAccess` | Lets the user opt in, per website, to show a site inside the side panel by removing `X-Frame-Options`/`Content-Security-Policy` on that exact origin, for sub-frames initiated only by this extension. Rules are created only after the user enables "allow embedding" for that site and can be revoked. |
-| `host_permissions: http://*/*, https://*/*` | (1) Required by the DNR rule above, since the user may pin any website. (2) Reading the title/URL of tabs the user chooses to pin or save into a session. (3) Content script that renders the optional floating rail of pinned sites. Page content is never read or transmitted. |
+| `host_permissions: http://*/*, https://*/*` | (1) Required by the DNR rule above, since the user may pin any website. (2) Reading the title/URL of tabs the user chooses to pin or save into a session. (3) Content script that renders the optional floating rail of pinned sites. (4) User-started cleanup check that sends cookie-less HEAD/GET requests to the user's own pinned sites to find dead or moved links. Page content is never read or transmitted. |
 | Content script on `http(s)://*/*` | Shows the optional floating rail inside a Shadow DOM so page CSS cannot affect it; top frame only; no page data read. Users can hide it in settings. |
 
 Remote code: **không dùng** (không eval, không tải script từ xa; gói được script kiểm tra tự động). Dữ liệu gửi ra ngoài: chỉ tên miền (favicon) và văn bản người dùng nhập vào trình dịch — khai báo đúng ở tab *Privacy practices*.

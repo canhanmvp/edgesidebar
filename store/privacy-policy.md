@@ -1,6 +1,6 @@
 # Chính sách quyền riêng tư — Pinned Sidebar
 
-Cập nhật lần cuối: 2026-10-10
+Cập nhật lần cuối: 2026-10-30
 
 Pinned Sidebar ("Tiện ích") là tiện ích trình duyệt cho Microsoft Edge và Google Chrome, giúp ghim, tìm và sắp xếp website, lưu phiên tab trong thanh bên.
 
@@ -8,6 +8,8 @@ Pinned Sidebar ("Tiện ích") là tiện ích trình duyệt cho Microsoft Edge
 
 - **Danh sách website đã ghim, thư mục, không gian làm việc, phiên tab, cài đặt**: lưu trong bộ nhớ của trình duyệt (`chrome.storage.local`). Nếu bạn bật đồng bộ trình duyệt, một bản sao được gửi qua bộ nhớ đồng bộ của Edge/Chrome (`chrome.storage.sync`) và do Microsoft/Google quản lý theo chính sách của họ.
 - **URL và tiêu đề tab**: chỉ đọc khi bạn chủ động ghim tab, lưu phiên tab hoặc mở trang tab. Không đọc nội dung trang.
+- **Bookmark (tùy chọn)**: chỉ khi bạn cấp quyền bookmark, Tiện ích đọc bookmark để hiển thị trong thanh bên và đọc/ghi thư mục bookmark bạn đã liên kết. Việc này diễn ra hoàn toàn trên máy; liên kết chỉ lưu trong `chrome.storage.local`. Bạn có thể thu hồi quyền trong Cài đặt.
+- **Kiểm tra link (Dọn dẹp)**: chỉ khi bạn bấm kiểm tra, Tiện ích gửi yêu cầu HEAD/GET trực tiếp tới chính các website đã ghim, không kèm cookie, để biết link còn hoạt động không. Kết quả chỉ lưu trên máy.
 - **Nhà phát triển không có máy chủ riêng, không thu thập, không bán, không chia sẻ dữ liệu của bạn, không dùng phân tích hay quảng cáo.**
 
 ## Dịch vụ bên thứ ba mà Tiện ích gọi tới
@@ -40,11 +42,11 @@ Thay đổi chính sách sẽ được cập nhật tại trang này kèm ngày 
 
 # Privacy Policy — Pinned Sidebar (English)
 
-Last updated: 2026-10-10
+Last updated: 2026-10-30
 
 Pinned Sidebar is a browser extension for Microsoft Edge and Google Chrome that lets you pin, search and organize websites and save tab sessions in a side panel.
 
-**Data handled.** Pinned sites, folders, workspaces, tab sessions and settings are stored in your browser (`chrome.storage.local`). If browser sync is on, a copy goes through the browser's own sync storage (`chrome.storage.sync`), managed by Microsoft/Google. Tab URLs and titles are read only when you pin a tab or save a session; page content is never read. The developer runs no server and does not collect, sell or share your data, and uses no analytics or ads.
+**Data handled.** Pinned sites, folders, workspaces, tab sessions and settings are stored in your browser (`chrome.storage.local`). If browser sync is on, a copy goes through the browser's own sync storage (`chrome.storage.sync`), managed by Microsoft/Google. Tab URLs and titles are read only when you pin a tab or save a session; page content is never read. Bookmarks are read only after you grant the optional bookmarks permission, to show them in the side panel and to keep a folder you linked in sync; this happens entirely on your device. When you run the cleanup check, the extension sends cookie-less HEAD/GET requests directly to your pinned websites to see whether links still work; results stay on your device. The developer runs no server and does not collect, sell or share your data, and uses no analytics or ads.
 
 **Third-party requests.** (1) The Google Favicon service receives the domain of pinned sites to display icons. (2) Google Translate receives the text you type, only when you use the built-in translator. Both are governed by Google's privacy policy.
 

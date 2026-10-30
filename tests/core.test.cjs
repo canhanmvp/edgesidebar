@@ -368,3 +368,109 @@ test("merge import cannot exceed the workspace limit that parse enforces", () =>
     /Tối đa 20 không gian/,
   );
 });
+test("fold ignores Vietnamese accents and case", () => {
+  assert.equal(C.fold("Đà Nẵng Ơi"), "da nang oi");
+  assert.equal(C.fold(null), "");
+});
+test("search ranks title prefix, title, host, tags and prefers the active workspace", () => {
+  const state = C.parse({
+    schema: 3,
+    workspaces: [
+      { id: "a", name: "A" },
+      { id: "b", name: "B" },
+    ],
+    pins: [
+      {
+        url: "https://note.test",
+        title: "Khác",
+        note: "tài liệu",
+        workspaceId: "a",
+      },
+      { url: "https://docs.test", title: "Tài liệu", workspaceId: "b" },
+      { url: "https://tai.test", title: "Ứng dụng", workspaceId: "a" },
+      {
+        url: "https://x.test",
+        title: "Mục",
+        tags: ["tài khoản"],
+        workspaceId: "a",
+      },
+      { url: "https://y.test", title: "Sổ tài liệu", workspaceId: "a" },
+    ],
+  }).state;
+  assert.deepEqual(
+    C.search(state, "tai", { workspaceId: "a", limit: 10 }).map(
+      (r) => r.pin.title,
+    ),
+    ["Sổ tài liệu", "Tài liệu", "Ứng dụng", "Mục", "Khác"],
+  );
+  assert.deepEqual(C.search(state, "  "), []);
+  assert.equal(C.search(state, "tai", { limit: 2 }).length, 2);
+});
+test("urlKey treats tracking params, www, protocol, slash and hash as equal", () => {
+  const key = C.urlKey("https://example.com/a/?b=2&a=1");
+  for (const value of [
+    "http://www.example.com/a?a=1&b=2#top",
+    "https://example.com/a?utm_source=x&a=1&b=2&fbclid=1",
+  ])
+    assert.equal(C.urlKey(value), key);
+  assert.notEqual(C.urlKey("https://example.com/b"), key);
+  assert.notEqual(C.urlKey("https://example.com:8080/a?a=1&b=2"), key);
+});
+test("duplicateGroups finds near-duplicates per workspace or across them", () => {
+  const state = C.parse({
+    schema: 3,
+    workspaces: [
+      { id: "a", name: "A" },
+      { id: "b", name: "B" },
+    ],
+    pins: [
+      { url: "https://dup.test/", workspaceId: "a" },
+      { url: "http://www.dup.test/?utm_medium=x", workspaceId: "a" },
+      { url: "https://dup.test", workspaceId: "b" },
+      { url: "https://alone.test", workspaceId: "a" },
+    ],
+  }).state;
+  assert.deepEqual(
+    C.duplicateGroups(state).map((g) => g.length),
+    [2],
+  );
+  assert.deepEqual(
+    C.duplicateGroups(state, { acrossWorkspaces: true }).map((g) => g.length),
+    [3],
+  );
+});
+test("classifyCheck sorts link check results", () => {
+  const url = "https://site.test/page";
+  assert.equal(C.classifyCheck(url, { status: 404 }).status, "broken");
+  assert.equal(C.classifyCheck(url, { status: 410 }).status, "broken");
+  assert.equal(C.classifyCheck(url, { status: 503 }).status, "unreachable");
+  assert.equal(
+    C.classifyCheck(url, { error: "timeout" }).status,
+    "unreachable",
+  );
+  assert.equal(C.classifyCheck(url, { status: 403 }).status, "blocked");
+  assert.equal(C.classifyCheck(url, { status: 200 }).status, "ok");
+  assert.equal(
+    C.classifyCheck(url, {
+      status: 200,
+      redirected: true,
+      finalUrl: "https://www.site.test/page/",
+    }).status,
+    "ok",
+    "trivial redirects are not reported",
+  );
+  assert.deepEqual(
+    C.classifyCheck(url, {
+      status: 200,
+      redirected: true,
+      finalUrl: "https://new.test/page",
+    }),
+    { status: "redirect", code: 200, finalUrl: "https://new.test/page" },
+  );
+});
+test("groupColor maps workspace colors to tab group colors", () => {
+  assert.equal(C.groupColor("#1a73e8"), "blue");
+  assert.equal(C.groupColor("#b5ef55"), "green");
+  assert.equal(C.groupColor("#e01010"), "red");
+  assert.equal(C.groupColor("nope"), "grey");
+});

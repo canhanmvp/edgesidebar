@@ -11,7 +11,10 @@ Pinned Sidebar đặt những website bạn dùng hằng ngày ngay trong thanh 
 • Ghim tab hiện tại chỉ bằng một cú nhấp, kéo-thả để sắp xếp
 • Bộ sưu tập (thư mục) và nhiều không gian làm việc tách biệt
 • Tìm kiếm nhanh, không phân biệt dấu tiếng Việt (phím /)
-• Lưu và mở lại phiên tab; xuất/nhập dữ liệu
+• Lưu và mở lại phiên tab, kể cả nhóm tab; xuất/nhập dữ liệu
+• Duyệt và tìm bookmark ngay trong thanh bên; liên kết hai chiều một thư mục bookmark với không gian
+• Gõ "p" trên thanh địa chỉ để mở nhanh trang đã ghim
+• Dọn dẹp: tìm link hỏng, link đã chuyển địa chỉ và trang trùng
 • Thanh nổi tùy chọn trên mọi trang, bật/tắt dễ dàng
 • Giao diện sáng/tối, chế độ gọn, phím tắt Ctrl+M / Ctrl+Shift+Y
 • Dịch nhanh văn bản ngay trong thanh bên
@@ -29,7 +32,10 @@ Pinned Sidebar keeps the sites you use every day one click away in your browser'
 • Pin the current tab in one click; drag and drop to reorder
 • Collections (folders) and separate workspaces
 • Instant search (accent-insensitive for Vietnamese)
-• Save and restore tab sessions; export / import your data
+• Save and restore tab sessions, including tab groups; export / import your data
+• Browse and search your bookmarks in the side panel; two-way link a bookmark folder with a workspace
+• Type "p" in the address bar to open a pinned site
+• Cleanup: find dead links, moved links and duplicates
 • Optional floating rail on any page, easy to hide
 • Light / dark themes, compact layout, shortcuts Ctrl+M / Ctrl+Shift+Y
 • Built-in quick text translator

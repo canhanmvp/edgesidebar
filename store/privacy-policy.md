@@ -24,7 +24,7 @@ Các dịch vụ này xử lý dữ liệu theo chính sách quyền riêng tư 
 ## Nội dung trang web
 
 - Tiện ích chèn một thanh nổi nhỏ (content script) vào trang http/https để hiển thị các website bạn đã ghim; nó không đọc, lưu hay gửi nội dung trang.
-- Với website bạn **tự bật** "cho phép nhúng", Tiện ích gỡ tiêu đề `X-Frame-Options` và `Content-Security-Policy` của đúng website đó, chỉ cho khung hiển thị bên trong thanh bên của Tiện ích. Bạn có thể thu hồi bất cứ lúc nào.
+- Với website bạn **tự bật** "cho phép nhúng", Tiện ích gỡ tiêu đề `X-Frame-Options` và `Content-Security-Policy` của đúng website đó (cùng bản `www`) và báo yêu cầu là tải trang (`Sec-Fetch-Dest: document`) thay vì khung nhúng, chỉ cho khung hiển thị bên trong thanh bên của Tiện ích. Bạn có thể thu hồi bất cứ lúc nào.
 
 ## Kiểm soát của bạn
 
@@ -50,6 +50,6 @@ Pinned Sidebar is a browser extension for Microsoft Edge and Google Chrome that 
 
 **Third-party requests.** (1) The Google Favicon service receives the domain of pinned sites to display icons. (2) Google Translate receives the text you type, only when you use the built-in translator. Both are governed by Google's privacy policy.
 
-**Web pages.** A small floating rail (content script) is injected into http/https pages to show your pinned sites; it does not read, store or transmit page content. For websites you explicitly allow to be embedded, the extension removes `X-Frame-Options` and `Content-Security-Policy` response headers for that exact site, only for frames shown inside the extension's side panel; you can revoke this at any time.
+**Web pages.** A small floating rail (content script) is injected into http/https pages to show your pinned sites; it does not read, store or transmit page content. For websites you explicitly allow to be embedded, the extension removes `X-Frame-Options` and `Content-Security-Policy` response headers for that exact site (and its www twin) and marks the request as a page load (`Sec-Fetch-Dest: document`) instead of an iframe load, only for frames shown inside the extension's side panel; you can revoke this at any time.
 
 **Your controls.** Export, import or delete data in the extension, or uninstall it to remove local data. **Children:** not directed to children. **Contact:** [YOUR CONTACT EMAIL].

@@ -22,6 +22,14 @@ const server = http.createServer((req, res) => {
     res.statusCode = 301;
     res.setHeader("Location", "/target");
     res.end();
+  } else if (
+    req.url.startsWith("/blocked") &&
+    req.headers["sec-fetch-dest"] === "iframe"
+  ) {
+    // Like Facebook: the server itself refuses requests marked as iframes.
+    res.statusCode = 400;
+    res.setHeader("X-Frame-Options", "DENY");
+    res.end("<!doctype html><title>Refused</title><h1>Iframe refused</h1>");
   } else if (req.url.startsWith("/blocked")) {
     res.setHeader("X-Frame-Options", "DENY");
     res.setHeader(

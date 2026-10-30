@@ -50,14 +50,6 @@ function iconButton(icon, title, className = "icon-button") {
 function isGoogleTranslate(pin) {
   return new URL(pin.url).origin === "https://translate.google.com";
 }
-function isFacebook(pin) {
-  return [
-    "facebook.com",
-    "www.facebook.com",
-    "m.facebook.com",
-    "mbasic.facebook.com",
-  ].includes(new URL(pin.url).hostname);
-}
 document
   .querySelectorAll("[data-icon]")
   .forEach((el) => el.append(makeIcon(el.dataset.icon)));
@@ -1285,7 +1277,7 @@ async function openPin(pin, mode, background = false) {
   $("viewer-status").textContent = "Đang tự mở khóa website…";
   $("viewer-back").focus();
   const origin = new URL(pin.url).origin;
-  if (!isFacebook(pin) && !embedOrigins.includes(origin)) {
+  if (!embedOrigins.includes(origin)) {
     await request("EMBED", { origin, enabled: true });
     embedOrigins = [...new Set([...embedOrigins, origin])];
     renderEmbeds();
@@ -1351,15 +1343,6 @@ function resetFrame() {
   // cached iframe error page. A srcdoc page always creates a new document,
   // unlike about:blank, then we navigate from that clean document to the pin.
   const frame = $("viewer-frame");
-  if (isFacebook(currentPin)) {
-    frame.removeAttribute("src");
-    frame.srcdoc =
-      "<!doctype html><meta charset=utf-8><style>body{margin:0;padding:32px;font:16px/1.6 system-ui,sans-serif;color:#223;background:#fff}strong{display:block;font-size:20px;margin-bottom:10px}</style><strong>Facebook không cho hiển thị trong sidebar.</strong>Facebook trả lỗi từ máy chủ khi phát hiện khung nhúng. Bấm biểu tượng mở tab ở góc trên bên phải để dùng Facebook bình thường.";
-    $("load-line").hidden = true;
-    $("viewer-status").textContent =
-      "Facebook chỉ mở được trong tab chính của trình duyệt.";
-    return;
-  }
   viewerBlankRequest = loadRequest;
   frame.addEventListener(
     "load",

@@ -376,6 +376,31 @@ test("iframe exception is restricted to extension initiator and exact origin; ca
   assert.ok(!regex.test("https://exampleXcom:8443/page"));
   assert.ok(!regex.test("https://example.com:8443.evil.com/page"));
   assert.ok(!regex.test("https://example.com/page"));
+  assert.equal(
+    JSON.stringify(rule.action.requestHeaders),
+    '[{"header":"sec-fetch-dest","operation":"set","value":"document"}]',
+    "servers that refuse iframe requests see a page load",
+  );
+  const twin = new RegExp(
+    w.chrome.declarativeNetRequest.rules[1].condition.regexFilter,
+  );
+  assert.ok(twin.test("https://www.example.com:8443/page"));
+  assert.equal(w.chrome.declarativeNetRequest.rules.length, 2);
+  await w.send({
+    type: "EMBED",
+    origin: "http://127.0.0.1:3000",
+    enabled: true,
+  });
+  assert.equal(
+    w.chrome.declarativeNetRequest.rules.length,
+    3,
+    "IP addresses get no www twin",
+  );
+  await w.send({
+    type: "EMBED",
+    origin: "http://127.0.0.1:3000",
+    enabled: false,
+  });
   await w.send({
     type: "EMBED",
     origin: "https://example.com:8443",

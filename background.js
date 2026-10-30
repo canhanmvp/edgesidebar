@@ -6,16 +6,28 @@ const B = BookmarkSync;
 const STATE_KEY = "pinned.v2";
 const SYNC_KEY = "pinned.cloud";
 const CHUNK_PREFIX = "pinned.chunk.";
-// These sites redirect between their documented bare and www hostnames. Keep
-// the exception narrow: do not grant arbitrary subdomains of a trusted site.
+// Sites commonly redirect between their bare and www hostnames, so both are
+// unlocked together. Keep the exception narrow: never other subdomains, except
+// documented mobile hosts that a site redirects small viewports to.
 const EMBED_ORIGIN_ALIASES = new Map([
-  ["https://youtube.com", ["https://www.youtube.com"]],
-  ["https://www.youtube.com", ["https://youtube.com"]],
-  ["https://google.com", ["https://www.google.com"]],
-  ["https://www.google.com", ["https://google.com"]],
-  ["https://perplexity.ai", ["https://www.perplexity.ai"]],
-  ["https://www.perplexity.ai", ["https://perplexity.ai"]],
+  ["https://facebook.com", ["https://m.facebook.com"]],
+  ["https://www.facebook.com", ["https://m.facebook.com"]],
 ]);
+function embedAliases(origin) {
+  const url = new URL(origin);
+  const twin = url.hostname.startsWith("www.")
+    ? url.hostname.slice(4)
+    : "www." + url.hostname;
+  // IP addresses and single-label hosts (localhost) have no www twin.
+  const named =
+    url.hostname.includes(".") && !/^[\d.]+$|^\[/.test(url.hostname);
+  return [
+    ...(named
+      ? [`${url.protocol}//${twin}${url.port ? ":" + url.port : ""}`]
+      : []),
+    ...(EMBED_ORIGIN_ALIASES.get(origin) || []),
+  ];
+}
 let queue = Promise.resolve();
 let initialized;
 function serial(work) {
@@ -613,18 +625,18 @@ async function applyEmbedRules(origins) {
   const existing = await chrome.declarativeNetRequest.getDynamicRules();
   const escape = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const requestOrigins = [
-    ...new Set(
-      origins.flatMap((origin) => [
-        origin,
-        ...(EMBED_ORIGIN_ALIASES.get(origin) || []),
-      ]),
-    ),
+    ...new Set(origins.flatMap((origin) => [origin, ...embedAliases(origin)])),
   ];
   const addRules = requestOrigins.map((origin, index) => ({
     id: 2000 + index,
     priority: 1,
     action: {
       type: "modifyHeaders",
+      // Some servers (Facebook, Instagram…) refuse any request marked as an
+      // iframe load and answer with an error page; present it as a page load.
+      requestHeaders: [
+        { header: "sec-fetch-dest", operation: "set", value: "document" },
+      ],
       responseHeaders: [
         { header: "x-frame-options", operation: "remove" },
         { header: "content-security-policy", operation: "remove" },

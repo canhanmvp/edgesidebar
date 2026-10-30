@@ -31,6 +31,14 @@ globalThis.PinnedIcons = {
   upload: '<path d="M12 15V3m-5 5 5-5 5 5M3 15v6h18v-6"/>',
   cloud:
     '<path d="M6 18a5 5 0 1 1 .8-9.9A7 7 0 0 1 20 10a4 4 0 0 1-1 8M12 13v8m-3-3 3 3 3-3"/>',
+  bookmark: '<path d="M6 3h12v18l-6-4-6 4V3Z"/>',
+  link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+  unlink:
+    '<path d="M15.7 14 18.7 11a4 4 0 0 0-5.7-5.7l-1 1M8.3 10l-3 3a4 4 0 0 0 5.7 5.7l1-1M3 3l18 18"/>',
+  broom:
+    '<path d="m14 4 6-1-1 6M20 3l-8.5 8.5M11 10l3 3-1.5 6.5L4 21l1.5-8.5L11 10ZM7 16l2 2"/>',
+  layers: '<path d="m12 3 9 5-9 5-9-5 9-5ZM3 13l9 5 9-5"/>',
+  alert: '<path d="M12 3 2 20h20L12 3ZM12 10v4m0 3h.01"/>',
 };
 globalThis.makeIcon = function (name) {
   const el = document.createElementNS("http://www.w3.org/2000/svg", "svg");

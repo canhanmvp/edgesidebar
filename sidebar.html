@@ -9,6 +9,8 @@
     <script src="core.js" defer></script>
     <script src="icons.js" defer></script>
     <script src="sidebar.js" defer></script>
+    <script src="sidebar-bookmarks.js" defer></script>
+    <script src="sidebar-cleanup.js" defer></script>
   </head>
   <body>
     <div id="app">
@@ -39,6 +41,16 @@
             <span data-icon="history"></span
             ><span class="view-tab-label">Phiên</span>
             <span class="view-tab-count" id="sessions-tab-count">0</span>
+          </button>
+          <button
+            class="view-tab"
+            id="bookmarks-tab"
+            type="button"
+            aria-selected="false"
+            title="Bookmark của trình duyệt"
+          >
+            <span data-icon="bookmark"></span
+            ><span class="view-tab-label">Bookmark</span>
           </button>
         </nav>
         <div class="header-actions">
@@ -148,6 +160,52 @@
             </button>
           </div>
         </section>
+        <div class="link-banner" id="link-banner" role="status" hidden>
+          <span data-icon="link"></span>
+          <span class="link-banner-copy" id="link-banner-copy"></span>
+          <button
+            class="icon-button"
+            id="link-banner-resync"
+            title="Đồng bộ lại với bookmark"
+            aria-label="Đồng bộ lại với bookmark"
+            data-icon="reload"
+          ></button>
+          <button
+            class="icon-button"
+            id="link-banner-more"
+            title="Tùy chọn liên kết bookmark"
+            aria-label="Tùy chọn liên kết bookmark"
+            data-icon="more"
+            aria-haspopup="menu"
+          ></button>
+        </div>
+        <section
+          id="bookmark-view"
+          class="bookmark-view"
+          aria-label="Bookmark của trình duyệt"
+        >
+          <div id="bm-permission" class="empty-state" hidden>
+            <span class="empty-icon" data-icon="bookmark"></span>
+            <h2>Dùng bookmark ngay trong sidebar</h2>
+            <p>
+              Duyệt, tìm và ghim bookmark của trình duyệt, hoặc liên kết một thư
+              mục bookmark với không gian để hai bên luôn giống nhau. Dữ liệu
+              chỉ được đọc trên máy này.
+            </p>
+            <button class="button primary" id="bm-grant">
+              Cho phép truy cập bookmark
+            </button>
+          </div>
+          <div id="bm-browser" hidden>
+            <nav
+              class="bm-crumbs"
+              id="bm-crumbs"
+              aria-label="Vị trí thư mục bookmark"
+            ></nav>
+            <p class="subtle" id="bm-status" role="status"></p>
+            <ul class="bm-list" id="bm-list"></ul>
+          </div>
+        </section>
         <div class="collection-heading">
           <span>BỘ SƯU TẬP <span id="pin-count" class="count">0</span></span
           ><button class="text-button" id="add-folder">
@@ -244,7 +302,7 @@
         <button id="storage-status" class="storage-status">
           <span class="status-dot"></span
           ><span id="storage-label">Lưu trên thiết bị</span></button
-        ><span class="version">V4.0.0</span>
+        ><span class="version">V4.1.0</span>
       </footer>
     </div>
     <div id="item-menu" class="item-menu" role="menu" hidden></div>
@@ -422,7 +480,8 @@
           </select></label
         >
         <p class="subtle">
-          Rê chuột để xem tên, kéo ⠿ để di chuyển, kéo mép để đổi độ rộng.
+          Rê chuột để xem tên, kéo bất kỳ đâu trên thanh để di chuyển (thả gần
+          mép sẽ tự dính vào mép), kéo mép để đổi độ rộng.
         </p>
       </section>
       <section class="settings-section">
@@ -469,6 +528,21 @@
         </p>
       </section>
       <section class="settings-section">
+        <h3>Dọn dẹp & bookmark</h3>
+        <p class="subtle">
+          Tìm link hỏng, link đã chuyển địa chỉ và trang gần trùng. Liên kết
+          bookmark lưu riêng trên máy này.
+        </p>
+        <div class="button-pair">
+          <button class="button" id="cleanup-btn">
+            <span data-icon="broom"></span>Dọn dẹp</button
+          ><button class="button" id="bookmark-permission-btn">
+            <span data-icon="bookmark"></span
+            ><span id="bookmark-permission-label">Bật bookmark</span>
+          </button>
+        </div>
+      </section>
+      <section class="settings-section">
         <h3>Website cho phép nhúng</h3>
         <p class="subtle">
           Chỉ áp dụng khi chính sidebar mở website. Bạn có thể thu hồi từng
@@ -477,8 +551,88 @@
         <div id="embed-list"></div>
       </section>
       <p class="settings-footnote">
-        Pinned Sidebar 4.0 · Ctrl + M hoặc Ctrl + Shift + Y để mở
+        Pinned Sidebar 4.1 · Ctrl + M hoặc Ctrl + Shift + Y để mở
       </p>
+    </dialog>
+    <dialog id="link-dialog" aria-labelledby="link-dialog-title">
+      <form id="link-form">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">BOOKMARK</p>
+            <h2 id="link-dialog-title">Đưa thư mục vào sidebar</h2>
+          </div>
+          <button
+            type="button"
+            class="icon-button"
+            data-close
+            aria-label="Đóng"
+            data-icon="close"
+          ></button>
+        </div>
+        <p class="subtle" id="link-source"></p>
+        <label>Không gian<select id="link-target"></select></label>
+        <label id="link-name-wrap"
+          >Tên không gian mới<input id="link-name" maxlength="80"
+        /></label>
+        <label
+          >Cách đồng bộ<select id="link-mode">
+            <option value="two-way">
+              Hai chiều: sửa bên nào cũng cập nhật bên kia
+            </option>
+            <option value="pull-only">Chỉ kéo về: bookmark → sidebar</option>
+            <option value="copy">Sao chép một lần</option>
+          </select></label
+        >
+        <div class="link-dialog-preview" id="link-preview" role="status"></div>
+        <p class="form-error" id="link-error" role="alert"></p>
+        <div class="dialog-actions">
+          <button type="button" class="button" data-close>Hủy</button
+          ><button class="button primary" id="link-save" type="submit">
+            Liên kết
+          </button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="cleanup-dialog" aria-labelledby="cleanup-title">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">DỌN DẸP</p>
+          <h2 id="cleanup-title">Kiểm tra trang ghim</h2>
+        </div>
+        <button
+          type="button"
+          class="icon-button"
+          data-close
+          aria-label="Đóng"
+          data-icon="close"
+        ></button>
+      </div>
+      <p class="subtle">
+        Gửi yêu cầu trực tiếp tới từng website đã ghim (không kèm cookie) để tìm
+        link hỏng hoặc đã chuyển địa chỉ, và gom các trang gần trùng.
+      </p>
+      <label
+        >Phạm vi<select id="cleanup-scope">
+          <option value="workspace">Không gian hiện tại</option>
+          <option value="all">Tất cả không gian</option>
+        </select></label
+      >
+      <label class="setting-row"
+        ><span>Tìm trùng giữa các không gian</span
+        ><input id="cleanup-across" type="checkbox" role="switch"
+      /></label>
+      <div class="cleanup-progress" id="cleanup-progress" hidden>
+        <span id="cleanup-bar"></span>
+      </div>
+      <p class="subtle" id="cleanup-status" role="status"></p>
+      <div class="cleanup-results" id="cleanup-results"></div>
+      <div class="dialog-actions">
+        <button type="button" class="button" id="cleanup-stop" hidden>
+          Dừng</button
+        ><button type="button" class="button primary" id="cleanup-run">
+          Bắt đầu kiểm tra
+        </button>
+      </div>
     </dialog>
     <dialog id="choice-dialog" aria-labelledby="choice-title">
       <div class="dialog-heading">

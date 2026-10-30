@@ -8,11 +8,29 @@ const { execFileSync } = require("node:child_process");
 const root = path.resolve(__dirname, "..");
 const out = path.join(root, "test-results");
 fs.mkdirSync(out, { recursive: true });
-execFileSync(process.execPath, [path.join(root, "scripts/build.cjs")]);
+execFileSync(process.execPath, [
+  path.join(root, "scripts/build.cjs"),
+  "--grant-optional",
+]);
 const extension = path.join(root, "dist", "pinned-sidebar");
 const server = http.createServer((req, res) => {
   res.setHeader("Content-Type", "text/html; charset=utf-8");
-  if (req.url.startsWith("/blocked")) {
+  if (req.url.startsWith("/gone")) {
+    res.statusCode = 410;
+    res.end("Gone");
+  } else if (req.url.startsWith("/moved")) {
+    res.statusCode = 301;
+    res.setHeader("Location", "/target");
+    res.end();
+  } else if (
+    req.url.startsWith("/blocked") &&
+    req.headers["sec-fetch-dest"] === "iframe"
+  ) {
+    // Like Facebook: the server itself refuses requests marked as iframes.
+    res.statusCode = 400;
+    res.setHeader("X-Frame-Options", "DENY");
+    res.end("<!doctype html><title>Refused</title><h1>Iframe refused</h1>");
+  } else if (req.url.startsWith("/blocked")) {
     res.setHeader("X-Frame-Options", "DENY");
     res.setHeader(
       "Content-Security-Policy",
@@ -356,6 +374,32 @@ async function waitState(page, count) {
   });
   await page.locator("#compact-btn").click();
   passed("black, pastel, light/dark/compact layouts and 280px viewport");
+  // Theme swatches: click, roving focus + arrow keys; header fits at 280px.
+  await page.locator("#settings-btn").click();
+  await page.locator('.theme-swatch[data-theme="ocean"]').click();
+  await page.waitForFunction(
+    () => document.documentElement.dataset.theme === "ocean",
+  );
+  assert.equal(await page.locator('.theme-swatch[tabindex="0"]').count(), 1);
+  await page.keyboard.press("ArrowRight");
+  await page.waitForFunction(
+    () => document.documentElement.dataset.theme === "sunset",
+  );
+  assert.equal(
+    await page.locator(".theme-swatch.is-selected").getAttribute("data-theme"),
+    "sunset",
+  );
+  await page.locator("#settings-dialog [data-close]").click();
+  await page.setViewportSize({ width: 280, height: 700 });
+  assert.ok(
+    await page.evaluate(
+      () =>
+        document.querySelector("#settings-btn").getBoundingClientRect().right <=
+        innerWidth,
+    ),
+  );
+  await page.setViewportSize({ width: 380, height: 850 });
+  passed("theme swatches support click and arrow keys; header fits 280px");
   // Native DNR matching is enabled automatically; allowed only for sidebar initiator.
   await page.getByRole("link", { name: /^Trang thử nghiệm —/ }).click();
   await page.locator("#viewer:not([hidden])").waitFor();
@@ -459,6 +503,40 @@ async function waitState(page, count) {
     );
   });
   passed("icon rail can be dragged and remembers its position");
+  // Drag from anywhere on the rail (an icon, then the logo) and snap to a side.
+  const stateX = () =>
+    page.evaluate(async () => {
+      const data = await chrome.runtime.sendMessage({ type: "GET_STATE" });
+      return data.state.settings;
+    });
+  const railPoint = () =>
+    site.evaluate(() => {
+      const r = document
+        .querySelector("#pinned-sidebar-v2")
+        .getBoundingClientRect();
+      return { x: r.x, y: r.y };
+    });
+  let box = await railPoint();
+  await site.mouse.move(box.x + 24, box.y + 80);
+  await site.mouse.down();
+  await site.mouse.move(180, 300, { steps: 8 });
+  await site.mouse.up();
+  await page.waitForFunction(async () => {
+    const data = await chrome.runtime.sendMessage({ type: "GET_STATE" });
+    const { overlayX } = data.state.settings;
+    return overlayX > 100 && overlayX < 250;
+  });
+  assert.equal((await stateX()).overlaySide, "left");
+  box = await railPoint();
+  await site.mouse.move(box.x + 24, box.y + 25);
+  await site.mouse.down();
+  await site.mouse.move(14, 200, { steps: 8 });
+  await site.mouse.up();
+  await page.waitForFunction(async () => {
+    const data = await chrome.runtime.sendMessage({ type: "GET_STATE" });
+    return data.state.settings.overlayX === 24;
+  });
+  passed("rail drags from icons and logo, and snaps to the nearest side");
   await site.screenshot({
     path: path.join(out, "overlay.png"),
     fullPage: true,
@@ -534,6 +612,249 @@ async function waitState(page, count) {
   );
   await closeSite.close();
   passed("small close button hides the floating rail and saves the choice");
+
+  // 4.1: bookmarks, tab groups and cleanup (test build grants "bookmarks").
+  const folderId = await sw.evaluate(async (origin) => {
+    const folder = await chrome.bookmarks.create({
+      parentId: "1",
+      title: "Dự án",
+    });
+    await chrome.bookmarks.create({
+      parentId: folder.id,
+      title: "Tài liệu dự án",
+      url: origin + "/docs",
+    });
+    const sub = await chrome.bookmarks.create({
+      parentId: folder.id,
+      title: "Thiết kế",
+    });
+    await chrome.bookmarks.create({
+      parentId: sub.id,
+      title: "Bản vẽ",
+      url: origin + "/design",
+    });
+    return folder.id;
+  }, origin);
+  const bm = await context.newPage();
+  bm.on("pageerror", (error) => errors.push(error.message));
+  await bm.goto(`chrome-extension://${id}/sidebar.html`);
+  await bm.locator("#bookmarks-tab").click();
+  await bm.locator("#bm-browser").waitFor();
+  await bm.locator("#bm-list .pin-link", { hasText: "Bookmarks bar" }).click();
+  const projectRow = bm.locator("#bm-list .pin-row", { hasText: "Dự án" });
+  await projectRow.locator(".row-more").click();
+  await bm
+    .getByRole("menuitem", { name: "Liên kết với không gian…", exact: true })
+    .click();
+  await bm.waitForFunction(() =>
+    document.querySelector("#link-preview").textContent.includes("Thêm 2"),
+  );
+  await bm.locator("#link-save").click();
+  await bm.locator("#link-banner:not([hidden])").waitFor();
+  await waitState(bm, 2);
+  assert.match(
+    await bm.locator("#workspace-select option:checked").textContent(),
+    /^🔗 Dự án$/,
+  );
+  passed("bookmark folder links to a new workspace with a live preview");
+  const linkedWorkspace = await bm.evaluate(
+    async () =>
+      (await chrome.storage.local.get("activeWorkspaceId")).activeWorkspaceId,
+  );
+  await bm.evaluate(
+    async ([workspaceId, origin]) =>
+      chrome.runtime.sendMessage({
+        type: "MUTATE",
+        action: {
+          type: "SAVE_PIN",
+          url: origin + "/added",
+          title: "Thêm từ sidebar",
+          workspaceId,
+        },
+      }),
+    [linkedWorkspace, origin],
+  );
+  assert.ok(
+    (
+      await sw.evaluate(
+        async (id) =>
+          (await chrome.bookmarks.getChildren(id)).map((node) => node.title),
+        folderId,
+      )
+    ).includes("Thêm từ sidebar"),
+  );
+  await sw.evaluate(async (id) => {
+    const [docs] = (await chrome.bookmarks.getChildren(id)).filter(
+      (node) => node.title === "Tài liệu dự án",
+    );
+    await chrome.bookmarks.update(docs.id, { title: "Tài liệu đã đổi" });
+  }, folderId);
+  await bm.locator(".site-title", { hasText: "Tài liệu đã đổi" }).waitFor();
+  passed("linked workspace and bookmark folder stay in sync both ways");
+  await bm.locator("#workspace-select").selectOption("workspace-default");
+  await bm.locator("#search").fill("ban ve");
+  await bm
+    .locator(".from-bookmarks .site-title", { hasText: "Bản vẽ" })
+    .waitFor();
+  await bm.locator(".from-bookmarks .row-pin").first().click();
+  await bm.waitForFunction(() =>
+    [
+      ...document.querySelectorAll(
+        "#pin-list .group:not(.from-bookmarks) .site-title",
+      ),
+    ].some((el) => el.textContent.startsWith("Bản vẽ")),
+  );
+  await bm.locator("#search").fill("");
+  passed("pin search offers matching bookmarks and pins them");
+  await bm.locator("#workspace-select").selectOption(linkedWorkspace);
+  const designGroup = bm.locator('.group[data-folder]:not([data-folder=""])', {
+    hasText: "Thiết kế",
+  });
+  await designGroup.locator(".group-heading .icon-button").click();
+  await bm
+    .getByRole("menuitem", { name: "Mở tất cả thành nhóm tab", exact: true })
+    .click();
+  await bm.waitForFunction(async () =>
+    (await chrome.tabGroups.query({})).some(
+      (group) => group.title === "Thiết kế",
+    ),
+  );
+  passed("a collection opens as a titled tab group");
+  await bm.locator("#save-session").click();
+  await bm
+    .getByRole("menuitem", { name: "Lưu nhóm “Thiết kế”", exact: true })
+    .click();
+  const groupedSession = await bm.waitForFunction(async () => {
+    const [session] =
+      (await chrome.storage.local.get("savedSessions")).savedSessions || [];
+    return session?.groups?.[0]?.title === "Thiết kế" &&
+      session.tabs.every((tab) => tab.group === 0)
+      ? session.name
+      : null;
+  });
+  const sessionName = await groupedSession.jsonValue();
+  await bm.evaluate(async () => {
+    const tabs = await chrome.tabs.query({});
+    await chrome.tabs.remove(
+      tabs.filter((tab) => tab.groupId > -1).map((tab) => tab.id),
+    );
+  });
+  await bm.locator("#sessions-tab").click();
+  await bm.getByRole("button", { name: "Mở lại " + sessionName }).click();
+  await bm.waitForFunction(async () =>
+    (await chrome.tabGroups.query({})).some(
+      (group) => group.title === "Thiết kế",
+    ),
+  );
+  await bm.locator("#pins-tab").click();
+  passed("a tab group saves as a session and reopens as the same group");
+  await bm.evaluate(
+    async ([workspaceId, origin]) => {
+      // Its own workspace: the default one holds 1000 unreachable test pins.
+      await chrome.runtime.sendMessage({
+        type: "MUTATE",
+        action: { type: "SAVE_WORKSPACE", workspaceId, name: "Dọn dẹp" },
+      });
+      for (const [path, title] of [
+        ["/gone", "Đã mất"],
+        ["/moved", "Đã chuyển"],
+      ])
+        await chrome.runtime.sendMessage({
+          type: "MUTATE",
+          action: { type: "SAVE_PIN", url: origin + path, title, workspaceId },
+        });
+    },
+    ["cleanup", origin],
+  );
+  await bm.locator("#workspace-select").selectOption("cleanup");
+  await bm.locator("#settings-btn").click();
+  await bm.locator("#cleanup-btn").click();
+  await bm.locator("#cleanup-run").click();
+  await bm
+    .locator("#cleanup-results h3", { hasText: "Link hỏng (1)" })
+    .waitFor({ timeout: 30000 });
+  await bm
+    .locator("#cleanup-results h3", { hasText: "Đã chuyển địa chỉ (1)" })
+    .waitFor();
+  await bm
+    .locator(".cleanup-row", { hasText: "Đã chuyển" })
+    .getByRole("button", { name: "Cập nhật" })
+    .click();
+  await bm.waitForFunction(async (origin) => {
+    const data = await chrome.runtime.sendMessage({ type: "GET_STATE" });
+    return data.state.pins.some((pin) => pin.url === origin + "/target");
+  }, origin);
+  await bm.locator("#cleanup-dialog [data-close]").click();
+  await bm.locator(".check-mark").first().waitFor();
+  passed("cleanup finds dead and moved links and updates the address");
+
+  const sortId = await sw.evaluate(async (origin) => {
+    const folder = await chrome.bookmarks.create({
+      parentId: "2",
+      title: "Sắp xếp",
+    });
+    for (const title of ["A", "B", "C"])
+      await chrome.bookmarks.create({
+        parentId: folder.id,
+        title,
+        url: `${origin}/${title}`,
+      });
+    await chrome.bookmarks.create({ parentId: folder.id, title: "Con" });
+    return folder.id;
+  }, origin);
+  const titles = (id) =>
+    sw.evaluate(
+      async (id) =>
+        (await chrome.bookmarks.getChildren(id)).map((node) => node.title),
+      id,
+    );
+  const waitTitles = async (id, expected) => {
+    for (let i = 0; i < 40; i++) {
+      if (JSON.stringify(await titles(id)) === JSON.stringify(expected)) return;
+      await bm.waitForTimeout(100);
+    }
+    assert.deepEqual(await titles(id), expected);
+  };
+  const bmRow = (title) =>
+    bm.locator("#bm-list .pin-row", {
+      has: bm.locator(".site-title", { hasText: new RegExp(`^${title}$`) }),
+    });
+  await bm.locator("#bookmarks-tab").click();
+  await bm
+    .locator("#bm-crumbs")
+    .getByRole("button", { name: "Bookmark", exact: true })
+    .click();
+  await bm
+    .locator("#bm-list .pin-link", { hasText: "Other bookmarks" })
+    .click();
+  await bm.locator("#bm-list .pin-link", { hasText: "Sắp xếp" }).click();
+  await bmRow("C").waitFor();
+  await bmRow("C").dragTo(bmRow("A"), { targetPosition: { x: 40, y: 4 } });
+  await waitTitles(sortId, ["C", "A", "B", "Con"]);
+  await bmRow("B").waitFor();
+  const conBox = await bmRow("Con").boundingBox();
+  await bmRow("B").dragTo(bmRow("Con"), {
+    targetPosition: { x: 40, y: conBox.height / 2 },
+  });
+  await waitTitles(sortId, ["C", "A", "Con"]);
+  passed("bookmarks reorder and move into a folder by drag and drop");
+  await bmRow("C").locator(".pin-link").focus();
+  await bm.keyboard.press("Alt+ArrowDown");
+  await waitTitles(sortId, ["A", "C", "Con"]);
+  await bmRow("A").locator(".row-more").click();
+  await bm.getByRole("menuitem", { name: "Xóa bookmark", exact: true }).click();
+  await waitTitles(sortId, ["C", "Con"]);
+  await bm
+    .locator(".toast", { hasText: "Đã xóa “A”" })
+    .getByRole("button", { name: "Hoàn tác" })
+    .click();
+  await waitTitles(sortId, ["A", "C", "Con"]);
+  await bmRow("Con").locator(".row-more").click();
+  await bm.getByRole("menuitem", { name: "Xóa thư mục", exact: true }).click();
+  await bm.getByRole("button", { name: "Xóa thư mục", exact: true }).click();
+  await waitTitles(sortId, ["A", "C"]);
+  passed("bookmarks move by keyboard and delete with undo");
+  await bm.close();
   assert.deepEqual(errors, []);
   fs.writeFileSync(
     path.join(out, "browser-report.json"),

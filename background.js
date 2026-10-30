@@ -1,20 +1,33 @@
 /* Single writer: mutations and cloud deliveries share the same durable queue. */
 "use strict";
-importScripts("core.js");
+importScripts("core.js", "bookmarks-core.js");
 const C = Pinned;
+const B = BookmarkSync;
 const STATE_KEY = "pinned.v2";
 const SYNC_KEY = "pinned.cloud";
 const CHUNK_PREFIX = "pinned.chunk.";
-// These sites redirect between their documented bare and www hostnames. Keep
-// the exception narrow: do not grant arbitrary subdomains of a trusted site.
+// Sites commonly redirect between their bare and www hostnames, so both are
+// unlocked together. Keep the exception narrow: never other subdomains, except
+// documented mobile hosts that a site redirects small viewports to.
 const EMBED_ORIGIN_ALIASES = new Map([
-  ["https://youtube.com", ["https://www.youtube.com"]],
-  ["https://www.youtube.com", ["https://youtube.com"]],
-  ["https://google.com", ["https://www.google.com"]],
-  ["https://www.google.com", ["https://google.com"]],
-  ["https://perplexity.ai", ["https://www.perplexity.ai"]],
-  ["https://www.perplexity.ai", ["https://perplexity.ai"]],
+  ["https://facebook.com", ["https://m.facebook.com"]],
+  ["https://www.facebook.com", ["https://m.facebook.com"]],
 ]);
+function embedAliases(origin) {
+  const url = new URL(origin);
+  const twin = url.hostname.startsWith("www.")
+    ? url.hostname.slice(4)
+    : "www." + url.hostname;
+  // IP addresses and single-label hosts (localhost) have no www twin.
+  const named =
+    url.hostname.includes(".") && !/^[\d.]+$|^\[/.test(url.hostname);
+  return [
+    ...(named
+      ? [`${url.protocol}//${twin}${url.port ? ":" + url.port : ""}`]
+      : []),
+    ...(EMBED_ORIGIN_ALIASES.get(origin) || []),
+  ];
+}
 let queue = Promise.resolve();
 let initialized;
 function serial(work) {
@@ -176,7 +189,320 @@ async function commit(action) {
   if (!next.settings.sync) await chrome.alarms.clear("pinned-sync");
   else if (!deviceOnly || (!state.settings.sync && syncStatus.dirty))
     await scheduleSync();
+  if (!deviceOnly && !action.fromBookmarks) await afterStateChange(state, next);
   return next;
+}
+/* Bookmark links are per device: bookmark IDs differ between computers, so
+   they live in storage.local and never travel through sync. Every function
+   below runs inside serial(); none may call serial() itself. */
+const LINKS_KEY = "bookmarkLinks";
+async function getLinks() {
+  return (await chrome.storage.local.get(LINKS_KEY))[LINKS_KEY] || [];
+}
+async function setLinks(links) {
+  await chrome.storage.local.set({ [LINKS_KEY]: links });
+}
+function requireBookmarks() {
+  if (!chrome.bookmarks)
+    throw new Error("Hãy cho phép truy cập bookmark trước trong tab Bookmark.");
+}
+async function bookmarkNode(id) {
+  const [node] = await chrome.bookmarks.getSubTree(String(id));
+  if (!node || node.url != null)
+    throw new Error("Hãy chọn một thư mục bookmark.");
+  return node;
+}
+async function bookmarkPath(id) {
+  const names = [];
+  for (let current = String(id); current && current !== "0";) {
+    const [node] = await chrome.bookmarks.get(current);
+    names.unshift(node.title || "Bookmark");
+    current = node.parentId;
+  }
+  return names.join(" › ");
+}
+function workspaceContent(state, workspaceId) {
+  return JSON.stringify([
+    state.folders.filter((item) => item.workspaceId === workspaceId),
+    state.pins.filter((item) => item.workspaceId === workspaceId),
+  ]);
+}
+async function pushLink(link, state) {
+  if (link.direction !== "two-way" || link.status !== "ok") return;
+  let node;
+  try {
+    node = await bookmarkNode(link.rootId);
+  } catch {
+    link.status = "broken";
+    return;
+  }
+  const result = await B.applyOps(
+    chrome.bookmarks,
+    link.rootId,
+    B.planPush(state, link, node),
+  );
+  link.map = result.map;
+  link.message = result.failed
+    ? "Một số bookmark chưa cập nhật được; sẽ thử lại ở lần đồng bộ sau."
+    : "";
+}
+// Sidebar edits on a linked workspace are written to its bookmark folder.
+async function afterStateChange(prev, next) {
+  const links = await getLinks();
+  if (!links.length) return;
+  let dirty = false;
+  for (const link of [...links]) {
+    if (!next.workspaces.some((item) => item.id === link.workspaceId)) {
+      // Deleting a workspace only drops the link; bookmarks are kept.
+      links.splice(links.indexOf(link), 1);
+      dirty = true;
+      continue;
+    }
+    if (
+      !chrome.bookmarks ||
+      workspaceContent(prev, link.workspaceId) ===
+        workspaceContent(next, link.workspaceId)
+    )
+      continue;
+    try {
+      await pushLink(link, next);
+    } catch (error) {
+      link.message = error.message;
+    }
+    dirty = true;
+  }
+  if (dirty) await setLinks(links);
+}
+async function pullLink(link) {
+  let node;
+  try {
+    node = await bookmarkNode(link.rootId);
+  } catch {
+    link.status = "broken";
+    link.message = "Thư mục bookmark đã bị xóa hoặc không đọc được.";
+    return;
+  }
+  const state = await readState();
+  if (!state.workspaces.some((item) => item.id === link.workspaceId)) return;
+  const plan = B.planPull(state, link, node);
+  link.map = plan.map;
+  link.message = "";
+  link.status = "ok";
+  if (plan.changed)
+    await commit({
+      type: "REPLACE_WORKSPACE_ITEMS",
+      workspaceId: link.workspaceId,
+      folders: plan.folders,
+      pins: plan.pins,
+      fromBookmarks: true,
+    });
+  // Sites added in the sidebar while the link was idle get their bookmarks.
+  await pushLink(link, await readState());
+}
+async function pullAll() {
+  if (!chrome.bookmarks) return;
+  const links = await getLinks();
+  if (!links.length) return;
+  for (const link of links)
+    if (link.status === "ok")
+      try {
+        await pullLink(link);
+      } catch (error) {
+        link.message = error.message;
+      }
+  await setLinks(links);
+}
+let pullTimer;
+let importingBookmarks = false;
+function schedulePull() {
+  if (importingBookmarks) return;
+  clearTimeout(pullTimer);
+  pullTimer = setTimeout(
+    () => serial(pullAll).catch((error) => console.warn("Bookmarks:", error)),
+    800,
+  );
+}
+let bookmarkListeners = false;
+function listenBookmarks() {
+  if (!chrome.bookmarks || bookmarkListeners) return;
+  bookmarkListeners = true;
+  for (const name of [
+    "onCreated",
+    "onChanged",
+    "onRemoved",
+    "onMoved",
+    "onChildrenReordered",
+  ])
+    chrome.bookmarks[name]?.addListener(schedulePull);
+  // Signing in can replay thousands of synced bookmarks: reconcile once.
+  chrome.bookmarks.onImportBegan?.addListener(() => {
+    importingBookmarks = true;
+  });
+  chrome.bookmarks.onImportEnded?.addListener(() => {
+    importingBookmarks = false;
+    schedulePull();
+  });
+}
+listenBookmarks();
+chrome.permissions?.onAdded.addListener((permissions) => {
+  if (!permissions.permissions?.includes("bookmarks")) return;
+  listenBookmarks();
+  serial(async () => {
+    const links = await getLinks();
+    for (const link of links) if (link.status === "paused") link.status = "ok";
+    await setLinks(links);
+    await pullAll();
+  }).catch(console.warn);
+});
+chrome.permissions?.onRemoved.addListener((permissions) => {
+  if (!permissions.permissions?.includes("bookmarks")) return;
+  serial(async () => {
+    const links = await getLinks();
+    for (const link of links)
+      if (link.status === "ok") {
+        link.status = "paused";
+        link.message = "Đã mất quyền truy cập bookmark.";
+      }
+    await setLinks(links);
+  }).catch(console.warn);
+});
+async function targetWorkspace(message) {
+  if (!message.newWorkspaceName) return message.workspaceId;
+  const workspaceId = C.uid();
+  await commit({
+    type: "SAVE_WORKSPACE",
+    workspaceId,
+    name: message.newWorkspaceName,
+    color: message.color,
+  });
+  return workspaceId;
+}
+async function linkBookmarks(message) {
+  requireBookmarks();
+  const direction = message.direction === "pull-only" ? "pull-only" : "two-way";
+  const node = await bookmarkNode(message.rootId);
+  if (node.unmodifiable && direction === "two-way")
+    throw new Error(
+      "Thư mục này do tổ chức quản lý nên chỉ có thể sao chép hoặc chỉ kéo về.",
+    );
+  const links = await getLinks();
+  if (links.some((link) => link.rootId === node.id))
+    throw new Error(
+      "Thư mục bookmark này đã liên kết với một không gian khác.",
+    );
+  if (
+    !message.newWorkspaceName &&
+    links.some((link) => link.workspaceId === message.workspaceId)
+  )
+    throw new Error(
+      "Không gian này đã có liên kết. Hãy hủy liên kết cũ trước.",
+    );
+  let state = await readState();
+  const draft = {
+    workspaceId: message.workspaceId,
+    rootId: node.id,
+    direction,
+    map: B.emptyMap(),
+    status: "ok",
+  };
+  if (message.dryRun) {
+    if (message.newWorkspaceName) {
+      draft.workspaceId = C.uid();
+      state = C.reduce(state, {
+        type: "SAVE_WORKSPACE",
+        workspaceId: draft.workspaceId,
+        name: message.newWorkspaceName,
+      });
+    }
+    const plan = B.planPull(state, draft, node);
+    const mapped = new Set(Object.values(plan.map.pins));
+    return {
+      stats: {
+        ...plan.stats,
+        pushed:
+          direction === "two-way"
+            ? plan.pins.filter((pin) => !mapped.has(pin.id)).length
+            : 0,
+      },
+    };
+  }
+  // Validate (size limits) before creating a workspace for the link.
+  B.planPull(state, draft, node);
+  draft.workspaceId = await targetWorkspace(message);
+  state = await readState();
+  const link = {
+    ...draft,
+    rootPath: await bookmarkPath(node.id),
+    linkedAt: Date.now(),
+    message: "",
+  };
+  await chrome.storage.local.set({
+    recoveryBackup: { time: Date.now(), data: state },
+    bookmarkLinkBackup: { time: Date.now(), rootId: node.id, tree: node },
+  });
+  // Re-read: creating the workspace above may have updated the stored links.
+  const current = await getLinks();
+  current.push(link);
+  await pullLink(link);
+  await setLinks(current);
+  return { workspaceId: link.workspaceId, state: await readState() };
+}
+async function copyBookmarks(message) {
+  requireBookmarks();
+  const node = await bookmarkNode(message.rootId);
+  const temp = { workspaceId: "", map: B.emptyMap() };
+  B.planPull(await readState(), temp, node, { mode: "copy" });
+  temp.workspaceId = await targetWorkspace(message);
+  const plan = B.planPull(await readState(), temp, node, { mode: "copy" });
+  if (plan.changed)
+    await commit({
+      type: "REPLACE_WORKSPACE_ITEMS",
+      workspaceId: temp.workspaceId,
+      folders: plan.folders,
+      pins: plan.pins,
+    });
+  return {
+    workspaceId: temp.workspaceId,
+    stats: plan.stats,
+    state: await readState(),
+  };
+}
+async function exportBookmarks(message) {
+  requireBookmarks();
+  const state = await readState();
+  const workspace = state.workspaces.find(
+    (item) => item.id === message.workspaceId,
+  );
+  if (!workspace) throw new Error("Không gian không còn tồn tại.");
+  if (
+    message.link &&
+    (await getLinks()).some((link) => link.workspaceId === workspace.id)
+  )
+    throw new Error(
+      "Không gian này đã có liên kết. Hãy hủy liên kết cũ trước.",
+    );
+  const parent = await bookmarkNode(message.parentId || "2");
+  const folder = await chrome.bookmarks.create({
+    parentId: parent.id,
+    title: "Pinned · " + workspace.name,
+  });
+  if (message.link)
+    return linkBookmarks({
+      rootId: folder.id,
+      workspaceId: workspace.id,
+      direction: "two-way",
+    });
+  const temp = {
+    workspaceId: workspace.id,
+    rootId: folder.id,
+    map: B.emptyMap(),
+  };
+  await B.applyOps(
+    chrome.bookmarks,
+    folder.id,
+    B.planPush(state, temp, await bookmarkNode(folder.id)),
+  );
+  return { rootId: folder.id };
 }
 async function upload(force = false) {
   const state = await readState();
@@ -270,6 +596,8 @@ async function receiveCloud() {
       conflict: false,
     },
   });
+  // Cloud edits from a device without the link still reach the bookmarks.
+  await afterStateChange(state, cloud.state);
 }
 async function syncError(error) {
   const { syncStatus = {} } = await chrome.storage.local.get("syncStatus");
@@ -297,18 +625,18 @@ async function applyEmbedRules(origins) {
   const existing = await chrome.declarativeNetRequest.getDynamicRules();
   const escape = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const requestOrigins = [
-    ...new Set(
-      origins.flatMap((origin) => [
-        origin,
-        ...(EMBED_ORIGIN_ALIASES.get(origin) || []),
-      ]),
-    ),
+    ...new Set(origins.flatMap((origin) => [origin, ...embedAliases(origin)])),
   ];
   const addRules = requestOrigins.map((origin, index) => ({
     id: 2000 + index,
     priority: 1,
     action: {
       type: "modifyHeaders",
+      // Some servers (Facebook, Instagram…) refuse any request marked as an
+      // iframe load and answer with an error page; present it as a page load.
+      requestHeaders: [
+        { header: "sec-fetch-dest", operation: "set", value: "document" },
+      ],
       responseHeaders: [
         { header: "x-frame-options", operation: "remove" },
         { header: "content-security-policy", operation: "remove" },
@@ -419,6 +747,7 @@ async function handle(message, sender) {
           title: tab.title || C.host(tab.url),
           url: tab.url,
           faviconUrl: tab.favIconUrl || "",
+          groupId: tab.groupId ?? -1,
         })),
     };
   }
@@ -437,6 +766,28 @@ async function handle(message, sender) {
         workspaceId: message.workspaceId,
       }),
     };
+  }
+  if (message.type === "BOOKMARK_LINK") return linkBookmarks(message);
+  if (message.type === "BOOKMARK_COPY") return copyBookmarks(message);
+  if (message.type === "BOOKMARK_EXPORT") return exportBookmarks(message);
+  if (message.type === "BOOKMARK_UNLINK") {
+    await setLinks(
+      (await getLinks()).filter(
+        (link) => link.workspaceId !== message.workspaceId,
+      ),
+    );
+    return {};
+  }
+  if (message.type === "BOOKMARK_RESYNC") {
+    requireBookmarks();
+    const links = await getLinks();
+    const link = links.find((item) => item.workspaceId === message.workspaceId);
+    if (!link) throw new Error("Không gian này chưa liên kết bookmark.");
+    link.status = "ok";
+    await pullLink(link);
+    await setLinks(links);
+    if (link.status !== "ok") throw new Error(link.message);
+    return { state: await readState() };
   }
   if (message.type === "EMBED") {
     await setEmbed(message.origin, message.enabled);
@@ -472,6 +823,7 @@ async function handle(message, sender) {
           syncedAt: Date.now(),
         },
       });
+      await afterStateChange(state, await readState());
     } else if (message.choice === "local") {
       const { syncStatus = {} } = await chrome.storage.local.get("syncStatus");
       const cloud = await readCloud();
@@ -602,6 +954,96 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (area === "local" && (changes[STATE_KEY] || changes.activeWorkspaceId))
     refreshOverlays(changes).catch(() => {});
 });
+// Omnibox: "p <text>" searches pins of every workspace, active one first.
+function escapeXml(text) {
+  return String(text).replace(
+    /[&<>"']/g,
+    (char) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&apos;",
+      })[char],
+  );
+}
+async function omniboxResults(text, limit = 8) {
+  const state = await readState();
+  return C.search(state, text, {
+    workspaceId: await activeWorkspace(state),
+    limit,
+  });
+}
+async function openFromOmnibox(url, disposition) {
+  const address = C.url(url);
+  if (disposition === "currentTab") {
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      lastFocusedWindow: true,
+    });
+    if (tab) return chrome.tabs.update(tab.id, { url: address });
+  }
+  await chrome.tabs.create({
+    url: address,
+    active: disposition !== "newBackgroundTab",
+  });
+}
+chrome.omnibox?.onInputStarted.addListener(() => {
+  chrome.omnibox.setDefaultSuggestion({
+    description:
+      "Tìm trong Pinned Sidebar: gõ tên, tên miền hoặc nhãn · gõ + để ghim tab hiện tại",
+  });
+});
+chrome.omnibox?.onInputChanged.addListener((text, suggest) => {
+  if (text.trim() === "+") {
+    chrome.omnibox.setDefaultSuggestion({
+      description: "Ghim tab hiện tại vào không gian đang chọn",
+    });
+    suggest([]);
+    return;
+  }
+  omniboxResults(text)
+    .then((results) => {
+      chrome.omnibox.setDefaultSuggestion({
+        description: results.length
+          ? `Mở <match>${escapeXml(results[0].pin.title)}</match> <dim>· ${escapeXml(results[0].workspace?.name || "")}</dim>`
+          : `Không có trang ghim khớp “${escapeXml(text)}”`,
+      });
+      suggest(
+        results.slice(1).map(({ pin, workspace, folder }) => ({
+          content: pin.url,
+          description: `<match>${escapeXml(pin.title)}</match> <dim>· ${escapeXml(
+            [workspace?.name, folder?.name].filter(Boolean).join(" › "),
+          )}</dim> <url>${escapeXml(C.host(pin.url))}</url>`,
+        })),
+      );
+    })
+    .catch(() => suggest([]));
+});
+chrome.omnibox?.onInputEntered.addListener((text, disposition) => {
+  serial(async () => {
+    if (text.trim() === "+") {
+      const [tab] = await chrome.tabs.query({
+        active: true,
+        lastFocusedWindow: true,
+      });
+      if (!tab?.url) throw new Error("Không đọc được tab hiện tại.");
+      await commit({
+        type: "SAVE_PIN",
+        url: tab.url,
+        title: tab.title,
+        workspaceId: await activeWorkspace(await readState()),
+      });
+      return;
+    }
+    // A picked suggestion sends its pin URL; typed text opens the best match.
+    const state = await readState();
+    let target = state.pins.find((pin) => pin.url === text)?.url;
+    if (!target) target = (await omniboxResults(text, 1))[0]?.pin.url;
+    if (target) await openFromOmnibox(target, disposition);
+  }).catch((error) => console.warn("Omnibox:", error));
+});
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === "pinned-sync") serial(() => upload()).catch(syncError);
 });
@@ -620,6 +1062,8 @@ async function setup() {
   );
   await applyEmbedRules(embedOrigins);
   if (syncStatus.dirty) await scheduleSync();
+  // Bookmarks may have changed while the extension was not running.
+  await pullAll().catch((error) => console.warn("Bookmarks:", error));
 }
 chrome.runtime.onInstalled.addListener(() =>
   serial(setup).catch(console.error),

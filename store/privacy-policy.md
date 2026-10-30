@@ -1,6 +1,6 @@
 # Chính sách quyền riêng tư — Pinned Sidebar
 
-Cập nhật lần cuối: 2026-10-10
+Cập nhật lần cuối: 2026-10-30
 
 Pinned Sidebar ("Tiện ích") là tiện ích trình duyệt cho Microsoft Edge và Google Chrome, giúp ghim, tìm và sắp xếp website, lưu phiên tab trong thanh bên.
 
@@ -8,6 +8,8 @@ Pinned Sidebar ("Tiện ích") là tiện ích trình duyệt cho Microsoft Edge
 
 - **Danh sách website đã ghim, thư mục, không gian làm việc, phiên tab, cài đặt**: lưu trong bộ nhớ của trình duyệt (`chrome.storage.local`). Nếu bạn bật đồng bộ trình duyệt, một bản sao được gửi qua bộ nhớ đồng bộ của Edge/Chrome (`chrome.storage.sync`) và do Microsoft/Google quản lý theo chính sách của họ.
 - **URL và tiêu đề tab**: chỉ đọc khi bạn chủ động ghim tab, lưu phiên tab hoặc mở trang tab. Không đọc nội dung trang.
+- **Bookmark (tùy chọn)**: chỉ khi bạn cấp quyền bookmark, Tiện ích đọc bookmark để hiển thị trong thanh bên và đọc/ghi thư mục bookmark bạn đã liên kết. Việc này diễn ra hoàn toàn trên máy; liên kết chỉ lưu trong `chrome.storage.local`. Bạn có thể thu hồi quyền trong Cài đặt.
+- **Kiểm tra link (Dọn dẹp)**: chỉ khi bạn bấm kiểm tra, Tiện ích gửi yêu cầu HEAD/GET trực tiếp tới chính các website đã ghim, không kèm cookie, để biết link còn hoạt động không. Kết quả chỉ lưu trên máy.
 - **Nhà phát triển không có máy chủ riêng, không thu thập, không bán, không chia sẻ dữ liệu của bạn, không dùng phân tích hay quảng cáo.**
 
 ## Dịch vụ bên thứ ba mà Tiện ích gọi tới
@@ -22,7 +24,7 @@ Các dịch vụ này xử lý dữ liệu theo chính sách quyền riêng tư 
 ## Nội dung trang web
 
 - Tiện ích chèn một thanh nổi nhỏ (content script) vào trang http/https để hiển thị các website bạn đã ghim; nó không đọc, lưu hay gửi nội dung trang.
-- Với website bạn **tự bật** "cho phép nhúng", Tiện ích gỡ tiêu đề `X-Frame-Options` và `Content-Security-Policy` của đúng website đó, chỉ cho khung hiển thị bên trong thanh bên của Tiện ích. Bạn có thể thu hồi bất cứ lúc nào.
+- Với website bạn **tự bật** "cho phép nhúng", Tiện ích gỡ tiêu đề `X-Frame-Options` và `Content-Security-Policy` của đúng website đó (cùng bản `www`) và báo yêu cầu là tải trang (`Sec-Fetch-Dest: document`) thay vì khung nhúng, chỉ cho khung hiển thị bên trong thanh bên của Tiện ích. Bạn có thể thu hồi bất cứ lúc nào.
 
 ## Kiểm soát của bạn
 
@@ -40,14 +42,14 @@ Thay đổi chính sách sẽ được cập nhật tại trang này kèm ngày 
 
 # Privacy Policy — Pinned Sidebar (English)
 
-Last updated: 2026-10-10
+Last updated: 2026-10-30
 
 Pinned Sidebar is a browser extension for Microsoft Edge and Google Chrome that lets you pin, search and organize websites and save tab sessions in a side panel.
 
-**Data handled.** Pinned sites, folders, workspaces, tab sessions and settings are stored in your browser (`chrome.storage.local`). If browser sync is on, a copy goes through the browser's own sync storage (`chrome.storage.sync`), managed by Microsoft/Google. Tab URLs and titles are read only when you pin a tab or save a session; page content is never read. The developer runs no server and does not collect, sell or share your data, and uses no analytics or ads.
+**Data handled.** Pinned sites, folders, workspaces, tab sessions and settings are stored in your browser (`chrome.storage.local`). If browser sync is on, a copy goes through the browser's own sync storage (`chrome.storage.sync`), managed by Microsoft/Google. Tab URLs and titles are read only when you pin a tab or save a session; page content is never read. Bookmarks are read only after you grant the optional bookmarks permission, to show them in the side panel and to keep a folder you linked in sync; this happens entirely on your device. When you run the cleanup check, the extension sends cookie-less HEAD/GET requests directly to your pinned websites to see whether links still work; results stay on your device. The developer runs no server and does not collect, sell or share your data, and uses no analytics or ads.
 
 **Third-party requests.** (1) The Google Favicon service receives the domain of pinned sites to display icons. (2) Google Translate receives the text you type, only when you use the built-in translator. Both are governed by Google's privacy policy.
 
-**Web pages.** A small floating rail (content script) is injected into http/https pages to show your pinned sites; it does not read, store or transmit page content. For websites you explicitly allow to be embedded, the extension removes `X-Frame-Options` and `Content-Security-Policy` response headers for that exact site, only for frames shown inside the extension's side panel; you can revoke this at any time.
+**Web pages.** A small floating rail (content script) is injected into http/https pages to show your pinned sites; it does not read, store or transmit page content. For websites you explicitly allow to be embedded, the extension removes `X-Frame-Options` and `Content-Security-Policy` response headers for that exact site (and its www twin) and marks the request as a page load (`Sec-Fetch-Dest: document`) instead of an iframe load, only for frames shown inside the extension's side panel; you can revoke this at any time.
 
 **Your controls.** Export, import or delete data in the extension, or uninstall it to remove local data. **Children:** not directed to children. **Contact:** [YOUR CONTACT EMAIL].

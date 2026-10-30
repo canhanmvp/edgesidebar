@@ -17,7 +17,7 @@ function event() {
     },
   };
 }
-function worker(initial = {}) {
+function worker(initial = {}, { bookmarks } = {}) {
   const changed = event();
   let failLocal = false;
   function storage(area, initialData = {}) {
@@ -73,6 +73,17 @@ function worker(initial = {}) {
       async create() {},
     },
     alarms: { onAlarm: event(), async create() {}, async clear() {} },
+    omnibox: {
+      onInputStarted: event(),
+      onInputChanged: event(),
+      onInputEntered: event(),
+      defaultSuggestion: null,
+      setDefaultSuggestion(value) {
+        this.defaultSuggestion = value;
+      },
+    },
+    permissions: { onAdded: event(), onRemoved: event() },
+    ...(bookmarks ? { bookmarks } : {}),
     sidePanel: {
       opened: [],
       open(options) {
@@ -106,11 +117,15 @@ function worker(initial = {}) {
     TextEncoder,
     structuredClone,
     console,
+    setTimeout,
+    clearTimeout,
   });
-  context.importScripts = (file) =>
-    vm.runInContext(
-      fs.readFileSync(path.join(__dirname, "..", file), "utf8"),
-      context,
+  context.importScripts = (...files) =>
+    files.forEach((file) =>
+      vm.runInContext(
+        fs.readFileSync(path.join(__dirname, "..", file), "utf8"),
+        context,
+      ),
     );
   vm.runInContext(
     fs.readFileSync(path.join(__dirname, "../background.js"), "utf8"),
@@ -133,6 +148,13 @@ function worker(initial = {}) {
     },
     async idle() {
       await vm.runInContext("queue", context);
+    },
+    // Runs the debounced bookmark pull now and waits for it.
+    async pullNow() {
+      await vm.runInContext(
+        "clearTimeout(pullTimer); serial(pullAll)",
+        context,
+      );
     },
   };
 }
@@ -354,6 +376,31 @@ test("iframe exception is restricted to extension initiator and exact origin; ca
   assert.ok(!regex.test("https://exampleXcom:8443/page"));
   assert.ok(!regex.test("https://example.com:8443.evil.com/page"));
   assert.ok(!regex.test("https://example.com/page"));
+  assert.equal(
+    JSON.stringify(rule.action.requestHeaders),
+    '[{"header":"sec-fetch-dest","operation":"set","value":"document"}]',
+    "servers that refuse iframe requests see a page load",
+  );
+  const twin = new RegExp(
+    w.chrome.declarativeNetRequest.rules[1].condition.regexFilter,
+  );
+  assert.ok(twin.test("https://www.example.com:8443/page"));
+  assert.equal(w.chrome.declarativeNetRequest.rules.length, 2);
+  await w.send({
+    type: "EMBED",
+    origin: "http://127.0.0.1:3000",
+    enabled: true,
+  });
+  assert.equal(
+    w.chrome.declarativeNetRequest.rules.length,
+    3,
+    "IP addresses get no www twin",
+  );
+  await w.send({
+    type: "EMBED",
+    origin: "http://127.0.0.1:3000",
+    enabled: false,
+  });
   await w.send({
     type: "EMBED",
     origin: "https://example.com:8443",
@@ -606,4 +653,240 @@ test("only overlay-visible changes refresh every open tab", async () => {
   const overlay = await w.send({ type: "OVERLAY_STATE" });
   assert.equal(overlay.settings.sync, undefined);
   assert.equal(overlay.settings.theme, "system");
+});
+const { bookmarks: bookmarkMock } = require("./bookmark-mock.cjs");
+async function linkedWorker() {
+  const bm = bookmarkMock();
+  const [rootId] = bm.seed("1", [
+    {
+      title: "Công việc",
+      children: [
+        { title: "Docs", url: "https://docs.test" },
+        {
+          title: "Nhóm",
+          children: [{ title: "Repo", url: "https://repo.test" }],
+        },
+      ],
+    },
+  ]);
+  const w = worker({ pins: [] }, { bookmarks: bm });
+  await w.send({ type: "GET_STATE" });
+  const linked = await w.send({
+    type: "BOOKMARK_LINK",
+    rootId,
+    newWorkspaceName: "Liên kết",
+  });
+  assert.equal(linked.ok, true, linked.error);
+  const state = () => w.chrome.storage.local.data["pinned.v2"];
+  const pins = () =>
+    state().pins.filter((pin) => pin.workspaceId === linked.workspaceId);
+  const link = () => w.chrome.storage.local.data.bookmarkLinks[0];
+  return { bm, rootId, w, workspaceId: linked.workspaceId, state, pins, link };
+}
+test("linking previews counts, mirrors a bookmark folder and refuses doubles", async () => {
+  const bm = bookmarkMock();
+  const [rootId] = bm.seed("1", [
+    { title: "F", children: [{ title: "A", url: "https://a.test" }] },
+  ]);
+  const w = worker({ pins: [] }, { bookmarks: bm });
+  await w.send({ type: "GET_STATE" });
+  const preview = await w.send({
+    type: "BOOKMARK_LINK",
+    rootId,
+    newWorkspaceName: "Mới",
+    dryRun: true,
+  });
+  assert.equal(preview.stats.added, 1);
+  assert.equal(w.chrome.storage.local.data["pinned.v2"].workspaces.length, 1);
+  const first = await w.send({
+    type: "BOOKMARK_LINK",
+    rootId,
+    newWorkspaceName: "Mới",
+  });
+  assert.equal(first.ok, true);
+  assert.equal(
+    w.chrome.storage.local.data.bookmarkLinks[0].rootPath,
+    "Bookmarks bar › F",
+  );
+  const again = await w.send({
+    type: "BOOKMARK_LINK",
+    rootId,
+    newWorkspaceName: "Khác",
+  });
+  assert.match(again.error, /đã liên kết/);
+});
+test("sidebar edits reach bookmarks and the echo does not commit again", async () => {
+  const t = await linkedWorker();
+  assert.deepEqual(
+    t.pins().map((p) => p.title),
+    ["Docs", "Repo"],
+  );
+  const docs = t.pins()[0];
+  await t.w.send({
+    type: "MUTATE",
+    action: {
+      type: "SAVE_PIN",
+      id: docs.id,
+      url: "https://docs.test/new",
+      title: "Tài liệu",
+      workspaceId: t.workspaceId,
+      tags: ["giữ"],
+    },
+  });
+  await t.w.send({
+    type: "MUTATE",
+    action: {
+      type: "SAVE_PIN",
+      url: "https://new.test",
+      title: "Mới",
+      workspaceId: t.workspaceId,
+    },
+  });
+  assert.deepEqual(t.bm.titles(t.rootId), [
+    "Tài liệu",
+    ["Nhóm", ["Repo"]],
+    "Mới",
+  ]);
+  const revision = t.state().revision;
+  await t.w.pullNow();
+  assert.equal(t.state().revision, revision, "echo of our own push is a no-op");
+});
+test("bookmark edits reach the workspace and keep pin metadata", async () => {
+  const t = await linkedWorker();
+  const docs = t.pins()[0];
+  await t.w.send({
+    type: "MUTATE",
+    action: {
+      type: "SAVE_PIN",
+      id: docs.id,
+      url: docs.url,
+      title: docs.title,
+      workspaceId: t.workspaceId,
+      note: "ghi chú",
+      favorite: true,
+    },
+  });
+  const bmId = Object.keys(t.link().map.pins).find(
+    (id) => t.link().map.pins[id] === docs.id,
+  );
+  await t.bm.update(bmId, { title: "Docs v2" });
+  await t.w.pullNow();
+  const updated = t.pins().find((p) => p.id === docs.id);
+  assert.equal(updated.title, "Docs v2");
+  assert.equal(updated.note, "ghi chú");
+  assert.equal(updated.favorite, true);
+});
+test("deleted bookmark folder marks the link broken but keeps the pins", async () => {
+  const t = await linkedWorker();
+  await t.bm.removeTree(t.rootId);
+  await t.w.pullNow();
+  assert.equal(t.link().status, "broken");
+  assert.equal(t.pins().length, 2);
+  const resync = await t.w.send({
+    type: "BOOKMARK_RESYNC",
+    workspaceId: t.workspaceId,
+  });
+  assert.equal(resync.ok, false);
+});
+test("deleting a linked workspace drops the link and keeps the bookmarks", async () => {
+  const t = await linkedWorker();
+  const result = await t.w.send({
+    type: "MUTATE",
+    action: { type: "DELETE_WORKSPACE", id: t.workspaceId },
+  });
+  assert.equal(result.ok, true, result.error);
+  assert.deepEqual(t.w.chrome.storage.local.data.bookmarkLinks, []);
+  assert.deepEqual(t.bm.titles(t.rootId), ["Docs", ["Nhóm", ["Repo"]]]);
+});
+test("bookmark messages explain a missing permission", async () => {
+  const w = worker({ pins: [] });
+  const result = await w.send({
+    type: "BOOKMARK_LINK",
+    rootId: "1",
+    workspaceId: "workspace-default",
+  });
+  assert.match(result.error, /cho phép truy cập bookmark/);
+});
+test("export creates a bookmark folder; copy adds bookmarks without a link", async () => {
+  const bm = bookmarkMock();
+  const w = worker({ pins: [] }, { bookmarks: bm });
+  const state = (await w.send({ type: "GET_STATE" })).state;
+  await w.send({
+    type: "MUTATE",
+    action: { type: "SAVE_FOLDER", folderId: "f", name: "Đọc sau" },
+  });
+  await w.send({
+    type: "MUTATE",
+    action: {
+      type: "SAVE_PIN",
+      url: "https://one.test",
+      title: "Một",
+      folderId: "f",
+    },
+  });
+  await w.send({
+    type: "MUTATE",
+    action: { type: "SAVE_PIN", url: "https://two.test", title: "Hai" },
+  });
+  const exported = await w.send({
+    type: "BOOKMARK_EXPORT",
+    workspaceId: state.workspaces[0].id,
+    parentId: "2",
+  });
+  assert.equal(exported.ok, true, exported.error);
+  assert.deepEqual(bm.titles("2"), [
+    ["Pinned · Mặc định", [["Đọc sau", ["Một"]], "Hai"]],
+  ]);
+  const [source] = bm.seed("1", [
+    { title: "Đọc", children: [{ title: "Blog", url: "https://blog.test" }] },
+  ]);
+  const copied = await w.send({
+    type: "BOOKMARK_COPY",
+    rootId: source,
+    workspaceId: state.workspaces[0].id,
+  });
+  assert.equal(copied.stats.added, 1);
+  assert.equal(w.chrome.storage.local.data.bookmarkLinks, undefined);
+});
+test("omnibox suggestions escape user text and open the best match", async () => {
+  const w = worker({ pins: [] });
+  await w.send({ type: "GET_STATE" });
+  await w.send({
+    type: "MUTATE",
+    action: {
+      type: "SAVE_PIN",
+      url: "https://a.test",
+      title: "<b>Tài & liệu</b>",
+    },
+  });
+  await w.send({
+    type: "MUTATE",
+    action: { type: "SAVE_PIN", url: "https://b.test", title: "Tài khoản" },
+  });
+  const suggestions = await new Promise((resolve) =>
+    w.chrome.omnibox.onInputChanged.emit("tai", resolve),
+  );
+  assert.match(
+    w.chrome.omnibox.defaultSuggestion.description,
+    /<match>Tài khoản<\/match>/,
+  );
+  const escaped = await new Promise((resolve) =>
+    w.chrome.omnibox.onInputChanged.emit("lieu", resolve),
+  );
+  assert.match(
+    w.chrome.omnibox.defaultSuggestion.description,
+    /&lt;b&gt;Tài &amp; liệu&lt;\/b&gt;/,
+  );
+  assert.equal(escaped.length, 0);
+  assert.equal(suggestions.length, 1);
+  assert.equal(suggestions[0].content, "https://a.test/");
+  assert.match(suggestions[0].description, /&lt;b&gt;/);
+  const created = [];
+  w.chrome.tabs.create = async (options) => created.push(options);
+  w.chrome.omnibox.onInputEntered.emit("tai", "newBackgroundTab");
+  await w.idle();
+  assert.equal(
+    JSON.stringify(created),
+    '[{"url":"https://b.test/","active":false}]',
+  );
 });

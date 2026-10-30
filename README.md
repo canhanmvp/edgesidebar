@@ -1,6 +1,24 @@
-# Pinned Sidebar 4.0
+# Pinned Sidebar 4.1
 
 Extension Manifest V3 cho Edge/Chrome: biến sidebar thành không gian làm việc cá nhân để ghim, tìm, sắp xếp website và lưu lại các phiên tab. Giao diện tiếng Việt gọn trong một màn hình (thanh công cụ cố định, chỉ danh sách cuộn), 16 giao diện màu: theo hệ thống, Sáng, Tối, Đen, Pastel, Đại dương, Hoàng hôn, Oải hương, Hồng đào, Cát, Nửa đêm, Rừng, Nord, Mocha, Mận, Dracula; có chế độ chỉ biểu tượng.
+
+## Có gì mới trong 4.1
+
+- **Tab Bookmark:** tab thứ ba cạnh Ghim/Phiên để duyệt bookmark (Favorites trên Edge) theo từng thư mục, tìm không dấu và ghim nhanh vào không gian đang chọn. Khi tìm ở tab Ghim, bookmark khớp hiện thêm trong nhóm **Từ bookmark**. Kéo thả để sắp xếp bookmark, thả vào giữa một thư mục (hoặc vào tên thư mục trên thanh đường dẫn) để chuyển chỗ; `Alt+↑/↓` di chuyển bằng bàn phím. Xóa bookmark hoặc thư mục (phím `Delete` hoặc menu `⋯`) đều có **Hoàn tác**; xóa thư mục đang liên kết sẽ hủy liên kết trước, trang ghim được giữ. Thư mục gốc của trình duyệt và bookmark do tổ chức quản lý không sửa được.
+- **Liên kết sống hai chiều:** liên kết một thư mục bookmark với một không gian. Thêm, sửa, bỏ ghim hay sắp xếp trong sidebar sẽ cập nhật thư mục bookmark; sửa bookmark trong trình duyệt cũng cập nhật không gian. Nhãn, ghi chú và yêu thích vẫn được giữ. Có chế độ **Chỉ kéo về** và **Sao chép một lần**; không gian cũng **xuất ra bookmark** được.
+- **Omnibox:** gõ `p`, phím cách rồi từ khóa trên thanh địa chỉ để tìm và mở trang ghim của mọi không gian. Gõ `p +` để ghim tab hiện tại.
+- **Nhóm tab:** mở thư mục, không gian hoặc thư mục bookmark thành một nhóm tab có tên và màu theo không gian. Lưu cả cửa sổ hoặc chỉ một nhóm thành phiên; mở lại phiên thì nhóm tab cũng được tạo lại.
+- **Dọn dẹp:** kiểm tra link hỏng (404/410), link đã chuyển địa chỉ (có nút cập nhật), website không truy cập được và trang gần trùng (bỏ qua `utm_*`, `www`, dấu `/` cuối…). Trang hỏng có dấu ⚠ trong danh sách.
+- **Quyền bookmark là tùy chọn:** chỉ xin khi bạn bấm **Cho phép truy cập bookmark**, nên cập nhật từ 4.0 không bị trình duyệt tạm tắt và không hiện cảnh báo quyền mới. Có thể tắt lại trong Cài đặt.
+
+### Liên kết bookmark hoạt động thế nào
+
+- Mở tab **Bookmark**, vào thư mục cần dùng, bấm `⋯` → **Liên kết với không gian…**, chọn không gian (mới hoặc có sẵn) và cách đồng bộ. Hộp thoại cho xem trước số trang sẽ thêm, cập nhật và đẩy sang bookmark.
+- Link nằm ngay trong thư mục gốc là **Chưa phân nhóm**; mỗi thư mục con cấp 1 là một bộ sưu tập; thư mục sâu hơn được gộp vào bộ sưu tập cấp 1 chứa nó (bookmark vẫn nằm nguyên chỗ cũ).
+- URL trùng trong cây bookmark: mục đầu tiên được dùng, các mục sau được bỏ qua và không bao giờ bị sửa hay xóa. Link không phải http/https (javascript:, chrome://, file:…) cũng bị bỏ qua.
+- Extension chỉ xóa bookmark mà nó đã ghép với trang ghim, không bao giờ xóa thư mục còn nội dung. Bỏ ghim vẫn có **Hoàn tác** 10 giây; trước khi liên kết, bản dự phòng danh sách và ảnh chụp cây bookmark được lưu trên máy.
+- Liên kết lưu **theo từng máy** vì ID bookmark khác nhau giữa các máy. Không gian và trang ghim vẫn đồng bộ như cũ; muốn liên kết trên máy khác thì liên kết lại ở máy đó. Xóa không gian chỉ hủy liên kết, không xóa bookmark. Nếu thư mục bookmark bị xóa, dải liên kết báo lỗi và trang ghim được giữ nguyên.
+- Giới hạn: một thư mục liên kết tối đa 2.000 bookmark và 100 thư mục con cấp 1.
 
 ## Có gì mới trong 4.0
 
@@ -29,7 +47,7 @@ Bản 2.0 đọc `pins` và `settings` từ bộ nhớ sync cũ, chuyển thư m
 2. Chọn **Load unpacked**, trỏ tới thư mục chứa `manifest.json`.
 3. Bấm biểu tượng extension, `Ctrl+M` hoặc `Ctrl+Shift+Y` để mở sidebar. Nếu Edge giữ phím `Ctrl+M` cho chức năng hệ thống, vào `edge://extensions/shortcuts` để đổi phím.
 
-Bản đóng gói sạch ở `dist/pinned-sidebar/`; chỉ chứa các file chạy extension. File phát hành để chuyển máy là `dist/pinned-sidebar-4.0.0.zip`: giải nén ZIP trước, rồi chọn thư mục đã giải nén trong **Load unpacked**. Khi cập nhật, chọn đúng thư mục cài cũ và bấm **Reload** để giữ extension ID và dữ liệu local. Dùng Chromium 120+ hoặc phiên bản Edge tương ứng có Side Panel API. Người sử dụng không cần Node.js.
+Bản đóng gói sạch ở `dist/pinned-sidebar/`; chỉ chứa các file chạy extension. File phát hành để chuyển máy là `release/pinned-sidebar-4.1.0.zip`: giải nén ZIP trước, rồi chọn thư mục đã giải nén trong **Load unpacked**. Khi cập nhật, chọn đúng thư mục cài cũ và bấm **Reload** để giữ extension ID và dữ liệu local. Dùng Chromium 120+ hoặc phiên bản Edge tương ứng có Side Panel API. Người sử dụng không cần Node.js.
 
 ## Sử dụng
 
@@ -66,9 +84,9 @@ Nhập JSON hỗ trợ file 1.x, file 2.0 hoặc mảng các website. Có ba l�
 Khi mở một website trong sidebar, extension tự bật ngoại lệ nhúng cho đúng website đó rồi tải trang. Không cần bấm nút mở khóa.
 
 - **Mở tab mới** để dùng website đầy đủ.
-- Quyền nhúng tự bật cho website bạn đã chọn: gỡ `X-Frame-Options` và header `Content-Security-Policy` chỉ trên yêu cầu `sub_frame` có initiator là extension này và URL thuộc **chính origin đã chọn** (gồm giao thức, tên miền và cổng). YouTube, Google và Perplexity cũng gồm alias chuyển hướng chính thức giữa tên miền trần và `www`; extension không mở khóa subdomain khác hoặc iframe do trang web thông thường tạo. Có thể thu hồi trong Cài đặt.
+- Quyền nhúng tự bật cho website bạn đã chọn: gỡ `X-Frame-Options` và header `Content-Security-Policy`, đồng thời gửi `Sec-Fetch-Dest: document` thay cho `iframe` (một số máy chủ như Facebook, Instagram trả trang lỗi khi thấy yêu cầu đến từ khung nhúng), chỉ trên yêu cầu `sub_frame` có initiator là extension này và URL thuộc **chính origin đã chọn** (gồm giao thức, tên miền và cổng). Tên miền trần và bản `www` của cùng website được mở khóa cùng nhau vì website thường chuyển hướng qua lại (Facebook thêm `m.facebook.com`); extension không mở khóa subdomain khác hoặc iframe do trang web thông thường tạo. Có thể thu hồi trong Cài đặt.
 
-Gỡ CSP là ngoại lệ có chủ đích và chỉ bật theo từng website. Sandbox iframe chặn điều hướng trang trên cùng. Cookie, đăng nhập, CSP qua thẻ meta hoặc cơ chế riêng của website vẫn có thể ngăn hoạt động. Google tải được sau khi bật quyền; ghim Google Dịch mở màn **Dịch nhanh** ngay trong sidebar cho văn bản, còn nút mở tab mới dùng giao diện Google đầy đủ để dịch ảnh/tài liệu. Facebook chủ động từ chối khung nhúng và hiện hướng dẫn mở tab thay vì trang lỗi của Facebook. ChatGPT có thể dừng ở trang kiểm tra Cloudflare và cần mở tab mới. Extension không cam kết mọi website đều nhúng được.
+Gỡ CSP là ngoại lệ có chủ đích và chỉ bật theo từng website. Sandbox iframe chặn điều hướng trang trên cùng. Cookie, đăng nhập, CSP qua thẻ meta hoặc cơ chế riêng của website vẫn có thể ngăn hoạt động. Google tải được sau khi bật quyền; ghim Google Dịch mở màn **Dịch nhanh** ngay trong sidebar cho văn bản, còn nút mở tab mới dùng giao diện Google đầy đủ để dịch ảnh/tài liệu. Facebook và Instagram hiển thị được trong sidebar từ bản 4.1; một số chức năng (gọi video, tải tệp…) vẫn nên dùng trong tab. ChatGPT có thể dừng ở trang kiểm tra Cloudflare và cần mở tab mới. Extension không cam kết mọi website đều nhúng được.
 
 Do giới hạn khác nguồn, sidebar không đọc URL/lịch sử điều hướng bên trong website. Các nút được đặt tên đúng chức năng: **Tải lại trang ghim ban đầu**, **Mở liên kết ghim trong tab mới**. Sự kiện `load` của iframe không được dùng để kết luận website đã hiển thị thành công.
 
@@ -81,6 +99,8 @@ Do giới hạn khác nguồn, sidebar không đọc URL/lịch sử điều hư
 | `tabs`                                | Đọc URL/tên tab hiện tại, mở tab và cập nhật thanh nổi  |
 | `contextMenus`                        | Ghim trang hoặc liên kết từ menu chuột phải             |
 | `alarms`                              | Hẹn gửi dữ liệu đồng bộ sau khi chỉnh sửa               |
+| `tabGroups`                           | Lưu và mở lại phiên/thư mục thành nhóm tab              |
+| `bookmarks` (tùy chọn)                | Tab Bookmark và liên kết thư mục; chỉ xin khi bạn bấm   |
 | `declarativeNetRequestWithHostAccess` | Ngoại lệ nhúng tự bật cho website được mở trong sidebar |
 | HTTP/HTTPS host access                | Chèn thanh nổi và thực hiện ngoại lệ nhúng đã chọn      |
 
@@ -98,12 +118,24 @@ npm run test:browser
 npm run build
 ```
 
-- `core.js`: schema 3, workspace/session metadata, validation, migration, reducer bất biến và chia dữ liệu cloud.
-- `background.js`: một đầu mối ghi dữ liệu, sync, context menu, message và quy tắc nhúng.
-- `sidebar.html`, `sidebar.js`, `sidebar.css`, `icons.js`: giao diện, dialog native, keyboard, drag/drop, viewer.
+- `core.js`: schema 3, workspace/session metadata, validation, migration, reducer bất biến, chia dữ liệu cloud, tìm kiếm xếp hạng, chuẩn hóa URL và phân loại kết quả kiểm tra link.
+- `bookmarks-core.js`: đối chiếu thuần giữa thư mục bookmark và không gian (`planPull`, `planPush`, `applyOps`).
+- `background.js`: một đầu mối ghi dữ liệu, sync, liên kết bookmark, omnibox, context menu, message và quy tắc nhúng.
+- `sidebar.html`, `sidebar.js`, `sidebar.css`, `icons.js`: giao diện, dialog native, keyboard, drag/drop, viewer, nhóm tab.
+- `sidebar-bookmarks.js`, `sidebar-cleanup.js`: tab Bookmark, hộp thoại liên kết và hộp thoại Dọn dẹp.
 - `content.js`, `content.css`: thanh nổi cách ly CSS.
 - `tests/`: unit/integration tests và kiểm thử extension thật bằng Chromium với profile tách biệt.
-- `scripts/build.cjs`: sao chép đúng các file runtime sang `dist/pinned-sidebar`.
+- `scripts/build.cjs`: sao chép đúng các file runtime sang `dist/pinned-sidebar`. Cờ `--grant-optional` (chỉ dùng cho kiểm thử browser) chuyển quyền tùy chọn thành quyền bắt buộc vì Chromium headless không bấm được hộp xin quyền.
+
+### CI với runner Docker trên máy
+
+`.github/workflows/test.yml` chạy `npm test` khi push lên `main` và khi có pull request, trên runner tự host có nhãn `edgesidebar`. Runner là container chính thức `ghcr.io/actions/actions-runner` trong `ci/runner/`:
+
+1. Lấy token: repo **Settings → Actions → Runners → New self-hosted runner**, chép giá trị sau `--token` (cần quyền Admin, hết hạn sau 1 giờ, chỉ dùng một lần).
+2. Chép `ci/runner/.env.example` thành `ci/runner/.env` và điền `RUNNER_TOKEN`. File `.env` không được commit.
+3. `docker compose -f ci/runner/compose.yml up -d`. Đăng ký được giữ trong volume `runner-home`, khởi động lại máy không cần token mới. Gỡ hẳn: `docker compose -f ci/runner/compose.yml down -v` rồi xóa runner trong Settings.
+
+Repo công khai nên workflow bỏ qua pull request từ fork, và container không có Docker socket hay `sudo`. Nên bật thêm **Settings → Actions → General → Fork pull request workflows → Require approval for all outside collaborators**, vì fork có thể sửa chính file workflow.
 
 Bộ kiểm thử browser không đăng nhập tài khoản cá nhân; dùng HTTP server local có fixture chặn iframe. Ảnh QA và báo cáo nằm trong `test-results/`. Sync giữa hai tài khoản/thiết bị Edge thực tế cần kiểm tra thủ công; các bài tự động kiểm tra API, quota, bản chụp chưa đủ và xung đột trong môi trường kiểm thử.
 

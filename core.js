@@ -36,6 +36,20 @@
   const MAX_PINS = 5000;
   const MAX_WORKSPACES = 20;
   const MAX_TAGS = 30;
+  // chrome.tabGroups.Color values with their approximate display colors.
+  const GROUP_COLORS = Object.freeze([
+    ["grey", "#5f6368"],
+    ["blue", "#1a73e8"],
+    ["red", "#d93025"],
+    ["yellow", "#f9ab00"],
+    ["green", "#1e8e3e"],
+    ["pink", "#d01884"],
+    ["purple", "#9334e6"],
+    ["cyan", "#007b83"],
+    ["orange", "#fa903e"],
+  ]);
+  const TRACKING_PARAMS =
+    /^(utm_.*|fbclid|gclid|dclid|msclkid|mc_cid|mc_eid|ref|ref_src|igshid|si)$/i;
   function fail(message) {
     throw new Error(message);
   }
@@ -81,6 +95,138 @@
   }
   function host(value) {
     return new URL(value).hostname.replace(/^www\./, "");
+  }
+  // Accent- and case-insensitive text for Vietnamese search ("Đà" ~ "da").
+  function fold(text) {
+    return String(text ?? "")
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .replace(/đ/g, "d")
+      .replace(/Đ/g, "D")
+      .toLocaleLowerCase("vi");
+  }
+  function matchText(pin, folderName = "") {
+    return fold(
+      pin.title +
+        " " +
+        pin.url +
+        " " +
+        folderName +
+        " " +
+        (pin.tags || []).join(" ") +
+        " " +
+        (pin.note || ""),
+    );
+  }
+  // Ranked search across every workspace; the active one is listed first.
+  function search(state, query, { workspaceId = "", limit = 8 } = {}) {
+    const q = fold(query).trim();
+    if (!q || !state) return [];
+    const folders = new Map(state.folders.map((item) => [item.id, item]));
+    const workspaces = new Map(state.workspaces.map((item) => [item.id, item]));
+    const results = [];
+    for (const pin of state.pins) {
+      const folder = folders.get(pin.folderId) || null;
+      const title = fold(pin.title);
+      let score = 0;
+      if (title.startsWith(q)) score = 60;
+      else if (title.includes(q)) score = 45;
+      else if (fold(host(pin.url)).includes(q)) score = 35;
+      else if ((pin.tags || []).some((tag) => fold(tag).includes(q)))
+        score = 25;
+      else if (matchText(pin, folder?.name).includes(q)) score = 15;
+      if (!score) continue;
+      if (pin.workspaceId === workspaceId) score += 20;
+      if (pin.favorite) score += 5;
+      results.push({
+        pin,
+        folder,
+        workspace: workspaces.get(pin.workspaceId) || null,
+        score,
+      });
+    }
+    // Array.prototype.sort is stable, so equal scores keep the user's order.
+    return results.sort((a, b) => b.score - a.score).slice(0, limit);
+  }
+  // A comparison key for near-duplicate URLs: ignores protocol, www, default
+  // ports, fragments, trailing slashes, tracking params and query order.
+  function urlKey(value) {
+    const parsed = new URL(url(value));
+    const params = [...parsed.searchParams]
+      .filter(([key]) => !TRACKING_PARAMS.test(key))
+      .sort(([a, av], [b, bv]) => a.localeCompare(b) || av.localeCompare(bv));
+    const query = new URLSearchParams(params).toString();
+    return (
+      parsed.hostname.replace(/^www\./, "") +
+      (parsed.port ? ":" + parsed.port : "") +
+      (parsed.pathname.replace(/\/+$/, "") || "") +
+      (query ? "?" + query : "")
+    );
+  }
+  function duplicateGroups(state, { acrossWorkspaces = false } = {}) {
+    const groups = new Map();
+    for (const pin of state.pins) {
+      let key;
+      try {
+        key = urlKey(pin.url);
+      } catch {
+        continue;
+      }
+      if (!acrossWorkspaces) key = pin.workspaceId + "\0" + key;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(pin);
+    }
+    return [...groups.values()].filter((pins) => pins.length > 1);
+  }
+  // result: { ok, status, redirected, finalUrl, error } from a fetch attempt.
+  function classifyCheck(original, result) {
+    if (!result || result.error) return { status: "unreachable" };
+    const code = result.status;
+    if (code === 404 || code === 410) return { status: "broken", code };
+    if (code >= 500) return { status: "unreachable", code };
+    if (code === 401 || code === 403 || code === 429)
+      return { status: "blocked", code };
+    if (result.redirected && result.finalUrl) {
+      try {
+        if (urlKey(result.finalUrl) !== urlKey(original))
+          return { status: "redirect", code, finalUrl: url(result.finalUrl) };
+      } catch {
+        return { status: "unreachable", code };
+      }
+    }
+    return { status: "ok", code };
+  }
+  // Picks the tab group color by hue, which matches how people name colors
+  // far better than RGB distance (lime #b5ef55 is "green", not "orange").
+  function groupColor(hex) {
+    const match = /^#?([\da-f]{6})$/i.exec(String(hex || ""));
+    if (!match) return "grey";
+    const n = parseInt(match[1], 16);
+    const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(
+      (v) => v / 255,
+    );
+    const max = Math.max(r, g, b);
+    const delta = max - Math.min(r, g, b);
+    if (delta < 0.15 || max < 0.2) return "grey";
+    let hue =
+      max === r
+        ? ((g - b) / delta) % 6
+        : max === g
+          ? (b - r) / delta + 2
+          : (r - g) / delta + 4;
+    hue = (hue * 60 + 360) % 360;
+    for (const [limit, name] of [
+      [15, "red"],
+      [40, "orange"],
+      [70, "yellow"],
+      [165, "green"],
+      [200, "cyan"],
+      [255, "blue"],
+      [290, "purple"],
+      [345, "pink"],
+    ])
+      if (hue < limit) return name;
+    return "red";
   }
   function id(value, fallback) {
     return typeof value === "string" && value.trim() && value.length <= 120
@@ -626,6 +772,67 @@
         }
         break;
       }
+      case "REPLACE_WORKSPACE_ITEMS": {
+        // Swaps the folders and pins of one workspace, e.g. after reading a
+        // linked bookmark folder. Given IDs are kept so tags/notes survive.
+        const workspaceId = action.workspaceId;
+        if (!next.workspaces.some((item) => item.id === workspaceId))
+          fail("Không gian không còn tồn tại.");
+        if (!Array.isArray(action.folders) || !Array.isArray(action.pins))
+          fail("Dữ liệu không gian không hợp lệ.");
+        const otherFolders = next.folders.filter(
+          (item) => item.workspaceId !== workspaceId,
+        );
+        const otherPins = next.pins.filter(
+          (item) => item.workspaceId !== workspaceId,
+        );
+        const takenIds = new Set([
+          ...otherFolders.map((item) => item.id),
+          ...otherPins.map((item) => item.id),
+        ]);
+        const folderIds = new Map();
+        const folderNames = new Set();
+        const folders = [];
+        for (const item of action.folders) {
+          const name = label(item?.name, 80);
+          if (!name) fail("Hãy nhập tên thư mục.");
+          const key = name.toLocaleLowerCase("vi");
+          if (folderNames.has(key)) fail("Tên thư mục đã tồn tại.");
+          folderNames.add(key);
+          let folderId = id(item.id, uid);
+          while (takenIds.has(folderId)) folderId = uid();
+          takenIds.add(folderId);
+          folderIds.set(item.id, folderId);
+          folders.push({ id: folderId, name, workspaceId });
+        }
+        const urls = new Set();
+        const pins = [];
+        for (const item of action.pins) {
+          const address = url(item?.url);
+          if (urls.has(address)) fail("Website này đã được ghim.");
+          urls.add(address);
+          let pinId = id(item.id, uid);
+          while (takenIds.has(pinId)) pinId = uid();
+          takenIds.add(pinId);
+          pins.push({
+            id: pinId,
+            title: label(item.title, 180, host(address)),
+            url: address,
+            folderId: folderIds.get(item.folderId) || "",
+            workspaceId,
+            tags: tags(item.tags),
+            note: label(item.note, 500),
+            favorite: item.favorite === true,
+          });
+        }
+        next.folders = [...otherFolders, ...folders];
+        next.pins = [...otherPins, ...pins];
+        const live = new Set(next.folders.map((item) => item.id));
+        next.settings.collapsed = next.settings.collapsed.filter((item) =>
+          live.has(item),
+        );
+        break;
+      }
       default:
         fail("Thao tác không được hỗ trợ.");
     }
@@ -660,9 +867,17 @@
     DEFAULTS,
     THEMES,
     MAX_PINS,
+    GROUP_COLORS,
     uid,
     url,
     host,
+    fold,
+    matchText,
+    search,
+    urlKey,
+    duplicateGroups,
+    classifyCheck,
+    groupColor,
     settings,
     empty,
     parse,

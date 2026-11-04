@@ -1,49 +1,90 @@
 # Nội dung listing
 
+Dán nguyên văn vào Chrome Web Store và Microsoft Edge Add-ons. Mô tả ngắn đã đếm ký tự (≤132). Chỉ ghi tính năng đã có trong bản đang nộp; gói Pro chưa mở bán nên không nhắc giá trong listing.
+
+**Đường dẫn dùng chung** (điền khi đã host `site/`):
+
+- Website: `https://<tên-miền>/`
+- Privacy policy URL: `https://<tên-miền>/privacy.html`
+- Support: `canhanmvp@gmail.com` hoặc https://github.com/canhanmvp/edgesidebar/issues
+
 ## Tiếng Việt
 
 **Tên:** Pinned Sidebar
-**Mô tả ngắn (≤132 ký tự):** Không gian làm việc bên cạnh trình duyệt: ghim, tìm, sắp xếp website và lưu phiên tab.
+
+**Mô tả ngắn (127/132 ký tự):**
+Ghim, tìm, sắp xếp website ngay trong thanh bên; mở web trong sidebar, lưu phiên tab, đồng bộ bookmark. Dữ liệu ở trên máy bạn.
 
 **Mô tả chi tiết:**
-Pinned Sidebar đặt những website bạn dùng hằng ngày ngay trong thanh bên của trình duyệt.
 
-• Ghim tab hiện tại chỉ bằng một cú nhấp, kéo-thả để sắp xếp
-• Bộ sưu tập (thư mục) và nhiều không gian làm việc tách biệt
+Pinned Sidebar biến thanh bên của Edge và Chrome thành không gian làm việc của bạn: các website dùng hằng ngày luôn cách một cú nhấp, mở ngay bên cạnh trang đang đọc.
+
+GHIM VÀ SẮP XẾP
+• Ghim tab hiện tại bằng một cú nhấp, từ menu chuột phải hoặc bằng URL; kéo-thả để sắp xếp
+• Bộ sưu tập (thư mục), nhãn, ghi chú và yêu thích
+• Nhiều không gian làm việc tách biệt: Công việc, Cá nhân, Dự án…
 • Tìm kiếm nhanh, không phân biệt dấu tiếng Việt (phím /)
-• Lưu và mở lại phiên tab, kể cả nhóm tab; xuất/nhập dữ liệu
-• Duyệt và tìm bookmark ngay trong thanh bên; liên kết hai chiều một thư mục bookmark với không gian
-• Gõ "p" trên thanh địa chỉ để mở nhanh trang đã ghim
-• Dọn dẹp: tìm link hỏng, link đã chuyển địa chỉ và trang trùng
-• Thanh nổi tùy chọn trên mọi trang, bật/tắt dễ dàng
-• Giao diện sáng/tối, chế độ gọn, phím tắt Ctrl+M / Ctrl+Shift+Y
+
+MỞ WEB NGAY TRONG THANH BÊN
+• Xem website trong sidebar mà không rời trang đang làm
+• Thanh nổi tùy chọn trên mọi trang, kéo đặt ở đâu cũng được, ẩn chỉ với một cú nhấp
 • Dịch nhanh văn bản ngay trong thanh bên
-• Dữ liệu lưu cục bộ trên máy bạn; đồng bộ qua tài khoản Edge/Chrome nếu bạn bật. Không máy chủ riêng, không theo dõi, không quảng cáo.
+
+TAB VÀ BOOKMARK
+• Lưu và mở lại phiên tab, kể cả nhóm tab có tên và màu
+• Tab Bookmark: duyệt, tìm, kéo-thả, xóa có hoàn tác
+• Liên kết hai chiều một thư mục bookmark với một không gian
+• Gõ "p" trên thanh địa chỉ để mở nhanh trang đã ghim, "p +" để ghim tab hiện tại
+
+GỌN GÀNG
+• Dọn dẹp: tìm link hỏng, link đã chuyển địa chỉ và trang trùng
+• 16 giao diện màu, chế độ chỉ biểu tượng, phím tắt Ctrl+M / Ctrl+Shift+Y
+• Xuất/nhập JSON, hoàn tác khi xóa
+
+RIÊNG TƯ
+Dữ liệu lưu trong trình duyệt của bạn và chỉ đồng bộ qua tài khoản Edge/Chrome khi bạn bật. Không máy chủ riêng, không theo dõi, không quảng cáo. Quyền bookmark là tùy chọn, chỉ xin khi bạn cần.
 
 **Danh mục:** Productivity (Năng suất)
 
 ## English
 
-**Summary (≤132):** A side-panel workspace: pin, search and organize your websites and save tab sessions. Local-first, no tracking.
+**Name:** Pinned Sidebar
+
+**Summary (126/132 characters):**
+Pin, search and organize your websites in the side panel. Save tab sessions and sync with bookmarks. Local-first, no tracking.
 
 **Description:**
-Pinned Sidebar keeps the sites you use every day one click away in your browser's side panel.
 
-• Pin the current tab in one click; drag and drop to reorder
-• Collections (folders) and separate workspaces
-• Instant search (accent-insensitive for Vietnamese)
-• Save and restore tab sessions, including tab groups; export / import your data
-• Browse and search your bookmarks in the side panel; two-way link a bookmark folder with a workspace
-• Type "p" in the address bar to open a pinned site
-• Cleanup: find dead links, moved links and duplicates
-• Optional floating rail on any page, easy to hide
-• Light / dark themes, compact layout, shortcuts Ctrl+M / Ctrl+Shift+Y
+Pinned Sidebar turns the Edge and Chrome side panel into your personal workspace. The sites you use every day stay one click away and open right next to the page you are reading.
+
+PIN AND ORGANIZE
+• Pin the current tab in one click, from the right-click menu or by URL; drag and drop to reorder
+• Collections (folders), tags, notes and favorites
+• Separate workspaces for work, personal and project sites
+• Instant search that ignores accents (press /)
+
+OPEN SITES IN THE SIDE PANEL
+• View a website in the side panel without leaving the page you are on
+• Optional floating rail on any page: drag it anywhere, hide it in one click
 • Built-in quick text translator
-• Local-first: data stays in your browser and syncs through your Edge/Chrome account only if you enable it. No server, no tracking, no ads.
+
+TABS AND BOOKMARKS
+• Save and restore tab sessions, including named, colored tab groups
+• Bookmarks tab: browse, search, drag and drop, delete with undo
+• Two-way link between a bookmark folder and a workspace
+• Type "p" in the address bar to open a pinned site, or "p +" to pin the current tab
+
+STAY TIDY
+• Cleanup finds dead links, moved links and duplicates
+• 16 color themes, icon-only mode, shortcuts Ctrl+M / Ctrl+Shift+Y
+• JSON export / import and undo for deletions
+
+PRIVATE BY DESIGN
+Your data stays in your browser and syncs through your Edge/Chrome account only if you turn sync on. No server, no tracking, no ads. The bookmarks permission is optional and only requested when you use it.
 
 **Category:** Productivity
 
-**Search terms (Edge, ≤7):** sidebar, pinned sites, bookmarks, workspace, tab session, side panel, productivity
+**Search terms (Edge, ≤7 terms, ≤30 characters each):** side panel, sidebar, pinned sites, workspaces, tab sessions, bookmarks manager, tab manager
 
 ## Hình ảnh (`store/assets`) — đúng kích thước store
 

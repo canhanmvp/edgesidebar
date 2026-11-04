@@ -6,7 +6,7 @@ FSL-1.1-ALv2
 
 ## Notice
 
-Copyright 2026 canhanmvp (nupet.vn)
+Copyright 2026 MAI VAN PHO
 
 ## Terms and Conditions
 

@@ -2,7 +2,7 @@
 
 Mã nguồn trong repo này được cấp phép theo [FSL-1.1-ALv2](LICENSE.md). Giấy phép đó **không** bao gồm tên, logo hay nhận diện thương hiệu.
 
-"Pinned Sidebar", logo (biểu tượng sidebar, chữ `pinned.`) và các tài sản trong `icons/` và `store/assets/` thuộc về chủ sở hữu repo (canhanmvp / nupet.vn).
+"Pinned Sidebar", logo (biểu tượng sidebar, chữ `pinned.`) và các tài sản trong `icons/` và `store/assets/` thuộc về chủ sở hữu MAI VAN PHO.
 
 ## Được phép
 
@@ -25,7 +25,7 @@ Muốn xin phép hoặc báo vi phạm: mở issue trên repo này hoặc liên 
 
 The source code in this repository is licensed under [FSL-1.1-ALv2](LICENSE.md). That license does **not** grant any rights to the name, logo or brand.
 
-"Pinned Sidebar", its logo (the sidebar mark and the `pinned.` wordmark) and the assets in `icons/` and `store/assets/` belong to the repository owner (canhanmvp / nupet.vn).
+"Pinned Sidebar", its logo (the sidebar mark and the `pinned.` wordmark) and the assets in `icons/` and `store/assets/` belong to their owner, MAI VAN PHO.
 
 **You may** say your project is "based on Pinned Sidebar", link to this repository, and use the name when writing about the original extension.
 

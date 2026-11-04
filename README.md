@@ -140,3 +140,16 @@ Repo công khai nên workflow bỏ qua pull request từ fork, và container kh�
 Bộ kiểm thử browser không đăng nhập tài khoản cá nhân; dùng HTTP server local có fixture chặn iframe. Ảnh QA và báo cáo nằm trong `test-results/`. Sync giữa hai tài khoản/thiết bị Edge thực tế cần kiểm tra thủ công; các bài tự động kiểm tra API, quota, bản chụp chưa đủ và xung đột trong môi trường kiểm thử.
 
 Tài liệu tham chiếu: [Side Panel](https://developer.chrome.com/docs/extensions/reference/api/sidePanel), [Storage](https://developer.chrome.com/docs/extensions/reference/api/storage), [Declarative Net Request](https://developer.chrome.com/docs/extensions/reference/api/declarativeNetRequest), [Playwright extension testing](https://playwright.dev/docs/chrome-extensions).
+
+## Giấy phép và thương hiệu
+
+Mã nguồn dùng **[Functional Source License 1.1, Apache 2.0 Future License (FSL-1.1-ALv2)](LICENSE.md)**:
+
+- Bạn được xem, chạy, sửa và dùng nội bộ (cá nhân, công ty, học tập, nghiên cứu), kể cả khi dùng để cung cấp dịch vụ cho khách hàng của chính bạn.
+- **Không được** dùng mã này để làm sản phẩm hoặc dịch vụ thương mại cạnh tranh: thay thế Pinned Sidebar, hoặc có chức năng giống hoặc gần giống.
+- Mỗi phiên bản tự chuyển sang **Apache 2.0** sau 2 năm kể từ ngày phát hành.
+- Các bản phát hành trước khi thêm giấy phép này (đến v4.1.0) chưa từng được cấp phép mở; từ nay chúng cũng được cấp theo FSL-1.1-ALv2.
+
+Tên "Pinned Sidebar", logo và ảnh store **không** nằm trong giấy phép mã nguồn; xem [TRADEMARK.md](TRADEMARK.md). Bản fork phải đổi tên và logo.
+
+Dịch vụ trả phí sau này (đồng bộ riêng, kiểm tra license, AI) chạy trên server riêng và không nằm trong repo này.

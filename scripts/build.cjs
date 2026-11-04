@@ -10,6 +10,7 @@ const files = [
   "manifest.json",
   "core.js",
   "bookmarks-core.js",
+  "import-core.js",
   "background.js",
   "icons.js",
   "sidebar.html",

@@ -1,4 +1,5 @@
 "use strict";
+const { t } = PinnedI18n;
 const $ = (id) => document.getElementById(id);
 const C = Pinned;
 let state = null,
@@ -57,7 +58,8 @@ async function request(type, extra = {}) {
   const response = await chrome.runtime.sendMessage({ type, ...extra });
   if (!response?.ok)
     throw new Error(
-      response?.error || "Không kết nối được extension. Hãy tải lại sidebar.",
+      response?.error ||
+        t("Không kết nối được extension. Hãy tải lại sidebar."),
     );
   return response;
 }
@@ -65,7 +67,7 @@ function toast(message, { error = false, undo } = {}) {
   const item = element("div", "toast" + (error ? " error" : ""));
   item.append(element("span", "", message));
   if (undo) {
-    const button = element("button", "", "Hoàn tác");
+    const button = element("button", "", t("Hoàn tác"));
     button.onclick = () =>
       run(button, async () => {
         await undo();
@@ -94,7 +96,7 @@ function accept(next) {
     state = next;
     if (!state.workspaces?.length)
       state.workspaces = [
-        { id: "workspace-default", name: "Mặc định", color: "#b5ef55" },
+        { id: "workspace-default", name: t("Mặc định"), color: "#b5ef55" },
       ];
     if (!state.workspaces.some((item) => item.id === activeWorkspaceId))
       activeWorkspaceId =
@@ -145,7 +147,7 @@ function choose(title, message, options) {
     $("choice-title").textContent = title;
     $("choice-copy").textContent = message;
     $("choice-actions").replaceChildren();
-    const cancel = element("button", "button", "Hủy");
+    const cancel = element("button", "button", t("Hủy"));
     cancel.onclick = () => dialog.close("cancel");
     $("choice-actions").append(cancel);
     for (const option of options) {
@@ -178,7 +180,7 @@ function renderThemePicker() {
   const select = $("setting-theme");
   const grid = $("theme-grid");
   select.replaceChildren(
-    ...C.THEMES.map(([id, label]) => new Option(label, id)),
+    ...C.THEMES.map(([id, label]) => new Option(t(label), id)),
   );
   grid.replaceChildren(
     ...C.THEMES.map(([id, label]) => {
@@ -219,14 +221,32 @@ function markThemePicker(theme) {
   }
 }
 renderThemePicker();
+let shownLanguage = null;
 function applySettings() {
   const s = state.settings;
+  const language = PinnedI18n.setLanguage(s.language);
+  if (shownLanguage && shownLanguage !== language) {
+    // Static markup was translated once; a reload re-renders everything.
+    location.reload();
+    return;
+  }
+  if (!shownLanguage) {
+    shownLanguage = language;
+    PinnedI18n.translateDom(document.body);
+    $("setting-language").replaceChildren(
+      ...PinnedI18n.LANGUAGES.map(
+        ([value, label]) =>
+          new Option(value === "auto" ? t(label) : label, value),
+      ),
+    );
+  }
   document.documentElement.dataset.theme = s.theme;
   markThemePicker(s.theme);
   document.body.classList.toggle("compact", s.compact);
   $("compact-btn").setAttribute("aria-pressed", String(s.compact));
   for (const key of [
     "theme",
+    "language",
     "openMode",
     "overlaySide",
     "compact",
@@ -275,8 +295,8 @@ function renderLinkBanner() {
   const healthy = link.status === "ok";
   $("link-banner").classList.toggle("warning", !healthy);
   $("link-banner-copy").textContent = healthy
-    ? `${link.rootPath || "Bookmark"} · ${link.direction === "two-way" ? "Hai chiều" : "Chỉ kéo về"}`
-    : link.message || "Liên kết bookmark đang tạm dừng.";
+    ? `${link.rootPath || "Bookmark"} · ${link.direction === "two-way" ? t("Hai chiều") : t("Chỉ kéo về")}`
+    : link.message || t("Liên kết bookmark đang tạm dừng.");
   $("link-banner-copy").title =
     (link.rootPath || "") + (link.message ? "\n" + link.message : "");
 }
@@ -289,7 +309,9 @@ function renderViewState() {
     $(view + "-tab").setAttribute("aria-selected", String(activeView === view));
   }
   $("search").placeholder =
-    activeView === "bookmarks" ? "Tìm bookmark…" : "Tìm trang hoặc thư mục…";
+    activeView === "bookmarks"
+      ? t("Tìm bookmark…")
+      : t("Tìm trang hoặc thư mục…");
   $("search").setAttribute("aria-label", $("search").placeholder);
   globalThis.PinnedBookmarks?.render();
 }
@@ -332,7 +354,7 @@ function cleanSessions(value) {
       name:
         typeof item.name === "string" && item.name.trim()
           ? item.name.trim().slice(0, 100)
-          : "Phiên làm việc",
+          : t("Phiên làm việc"),
       workspaceId: typeof item.workspaceId === "string" ? item.workspaceId : "",
       createdAt: Number.isFinite(item.createdAt) ? item.createdAt : Date.now(),
       groups: cleanGroups(item.groups),
@@ -397,7 +419,9 @@ function renderSessions() {
   if ($("sessions-tab-count"))
     $("sessions-tab-count").textContent = workspaceSessions.length;
   if (!workspaceSessions.length) {
-    list.append(element("p", "session-empty", "Chưa có phiên nào được lưu."));
+    list.append(
+      element("p", "session-empty", t("Chưa có phiên nào được lưu.")),
+    );
     return;
   }
   const visibleSessions =
@@ -408,21 +432,23 @@ function renderSessions() {
     const chip = element("div", "session-chip");
     const open = element("button", "session-open");
     open.type = "button";
-    open.title = "Mở lại phiên này";
-    open.setAttribute("aria-label", `Mở lại ${session.name}`);
+    open.title = t("Mở lại phiên này");
+    open.setAttribute("aria-label", t("Mở lại {0}", [session.name]));
     open.append(
       element("span", "session-chip-name", session.name),
       element(
         "span",
         "session-chip-meta",
         `${session.tabs.length} tab` +
-          (session.groups.length ? ` · ${session.groups.length} nhóm` : ""),
+          (session.groups.length
+            ? t(" · {0} nhóm", [session.groups.length])
+            : ""),
       ),
     );
     open.onclick = () => run(open, () => openSession(session));
     const actions = iconButton(
       "more",
-      `Tùy chọn phiên ${session.name}`,
+      t("Tùy chọn phiên {0}", [session.name]),
       "session-actions",
     );
     actions.setAttribute("aria-haspopup", "menu");
@@ -430,15 +456,15 @@ function renderSessions() {
       event.stopPropagation();
       showMenu(actions, [
         {
-          label: "Mở thành một nhóm tab",
+          label: t("Mở thành một nhóm tab"),
           icon: "layers",
           action: () => openSession(session, { asGroup: true }),
         },
         {
-          label: "Đổi tên phiên",
+          label: t("Đổi tên phiên"),
           icon: "edit",
           action: async () => {
-            const name = window.prompt("Tên phiên tab", session.name);
+            const name = window.prompt(t("Tên phiên tab"), session.name);
             if (!name?.trim()) return;
             session.name = name.trim().slice(0, 100);
             savedSessions = cleanSessions(savedSessions);
@@ -447,7 +473,7 @@ function renderSessions() {
           },
         },
         {
-          label: "Xóa phiên",
+          label: t("Xóa phiên"),
           icon: "trash",
           danger: true,
           action: () => removeSession(session),
@@ -456,7 +482,7 @@ function renderSessions() {
     };
     const remove = iconButton(
       "close",
-      `Xóa phiên ${session.name}`,
+      t("Xóa phiên {0}", [session.name]),
       "session-remove",
     );
     remove.onclick = () => run(remove, () => removeSession(session));
@@ -499,19 +525,19 @@ async function createTabs(urls) {
 }
 async function openTabsAsGroup(items, group) {
   const urls = [...new Set(items.map((item) => item.url))];
-  if (!urls.length) throw new Error("Không có website nào để mở.");
+  if (!urls.length) throw new Error(t("Không có website nào để mở."));
   if (urls.length > 30) {
     const result = await choose(
-      "Mở nhiều tab?",
-      `Sẽ mở ${urls.length} tab trong một nhóm “${group.title}”.`,
-      [{ label: `Mở ${urls.length} tab`, value: "open" }],
+      t("Mở nhiều tab?"),
+      t("Sẽ mở {0} tab trong một nhóm “{1}”.", [urls.length, group.title]),
+      [{ label: t("Mở {0} tab", [urls.length]), value: "open" }],
     );
     if (result !== "open") return;
   }
   const tabIds = (await createTabs(urls)).filter((id) => id != null);
-  if (!tabIds.length) throw new Error("Không mở được website nào.");
+  if (!tabIds.length) throw new Error(t("Không mở được website nào."));
   await groupTabs(tabIds, group);
-  toast(`Đã mở ${tabIds.length} tab thành nhóm “${group.title}”.`);
+  toast(t("Đã mở {0} tab thành nhóm “{1}”.", [tabIds.length, group.title]));
 }
 async function openSession(session, { asGroup = false } = {}) {
   const existing = new Set(
@@ -538,8 +564,10 @@ async function openSession(session, { asGroup = false } = {}) {
         group,
       );
   toast(
-    `Đã mở ${opened} tab từ phiên “${session.name}”.` +
-      (skipped ? ` Bỏ qua ${skipped} tab đã có hoặc không mở được.` : ""),
+    t("Đã mở {0} tab từ phiên “{1}”.", [opened, session.name]) +
+      (skipped
+        ? t(" Bỏ qua {0} tab đã có hoặc không mở được.", [skipped])
+        : ""),
   );
 }
 async function removeSession(session) {
@@ -547,7 +575,7 @@ async function removeSession(session) {
   savedSessions = savedSessions.filter((item) => item.id !== session.id);
   await chrome.storage.local.set({ [SESSIONS_KEY]: savedSessions });
   renderSessions();
-  toast(`Đã xóa phiên “${session.name}”.`, {
+  toast(t("Đã xóa phiên “{0}”.", [session.name]), {
     undo: async () => {
       savedSessions = previous;
       await chrome.storage.local.set({ [SESSIONS_KEY]: savedSessions });
@@ -582,7 +610,7 @@ async function saveCurrentSession(onlyGroupId = null) {
     }));
   const [cleaned] = cleanSessions([{ tabs: raw, groups: used }]);
   const tabs = cleaned?.tabs || [];
-  if (!tabs.length) throw new Error("Không có tab website nào để lưu.");
+  if (!tabs.length) throw new Error(t("Không có tab website nào để lưu."));
   const workspace = state.workspaces.find(
     (item) => item.id === activeWorkspaceId,
   );
@@ -593,7 +621,7 @@ async function saveCurrentSession(onlyGroupId = null) {
   const groupName = onlyGroupId != null ? used[0]?.title : "";
   const session = {
     id: C.uid(),
-    name: `${groupName || workspace?.name || "Mặc định"} · ${time}`,
+    name: `${groupName || workspace?.name || t("Mặc định")} · ${time}`,
     workspaceId: activeWorkspaceId,
     createdAt: Date.now(),
     groups: cleaned.groups,
@@ -602,32 +630,34 @@ async function saveCurrentSession(onlyGroupId = null) {
   savedSessions = [session, ...savedSessions].slice(0, 20);
   await chrome.storage.local.set({ [SESSIONS_KEY]: savedSessions });
   renderSessions();
-  toast(`Đã lưu ${tabs.length} tab thành một phiên.`);
+  toast(t("Đã lưu {0} tab thành một phiên.", [tabs.length]));
 }
 function renderStatus() {
   if (!state) return;
   const warning = !!(syncStatus.message || syncStatus.conflict);
   $("storage-status").classList.toggle("warning", warning);
   $("storage-label").textContent = warning
-    ? "Đã lưu trên máy · Kiểm tra đồng bộ"
+    ? t("Đã lưu trên máy · Kiểm tra đồng bộ")
     : !state.settings.sync
-      ? "Đã lưu trên thiết bị"
+      ? t("Đã lưu trên thiết bị")
       : syncStatus.dirty
-        ? "Đã lưu · Chờ đồng bộ"
-        : "Đã lưu · Đã gửi tới trình duyệt";
+        ? t("Đã lưu · Chờ đồng bộ")
+        : t("Đã lưu · Đã gửi tới trình duyệt");
   $("sync-detail").textContent =
     syncStatus.message ||
     (syncStatus.conflict
-      ? "Có thay đổi trên thiết bị khác."
+      ? t("Có thay đổi trên thiết bị khác.")
       : !state.settings.sync
-        ? "Đồng bộ tự động đang tắt."
+        ? t("Đồng bộ tự động đang tắt.")
         : syncStatus.dirty
-          ? "Đã lưu trên máy. Gửi tới trình duyệt sau khoảng 30 giây ngừng chỉnh sửa."
+          ? t(
+              "Đã lưu trên máy. Gửi tới trình duyệt sau khoảng 30 giây ngừng chỉnh sửa.",
+            )
           : syncStatus.syncedAt
-            ? "Đã gửi tới bộ nhớ đồng bộ lúc " +
+            ? t("Đã gửi tới bộ nhớ đồng bộ lúc ") +
               new Date(syncStatus.syncedAt).toLocaleString("vi-VN") +
-              ". Trình duyệt sẽ chuyển dữ liệu giữa các thiết bị."
-            : "Chưa có bản đồng bộ.");
+              t(". Trình duyệt sẽ chuyển dữ liệu giữa các thiết bị.")
+            : t("Chưa có bản đồng bộ."));
   $("sync-conflict").hidden = !syncStatus.conflict;
   $("sync-now").hidden = !!syncStatus.conflict;
 }
@@ -673,7 +703,7 @@ function render() {
   let visibleCount = 0;
   const workspaceId = activeWorkspaceId || state.workspaces[0]?.id;
   const groups = [
-    { id: "", name: "Chưa phân nhóm" },
+    { id: "", name: t("Chưa phân nhóm") },
     ...state.folders.filter((folder) => folder.workspaceId === workspaceId),
   ];
   for (const folder of groups) {
@@ -699,7 +729,7 @@ function render() {
     toggle.setAttribute("aria-expanded", String(!collapsed));
     toggle.setAttribute(
       "aria-label",
-      (collapsed ? "Mở " : "Thu gọn ") + folder.name,
+      (collapsed ? t("Mở ") : t("Thu gọn ")) + folder.name,
     );
     const chevron = makeIcon("chevron");
     chevron.classList.add("chevron");
@@ -717,15 +747,15 @@ function render() {
       // marked draggable. Keeping it on the grip prevents the folder header
       // and its website links from swallowing the gesture in Edge.
       grip.draggable = !query;
-      grip.title = "Kéo để sắp xếp bộ sưu tập";
+      grip.title = t("Kéo để sắp xếp bộ sưu tập");
       grip.setAttribute("role", "img");
-      grip.setAttribute("aria-label", "Kéo để sắp xếp bộ sưu tập");
+      grip.setAttribute("aria-label", t("Kéo để sắp xếp bộ sưu tập"));
       grip.append(makeIcon("grip"));
       heading.append(grip);
     }
     heading.append(toggle);
     if (folder.id) {
-      const more = iconButton("more", "Quản lý thư mục " + folder.name);
+      const more = iconButton("more", t("Quản lý thư mục ") + folder.name);
       more.setAttribute("aria-haspopup", "menu");
       more.onclick = (event) => {
         event.stopPropagation();
@@ -740,7 +770,7 @@ function render() {
           element(
             "p",
             "group-empty",
-            "Thả website vào đây hoặc thêm trang mới",
+            t("Thả website vào đây hoặc thêm trang mới"),
           ),
         );
       else {
@@ -759,8 +789,8 @@ function render() {
             pin.title +
               " — " +
               (state.settings.openMode === "sidebar"
-                ? "Mở trong sidebar"
-                : "Mở tab mới"),
+                ? t("Mở trong sidebar")
+                : t("Mở tab mới")),
           );
           const copy = element("span", "site-copy");
           copy.append(
@@ -770,7 +800,7 @@ function render() {
           if (pin.favorite) copy.append(element("span", "favorite-mark", "★"));
           if (linkCheck[pin.id]?.status === "broken") {
             const mark = element("span", "check-mark");
-            mark.title = "Lần kiểm tra gần nhất: link hỏng";
+            mark.title = t("Lần kiểm tra gần nhất: link hỏng");
             mark.append(makeIcon("alert"));
             copy.querySelector(".site-title").append(mark);
           }
@@ -801,7 +831,7 @@ function render() {
           });
           const more = iconButton(
             "more",
-            "Tùy chọn " + pin.title,
+            t("Tùy chọn ") + pin.title,
             "icon-button row-more",
           );
           more.setAttribute("aria-haspopup", "menu");
@@ -843,15 +873,17 @@ function render() {
       : workspacePins.length > 0 ||
         state.folders.some((folder) => folder.workspaceId === workspaceId);
   $("empty-title").textContent =
-    query || hasFilter ? "Chưa tìm thấy trang phù hợp" : "Một góc mới cho bạn";
+    query || hasFilter
+      ? t("Chưa tìm thấy trang phù hợp")
+      : t("Một góc mới cho bạn");
   $("empty-copy").textContent =
     query || hasFilter
       ? hasFilter && !query
-        ? "Chưa có website yêu thích trong không gian này."
-        : "Thử tên website, tên miền hoặc tên thư mục khác."
-      : "Ghim trang đang xem hoặc thêm website đầu tiên.";
+        ? t("Chưa có website yêu thích trong không gian này.")
+        : t("Thử tên website, tên miền hoặc tên thư mục khác.")
+      : t("Ghim trang đang xem hoặc thêm website đầu tiên.");
   $("empty-action").textContent =
-    query || hasFilter ? "Hiện tất cả" : "Thêm website";
+    query || hasFilter ? t("Hiện tất cả") : t("Thêm website");
   $("list-hint").hidden = !workspacePins.length || !!query || hasFilter;
   if (activeId)
     [...document.querySelectorAll("[data-pin]")]
@@ -901,31 +933,31 @@ function showMenu(trigger, entries) {
 function pinMenu(pin, trigger) {
   showMenu(trigger, [
     {
-      label: "Mở trong sidebar",
+      label: t("Mở trong sidebar"),
       icon: "panel",
       action: () => openPin(pin, "sidebar"),
     },
     {
-      label: "Mở tab mới",
+      label: t("Mở tab mới"),
       icon: "external",
       action: () => openPin(pin, "tab"),
     },
     null,
     {
-      label: "Sửa / chuyển thư mục",
+      label: t("Sửa / chuyển thư mục"),
       icon: "edit",
       action: () => pinDialog(pin),
     },
     {
-      label: pin.favorite ? "Bỏ yêu thích" : "Đánh dấu yêu thích",
+      label: pin.favorite ? t("Bỏ yêu thích") : t("Đánh dấu yêu thích"),
       icon: "star",
       action: () => toggleFavorite(pin),
     },
-    { label: "Đưa lên trên", icon: "up", action: () => movePin(pin, -1) },
-    { label: "Đưa xuống dưới", icon: "down", action: () => movePin(pin, 1) },
+    { label: t("Đưa lên trên"), icon: "up", action: () => movePin(pin, -1) },
+    { label: t("Đưa xuống dưới"), icon: "down", action: () => movePin(pin, 1) },
     null,
     {
-      label: "Bỏ ghim",
+      label: t("Bỏ ghim"),
       icon: "trash",
       danger: true,
       action: () => deletePin(pin),
@@ -935,17 +967,17 @@ function pinMenu(pin, trigger) {
 function folderMenu(folder, trigger) {
   showMenu(trigger, [
     {
-      label: "Thêm website vào đây",
+      label: t("Thêm website vào đây"),
       icon: "plus",
       action: () => pinDialog(null, folder.id),
     },
     {
-      label: "Đổi tên thư mục",
+      label: t("Đổi tên thư mục"),
       icon: "edit",
       action: () => folderDialog(folder),
     },
     {
-      label: "Mở tất cả thành nhóm tab",
+      label: t("Mở tất cả thành nhóm tab"),
       icon: "layers",
       action: () =>
         openTabsAsGroup(
@@ -957,29 +989,31 @@ function folderMenu(folder, trigger) {
         ),
     },
     {
-      label: "Đưa bộ sưu tập lên trên",
+      label: t("Đưa bộ sưu tập lên trên"),
       icon: "up",
       action: () => moveFolder(folder, -1),
     },
     {
-      label: "Đưa bộ sưu tập xuống dưới",
+      label: t("Đưa bộ sưu tập xuống dưới"),
       icon: "down",
       action: () => moveFolder(folder, 1),
     },
     null,
     {
-      label: "Xóa thư mục",
+      label: t("Xóa thư mục"),
       icon: "trash",
       danger: true,
       action: async () => {
         const result = await choose(
-          "Xóa thư mục?",
-          `Các website trong “${folder.name}” sẽ chuyển về Chưa phân nhóm.`,
-          [{ label: "Xóa thư mục", value: "delete", danger: true }],
+          t("Xóa thư mục?"),
+          t("Các website trong “{0}” sẽ chuyển về Chưa phân nhóm.", [
+            folder.name,
+          ]),
+          [{ label: t("Xóa thư mục"), value: "delete", danger: true }],
         );
         if (result === "delete") {
           await mutate({ type: "DELETE_FOLDER", id: folder.id });
-          toast("Đã xóa thư mục, giữ lại các website.");
+          toast(t("Đã xóa thư mục, giữ lại các website."));
         }
       },
     },
@@ -1005,7 +1039,7 @@ async function toggleFavorite(pin) {
     note: pin.note,
     favorite: !pin.favorite,
   });
-  toast(pin.favorite ? "Đã bỏ yêu thích." : "Đã thêm vào yêu thích.");
+  toast(pin.favorite ? t("Đã bỏ yêu thích.") : t("Đã thêm vào yêu thích."));
 }
 async function moveFolder(folder, direction) {
   const peers = state.folders.filter(
@@ -1021,28 +1055,30 @@ async function moveFolder(folder, direction) {
     beforeId: direction < 0 ? peers[index - 1].id : peers[index + 2]?.id || "",
     workspaceId: folder.workspaceId,
   });
-  toast(`Đã sắp xếp bộ sưu tập “${folder.name}”.`, {
+  toast(t("Đã sắp xếp bộ sưu tập “{0}”.", [folder.name]), {
     undo: () => mutate({ type: "SET_FOLDER_ORDER", ids: previousOrder }),
   });
 }
 async function deletePin(pin) {
   const index = state.pins.findIndex((p) => p.id === pin.id);
   await mutate({ type: "DELETE_PIN", id: pin.id });
-  toast(`Đã bỏ ghim ${pin.title}`, {
+  toast(t("Đã bỏ ghim {0}", [pin.title]), {
     undo: () => mutate({ type: "RESTORE_PIN", pin, index }),
   });
 }
 function pinDialog(pin = null, folderId = "") {
   if (!state) return;
   editingPin = pin?.id || null;
-  $("pin-dialog-title").textContent = pin ? "Sửa website" : "Thêm website";
+  $("pin-dialog-title").textContent = pin
+    ? t("Sửa website")
+    : t("Thêm website");
   $("pin-url").value = pin?.url || "";
   $("pin-title").value = pin?.title || "";
   $("pin-tags").value = (pin?.tags || []).join(", ");
   $("pin-note").value = pin?.note || "";
   $("pin-favorite").checked = pin?.favorite === true;
   $("pin-folder").replaceChildren(
-    new Option("Chưa phân nhóm", ""),
+    new Option(t("Chưa phân nhóm"), ""),
     ...state.folders
       .filter(
         (f) => f.workspaceId === (activeWorkspaceId || state.workspaces[0]?.id),
@@ -1058,8 +1094,8 @@ function folderDialog(folder = null) {
   editingFolder = folder?.id || null;
   $("folder-name").value = folder?.name || "";
   $("folder-dialog-title").textContent = folder
-    ? "Đổi tên thư mục"
-    : "Thư mục mới";
+    ? t("Đổi tên thư mục")
+    : t("Thư mục mới");
   $("folder-error").textContent = "";
   showDialog($("folder-dialog"));
   $("folder-name").focus();
@@ -1067,8 +1103,8 @@ function folderDialog(folder = null) {
 function workspaceDialog(workspace = null) {
   editingWorkspace = workspace?.id || null;
   $("workspace-dialog-title").textContent = workspace
-    ? "Đổi tên không gian"
-    : "Không gian mới";
+    ? t("Đổi tên không gian")
+    : t("Không gian mới");
   $("workspace-name").value = workspace?.name || "";
   $("workspace-color").value = workspace?.color || "#b5ef55";
   $("workspace-error").textContent = "";
@@ -1094,7 +1130,7 @@ $("pin-form").onsubmit = (event) => {
         favorite: $("pin-favorite").checked,
       });
       $("pin-dialog").close();
-      toast("Đã lưu website.");
+      toast(t("Đã lưu website."));
     },
     $("pin-error"),
   );
@@ -1111,7 +1147,7 @@ $("folder-form").onsubmit = (event) => {
         workspaceId: activeWorkspaceId,
       });
       $("folder-dialog").close();
-      toast("Đã lưu thư mục.");
+      toast(t("Đã lưu thư mục."));
     },
     $("folder-error"),
   );
@@ -1136,7 +1172,9 @@ $("workspace-form").onsubmit = (event) => {
       renderSessions();
       render();
       toast(
-        editingWorkspace ? "Đã cập nhật không gian." : "Đã tạo không gian mới.",
+        editingWorkspace
+          ? t("Đã cập nhật không gian.")
+          : t("Đã tạo không gian mới."),
       );
     },
     $("workspace-error"),
@@ -1243,7 +1281,7 @@ $("pin-list").addEventListener("drop", (event) => {
         beforeId,
         workspaceId: activeWorkspaceId,
       });
-      toast(`Đã sắp xếp bộ sưu tập “${folder.name}”.`, {
+      toast(t("Đã sắp xếp bộ sưu tập “{0}”.", [folder.name]), {
         undo: () => mutate({ type: "SET_FOLDER_ORDER", ids: previousOrder }),
       });
     });
@@ -1288,7 +1326,7 @@ async function openPin(pin, mode, background = false) {
   }
   closeTranslator();
   $("load-line").hidden = false;
-  $("viewer-status").textContent = "Đang tự mở khóa website…";
+  $("viewer-status").textContent = t("Đang tự mở khóa website…");
   $("viewer-back").focus();
   const origin = new URL(pin.url).origin;
   if (!embedOrigins.includes(origin)) {
@@ -1304,7 +1342,7 @@ function openTranslator() {
   $("translator").hidden = false;
   $("load-line").hidden = true;
   $("viewer-reset").hidden = true;
-  $("viewer-status").textContent = "Dịch nhanh trong sidebar.";
+  $("viewer-status").textContent = t("Dịch nhanh trong sidebar.");
   $("translator-input").focus();
 }
 function closeTranslator() {
@@ -1314,10 +1352,10 @@ function closeTranslator() {
 }
 async function translateText() {
   const text = $("translator-input").value.trim();
-  if (!text) throw new Error("Hãy nhập văn bản cần dịch.");
+  if (!text) throw new Error(t("Hãy nhập văn bản cần dịch."));
   const target = $("translator-target").value;
   const source = $("translator-source").value;
-  $("translator-status").textContent = "Đang dịch…";
+  $("translator-status").textContent = t("Đang dịch…");
   $("translator-output").hidden = true;
   const query = new URLSearchParams({
     client: "gtx",
@@ -1329,19 +1367,19 @@ async function translateText() {
   const response = await fetch(
     "https://translate.googleapis.com/translate_a/single?" + query,
   );
-  if (!response.ok) throw new Error("Không thể dịch lúc này. Hãy thử lại.");
+  if (!response.ok) throw new Error(t("Không thể dịch lúc này. Hãy thử lại."));
   const data = await response.json();
   const output = data?.[0]
     ?.map((part) => part?.[0])
     .filter(Boolean)
     .join("");
-  if (!output) throw new Error("Không nhận được bản dịch. Hãy thử lại.");
+  if (!output) throw new Error(t("Không nhận được bản dịch. Hãy thử lại."));
   $("translator-output").textContent = output;
   $("translator-output").hidden = false;
   $("translator-status").textContent =
     source === "auto" && data?.[2]
-      ? "Đã nhận diện: " + data[2] + "."
-      : "Đã dịch xong.";
+      ? t("Đã nhận diện: ") + data[2] + "."
+      : t("Đã dịch xong.");
 }
 function resetFrame() {
   if (!currentPin) return;
@@ -1350,8 +1388,8 @@ function resetFrame() {
   const embedEnabled = embedOrigins.includes(origin);
   $("load-line").hidden = false;
   $("viewer-status").textContent = embedEnabled
-    ? "Đang mở với quyền nhúng riêng cho website này…"
-    : "Đang tải lại website…";
+    ? t("Đang mở với quyền nhúng riêng cho website này…")
+    : t("Đang tải lại website…");
   clearTimeout(viewerTimer);
   // Reassigning the same URL after adding a DNR rule can leave Chromium on its
   // cached iframe error page. A srcdoc page always creates a new document,
@@ -1368,8 +1406,8 @@ function resetFrame() {
       viewerTimer = setTimeout(() => {
         $("load-line").hidden = true;
         $("viewer-status").textContent = embedEnabled
-          ? "Nếu vẫn bị chặn, website này cần mở trong tab mới."
-          : "Website này cần mở trong tab mới.";
+          ? t("Nếu vẫn bị chặn, website này cần mở trong tab mới.")
+          : t("Website này cần mở trong tab mới.");
       }, 5000);
     },
     { once: true },
@@ -1385,8 +1423,8 @@ $("viewer-frame").addEventListener("load", () => {
   // proof that the website actually rendered.
   const embedEnabled = embedOrigins.includes(new URL(currentPin.url).origin);
   $("viewer-status").textContent = embedEnabled
-    ? "Đang hiển thị trong sidebar…"
-    : "Website này cần mở trong tab mới.";
+    ? t("Đang hiển thị trong sidebar…")
+    : t("Website này cần mở trong tab mới.");
 });
 function closeViewer() {
   currentPin = null;
@@ -1422,14 +1460,14 @@ function renderEmbeds() {
   $("embed-list").replaceChildren();
   if (!embedOrigins.length) {
     $("embed-list").append(
-      element("p", "subtle", "Chưa cho phép website nào."),
+      element("p", "subtle", t("Chưa cho phép website nào.")),
     );
     return;
   }
   for (const origin of embedOrigins) {
     const row = element("div", "embed-row");
     row.append(element("span", "", origin));
-    const button = iconButton("close", "Thu hồi " + origin);
+    const button = iconButton("close", t("Thu hồi ") + origin);
     button.onclick = () =>
       run(button, async () => {
         await request("EMBED", { origin, enabled: false });
@@ -1437,7 +1475,7 @@ function renderEmbeds() {
         renderEmbeds();
         if (currentPin && new URL(currentPin.url).origin === origin)
           resetFrame();
-        toast("Đã thu hồi quyền nhúng.");
+        toast(t("Đã thu hồi quyền nhúng."));
       });
     row.append(button);
     $("embed-list").append(row);
@@ -1453,6 +1491,7 @@ $("settings-btn").onclick = settingsDialog;
 $("storage-status").onclick = settingsDialog;
 for (const key of [
   "theme",
+  "language",
   "openMode",
   "overlaySide",
   "compact",
@@ -1492,7 +1531,7 @@ $("workspace-more").onclick = (event) => {
   if (!workspace) return;
   showMenu(event.currentTarget, [
     {
-      label: "Đổi tên không gian",
+      label: t("Đổi tên không gian"),
       icon: "edit",
       action: () => workspaceDialog(workspace),
     },
@@ -1501,21 +1540,21 @@ $("workspace-more").onclick = (event) => {
       ? linkMenuEntries(workspace)
       : [
           {
-            label: "Liên kết với thư mục bookmark…",
+            label: t("Liên kết với thư mục bookmark…"),
             icon: "link",
             action: () => {
               setActiveView("bookmarks");
-              toast("Chọn thư mục bookmark, bấm ⋯ rồi chọn Liên kết.");
+              toast(t("Chọn thư mục bookmark, bấm ⋯ rồi chọn Liên kết."));
             },
           },
         ]),
     {
-      label: "Xuất ra bookmark…",
+      label: t("Xuất ra bookmark…"),
       icon: "bookmark",
       action: () => globalThis.PinnedBookmarks.exportWorkspace(workspace),
     },
     {
-      label: "Mở tất cả thành nhóm tab",
+      label: t("Mở tất cả thành nhóm tab"),
       icon: "layers",
       action: () =>
         openTabsAsGroup(
@@ -1524,20 +1563,23 @@ $("workspace-more").onclick = (event) => {
         ),
     },
     {
-      label: "Dọn dẹp trang ghim…",
+      label: t("Dọn dẹp trang ghim…"),
       icon: "broom",
       action: () => globalThis.PinnedCleanup.open(),
     },
     null,
     {
-      label: "Xóa không gian",
+      label: t("Xóa không gian"),
       icon: "trash",
       danger: true,
       action: async () => {
         const result = await choose(
-          "Xóa không gian?",
-          `Xóa “${workspace.name}” sẽ xóa các thư mục và website bên trong. Hãy xuất bản sao trước nếu cần.`,
-          [{ label: "Xóa không gian", value: "delete", danger: true }],
+          t("Xóa không gian?"),
+          t(
+            "Xóa “{0}” sẽ xóa các thư mục và website bên trong. Hãy xuất bản sao trước nếu cần.",
+            [workspace.name],
+          ),
+          [{ label: t("Xóa không gian"), value: "delete", danger: true }],
         );
         if (result !== "delete") return;
         await mutate({ type: "DELETE_WORKSPACE", id: workspace.id });
@@ -1546,7 +1588,7 @@ $("workspace-more").onclick = (event) => {
         renderWorkspaces();
         renderSessions();
         render();
-        toast("Đã xóa không gian và dữ liệu bên trong.");
+        toast(t("Đã xóa không gian và dữ liệu bên trong."));
       },
     },
   ]);
@@ -1555,35 +1597,38 @@ function linkMenuEntries(workspace) {
   const link = workspaceLink(workspace.id);
   return [
     {
-      label: "Đồng bộ lại với bookmark",
+      label: t("Đồng bộ lại với bookmark"),
       icon: "reload",
       action: () => resyncLink(workspace.id),
     },
     ...(link?.status !== "ok"
       ? [
           {
-            label: "Chọn lại thư mục bookmark",
+            label: t("Chọn lại thư mục bookmark"),
             icon: "bookmark",
             action: async () => {
               await request("BOOKMARK_UNLINK", { workspaceId: workspace.id });
               setActiveView("bookmarks");
-              toast("Chọn thư mục mới, bấm ⋯ rồi chọn Liên kết.");
+              toast(t("Chọn thư mục mới, bấm ⋯ rồi chọn Liên kết."));
             },
           },
         ]
       : []),
     {
-      label: "Hủy liên kết bookmark",
+      label: t("Hủy liên kết bookmark"),
       icon: "unlink",
       action: async () => {
         const result = await choose(
-          "Hủy liên kết?",
-          `Trang ghim và bookmark đều được giữ nguyên; chỉ ngừng đồng bộ giữa “${workspace.name}” và ${link?.rootPath || "thư mục bookmark"}.`,
-          [{ label: "Hủy liên kết", value: "unlink", danger: true }],
+          t("Hủy liên kết?"),
+          t(
+            "Trang ghim và bookmark đều được giữ nguyên; chỉ ngừng đồng bộ giữa “{0}” và {1}.",
+            [workspace.name, link?.rootPath || t("thư mục bookmark")],
+          ),
+          [{ label: t("Hủy liên kết"), value: "unlink", danger: true }],
         );
         if (result !== "unlink") return;
         await request("BOOKMARK_UNLINK", { workspaceId: workspace.id });
-        toast("Đã hủy liên kết bookmark.");
+        toast(t("Đã hủy liên kết bookmark."));
       },
     },
   ];
@@ -1592,7 +1637,7 @@ async function resyncLink(workspaceId) {
   if (!(await globalThis.PinnedBookmarks.ensurePermission())) return;
   const data = await request("BOOKMARK_RESYNC", { workspaceId });
   accept(data.state);
-  toast("Đã đồng bộ với bookmark.");
+  toast(t("Đã đồng bộ với bookmark."));
 }
 $("link-banner-resync").onclick = () =>
   run($("link-banner-resync"), () => resyncLink(activeWorkspaceId));
@@ -1611,9 +1656,11 @@ $("bookmark-permission-btn").onclick = () =>
   run($("bookmark-permission-btn"), async () => {
     if (await globalThis.PinnedBookmarks.hasPermission()) {
       const result = await choose(
-        "Tắt quyền bookmark?",
-        "Các liên kết bookmark sẽ tạm dừng cho tới khi bạn cho phép lại. Trang ghim vẫn được giữ.",
-        [{ label: "Tắt quyền", value: "off", danger: true }],
+        t("Tắt quyền bookmark?"),
+        t(
+          "Các liên kết bookmark sẽ tạm dừng cho tới khi bạn cho phép lại. Trang ghim vẫn được giữ.",
+        ),
+        [{ label: t("Tắt quyền"), value: "off", danger: true }],
       );
       if (result === "off")
         await chrome.permissions.remove({ permissions: ["bookmarks"] });
@@ -1637,13 +1684,13 @@ $("save-session").onclick = (event) =>
     if (!groups.length) return saveCurrentSession();
     showMenu($("save-session"), [
       {
-        label: "Lưu cả cửa sổ",
+        label: t("Lưu cả cửa sổ"),
         icon: "history",
         action: () => saveCurrentSession(),
       },
       null,
       ...groups.map((group) => ({
-        label: `Lưu nhóm “${group.title || "Không tên"}”`,
+        label: t("Lưu nhóm “{0}”", [group.title || t("Không tên")]),
         icon: "layers",
         action: () => saveCurrentSession(group.id),
       })),
@@ -1657,22 +1704,26 @@ $("compact-btn").onclick = () =>
 $("sync-now").onclick = () =>
   run($("sync-now"), async () => {
     await request("SYNC_NOW");
-    toast("Đã gửi dữ liệu tới bộ nhớ đồng bộ của trình duyệt.");
+    toast(t("Đã gửi dữ liệu tới bộ nhớ đồng bộ của trình duyệt."));
   });
 for (const choice of ["local", "remote"])
   $("sync-" + choice).onclick = () =>
     run($("sync-" + choice), async () => {
       const result = await choose(
-        "Chọn bản dữ liệu",
+        t("Chọn bản dữ liệu"),
         choice === "local"
-          ? "Gửi danh sách trên máy này lên tài khoản? Bản tài khoản hiện tại sẽ được lưu dự phòng."
-          : "Thay danh sách trên máy bằng bản tài khoản? Danh sách hiện tại sẽ được lưu dự phòng.",
-        [{ label: "Tiếp tục", value: "confirm" }],
+          ? t(
+              "Gửi danh sách trên máy này lên tài khoản? Bản tài khoản hiện tại sẽ được lưu dự phòng.",
+            )
+          : t(
+              "Thay danh sách trên máy bằng bản tài khoản? Danh sách hiện tại sẽ được lưu dự phòng.",
+            ),
+        [{ label: t("Tiếp tục"), value: "confirm" }],
       );
       if (result === "confirm") {
         await request("RESOLVE_SYNC", { choice });
         await reloadState();
-        toast("Đã xử lý xung đột đồng bộ.");
+        toast(t("Đã xử lý xung đột đồng bộ."));
       }
     });
 function download(data, name = "pinned-sidebar") {
@@ -1709,7 +1760,7 @@ $("export-sessions-btn").onclick = () => {
       },
       "pinned-sessions",
     );
-  else toast("Chưa có phiên tab để xuất.", { error: true });
+  else toast(t("Chưa có phiên tab để xuất."), { error: true });
 };
 $("recovery-export").onclick = () =>
   run($("recovery-export"), async () => {
@@ -1731,7 +1782,7 @@ $("recovery-export").onclick = () =>
       data.recoveryBackup?.data || candidates[0] || data.legacyBackup;
     if (!backup)
       throw new Error(
-        "Chưa có bản dự phòng. Bạn có thể xuất danh sách hiện tại.",
+        t("Chưa có bản dự phòng. Bạn có thể xuất danh sách hiện tại."),
       );
     download(backup, "pinned-recovery");
   });
@@ -1750,15 +1801,15 @@ $("import-sessions-file").onchange = () =>
     const file = $("import-sessions-file").files[0];
     if (!file) return;
     if (file.size > 20 * 1024 * 1024)
-      throw new Error("File quá lớn. Giới hạn 20 MB.");
+      throw new Error(t("File quá lớn. Giới hạn 20 MB."));
     let data;
     try {
       data = JSON.parse(await file.text());
     } catch {
-      throw new Error("File không phải JSON hợp lệ.");
+      throw new Error(t("File không phải JSON hợp lệ."));
     }
     const incoming = cleanSessions(Array.isArray(data) ? data : data?.sessions);
-    if (!incoming.length) throw new Error("File chưa có phiên tab hợp lệ.");
+    if (!incoming.length) throw new Error(t("File chưa có phiên tab hợp lệ."));
     const mapped = incoming.map((session) => ({
       ...session,
       workspaceId: state.workspaces.some(
@@ -1768,11 +1819,14 @@ $("import-sessions-file").onchange = () =>
         : activeWorkspaceId,
     }));
     const result = await choose(
-      "Nhập phiên tab",
-      `Đã đọc ${mapped.length} phiên. Gộp thêm sẽ giữ phiên đang có; thay thế sẽ xóa danh sách phiên local hiện tại.`,
+      t("Nhập phiên tab"),
+      t(
+        "Đã đọc {0} phiên. Gộp thêm sẽ giữ phiên đang có; thay thế sẽ xóa danh sách phiên local hiện tại.",
+        [mapped.length],
+      ),
       [
-        { label: "Thay thế", value: "replace", danger: true },
-        { label: "Gộp thêm", value: "merge" },
+        { label: t("Thay thế"), value: "replace", danger: true },
+        { label: t("Gộp thêm"), value: "merge" },
       ],
     );
     if (result !== "merge" && result !== "replace") return;
@@ -1790,32 +1844,39 @@ $("import-sessions-file").onchange = () =>
     }
     await chrome.storage.local.set({ [SESSIONS_KEY]: savedSessions });
     renderSessions();
-    toast(`Đã nhập ${mapped.length} phiên tab.`);
+    toast(t("Đã nhập {0} phiên tab.", [mapped.length]));
   });
 $("import-file").onchange = () =>
   run(null, async () => {
     const file = $("import-file").files[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024)
-      throw new Error("File quá lớn. Giới hạn 5 MB.");
+      throw new Error(t("File quá lớn. Giới hạn 5 MB."));
     let data;
     try {
       data = JSON.parse(await file.text());
     } catch {
-      throw new Error("File không phải JSON hợp lệ.");
+      throw new Error(t("File không phải JSON hợp lệ."));
     }
     const checked = C.parse(data);
     const result = await choose(
-      "Nhập bộ sưu tập",
-      `Đã đọc ${checked.state.pins.length} website và ${checked.state.folders.length} thư mục.${checked.skipped ? ` Bỏ qua ${checked.skipped} mục trùng.` : ""}\n\nGộp thêm sẽ bỏ qua website đã có. Thay thế sẽ lưu danh sách hiện tại thành bản dự phòng trước khi nhập.`,
+      t("Nhập bộ sưu tập"),
+      t(
+        "Đã đọc {0} website và {1} thư mục.{2}\n\nGộp thêm sẽ bỏ qua website đã có. Thay thế sẽ lưu danh sách hiện tại thành bản dự phòng trước khi nhập.",
+        [
+          checked.state.pins.length,
+          checked.state.folders.length,
+          checked.skipped ? t(" Bỏ qua {0} mục trùng.", [checked.skipped]) : "",
+        ],
+      ),
       [
-        { label: "Thay thế", value: "replace", danger: true },
-        { label: "Gộp thêm", value: "merge" },
+        { label: t("Thay thế"), value: "replace", danger: true },
+        { label: t("Gộp thêm"), value: "merge" },
       ],
     );
     if (result !== "merge" && result !== "replace") return;
     await mutate({ type: "IMPORT", mode: result, data });
-    toast("Đã nhập bộ sưu tập.");
+    toast(t("Đã nhập bộ sưu tập."));
   });
 $("add-pin").onclick = () => pinDialog();
 $("add-folder").onclick = () => state && folderDialog();
@@ -1834,7 +1895,7 @@ $("pin-current").onclick = () =>
       workspaceId: activeWorkspaceId,
     });
     accept(data.state);
-    toast("Đã ghim tab hiện tại.");
+    toast(t("Đã ghim tab hiện tại."));
   });
 $("search").oninput = () => {
   clearTimeout(queryTimer);

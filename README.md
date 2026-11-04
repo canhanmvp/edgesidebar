@@ -2,6 +2,12 @@
 
 Extension Manifest V3 cho Edge/Chrome: biến sidebar thành không gian làm việc cá nhân để ghim, tìm, sắp xếp website và lưu lại các phiên tab. Giao diện tiếng Việt gọn trong một màn hình (thanh công cụ cố định, chỉ danh sách cuộn), 16 giao diện màu: theo hệ thống, Sáng, Tối, Đen, Pastel, Đại dương, Hoàng hôn, Oải hương, Hồng đào, Cát, Nửa đêm, Rừng, Nord, Mocha, Mận, Dracula; có chế độ chỉ biểu tượng.
 
+## Ngôn ngữ / Language
+
+Giao diện có **tiếng Việt và tiếng Anh**. Mặc định theo ngôn ngữ của trình duyệt; đổi trong **Cài đặt → Ngôn ngữ**. Tên và mô tả trên store lấy từ `_locales/`.
+
+Cách thêm chuỗi mới: viết câu tiếng Việt trong `t("…")` (tham số dạng `{0}`), rồi thêm bản tiếng Anh vào `i18n-en.js`. Văn bản tĩnh trong `sidebar.html` được dịch tự động theo đúng câu gốc. `tests/i18n.test.cjs` báo lỗi khi có chuỗi tiếng Việt chưa bọc `t()`, chưa có bản dịch, hoặc lệch placeholder.
+
 ## Có gì mới trong 4.1
 
 - **Tab Bookmark:** tab thứ ba cạnh Ghim/Phiên để duyệt bookmark (Favorites trên Edge) theo từng thư mục, tìm không dấu và ghim nhanh vào không gian đang chọn. Khi tìm ở tab Ghim, bookmark khớp hiện thêm trong nhóm **Từ bookmark**. Kéo thả để sắp xếp bookmark, thả vào giữa một thư mục (hoặc vào tên thư mục trên thanh đường dẫn) để chuyển chỗ; `Alt+↑/↓` di chuyển bằng bàn phím. Xóa bookmark hoặc thư mục (phím `Delete` hoặc menu `⋯`) đều có **Hoàn tác**; xóa thư mục đang liên kết sẽ hủy liên kết trước, trang ghim được giữ. Thư mục gốc của trình duyệt và bookmark do tổ chức quản lý không sửa được.

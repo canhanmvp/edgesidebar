@@ -20,7 +20,7 @@
   async function ensurePermission() {
     if (await hasPermission()) return true;
     if (!(await chrome.permissions.request(PERMISSION)))
-      throw new Error("Chưa được cấp quyền truy cập bookmark.");
+      throw new Error(t("Chưa được cấp quyền truy cập bookmark."));
     await refreshPermission();
     return true;
   }
@@ -50,8 +50,8 @@
   async function refreshPermission() {
     granted = await hasPermission();
     $("bookmark-permission-label").textContent = granted
-      ? "Tắt bookmark"
-      : "Bật bookmark";
+      ? t("Tắt bookmark")
+      : t("Bật bookmark");
     if (granted) bindEvents();
     flat = null;
     render();
@@ -91,7 +91,7 @@
       makeIcon("link"),
       document.createTextNode(workspace?.name || ""),
     );
-    badge.title = "Đã liên kết với không gian " + (workspace?.name || "");
+    badge.title = t("Đã liên kết với không gian ") + (workspace?.name || "");
     return badge;
   }
   function isWeb(node) {
@@ -114,7 +114,7 @@
       title: node.title,
       workspaceId: activeWorkspaceId,
     });
-    toast(`Đã ghim “${node.title || C.host(C.url(node.url))}”.`);
+    toast(t("Đã ghim “{0}”.", [node.title || C.host(C.url(node.url))]));
   }
   // Top-level containers (Bookmarks bar, Other…) and managed bookmarks are
   // fixed by the browser: they cannot be moved, deleted or dropped beside.
@@ -147,7 +147,7 @@
     return created;
   }
   async function deleteBookmark(node) {
-    if (!editable(node)) throw new Error("Không thể xóa mục này.");
+    if (!editable(node)) throw new Error(t("Không thể xóa mục này."));
     const snapshot = flat?.get(node.id)?.node || node;
     if (node.url == null) {
       const inside = new Set();
@@ -163,13 +163,19 @@
         )
         .filter(Boolean);
       const result = await choose(
-        "Xóa thư mục bookmark?",
-        `Xóa “${node.title || "Bookmark"}” và ${countLinks(snapshot)} bookmark bên trong.` +
+        t("Xóa thư mục bookmark?"),
+        t("Xóa “{0}” và {1} bookmark bên trong.", [
+          node.title || "Bookmark",
+          countLinks(snapshot),
+        ]) +
           (names.length
-            ? ` Liên kết với không gian ${names.map((n) => `“${n}”`).join(", ")} sẽ bị hủy; trang ghim vẫn được giữ.`
+            ? t(
+                " Liên kết với không gian {0} sẽ bị hủy; trang ghim vẫn được giữ.",
+                [names.map((n) => `“${n}”`).join(", ")],
+              )
             : "") +
-          " Có thể hoàn tác trong 10 giây.",
-        [{ label: "Xóa thư mục", value: "delete", danger: true }],
+          t(" Có thể hoàn tác trong 10 giây."),
+        [{ label: t("Xóa thư mục"), value: "delete", danger: true }],
       );
       if (result !== "delete") return;
       // Unlink first so the worker does not mirror the deletion into pins.
@@ -178,7 +184,7 @@
       await chrome.bookmarks.removeTree(node.id);
     } else await chrome.bookmarks.remove(node.id);
     invalidate();
-    toast(`Đã xóa “${node.title || node.url || "Bookmark"}”.`, {
+    toast(t("Đã xóa “{0}”.", [node.title || node.url || "Bookmark"]), {
       undo: async () => {
         await recreate(snapshot, snapshot.parentId, snapshot.index);
         invalidate();
@@ -194,7 +200,7 @@
     if (!parentId || parentId === "0") return;
     for (let current = flat.get(parentId); current;) {
       if (current.node.id === id)
-        throw new Error("Không thể đưa thư mục vào chính nó.");
+        throw new Error(t("Không thể đưa thư mục vào chính nó."));
       current = current.node.parentId ? flat.get(current.node.parentId) : null;
     }
     const destination = { parentId };
@@ -225,10 +231,10 @@
     if (!editable(node)) return [];
     return [
       null,
-      { label: "Đưa lên trên", icon: "up", action: () => step(node, -1) },
-      { label: "Đưa xuống dưới", icon: "down", action: () => step(node, 1) },
+      { label: t("Đưa lên trên"), icon: "up", action: () => step(node, -1) },
+      { label: t("Đưa xuống dưới"), icon: "down", action: () => step(node, 1) },
       {
-        label: node.url == null ? "Xóa thư mục" : "Xóa bookmark",
+        label: node.url == null ? t("Xóa thư mục") : t("Xóa bookmark"),
         icon: "trash",
         danger: true,
         action: () => deleteBookmark(node),
@@ -280,14 +286,16 @@
     const pinned = pinnedHere(node.url);
     const pin = iconButton(
       "pin",
-      pinned ? "Đã ghim trong không gian này" : "Ghim vào không gian hiện tại",
+      pinned
+        ? t("Đã ghim trong không gian này")
+        : t("Ghim vào không gian hiện tại"),
       "icon-button row-pin",
     );
     pin.disabled = pinned;
     pin.onclick = () => run(pin, () => pinBookmark(node));
     const more = iconButton(
       "more",
-      "Tùy chọn " + (node.title || ""),
+      t("Tùy chọn ") + (node.title || ""),
       "icon-button row-more",
     );
     more.setAttribute("aria-haspopup", "menu");
@@ -295,18 +303,18 @@
       event.stopPropagation();
       showMenu(more, [
         {
-          label: "Mở trong sidebar",
+          label: t("Mở trong sidebar"),
           icon: "panel",
           action: () => openPin(asPin(node), "sidebar"),
         },
         {
-          label: "Mở tab mới",
+          label: t("Mở tab mới"),
           icon: "external",
           action: () => openPin(asPin(node), "tab"),
         },
         null,
         {
-          label: "Ghim vào không gian hiện tại",
+          label: t("Ghim vào không gian hiện tại"),
           icon: "pin",
           action: () => pinBookmark(node),
         },
@@ -328,7 +336,7 @@
     const badge = linkBadge(node);
     if (badge) title.append(badge);
     const count = (node.children || []).length;
-    copy.append(title, element("span", "site-domain", `${count} mục`));
+    copy.append(title, element("span", "site-domain", t("{0} mục", [count])));
     open.append(icon, copy);
     open.onclick = () => {
       currentId = node.id;
@@ -337,7 +345,7 @@
     };
     const more = iconButton(
       "more",
-      "Tùy chọn thư mục " + (node.title || ""),
+      t("Tùy chọn thư mục ") + (node.title || ""),
       "icon-button row-more",
     );
     more.setAttribute("aria-haspopup", "menu");
@@ -365,7 +373,7 @@
       ...(workspace
         ? [
             {
-              label: `Mở không gian “${workspace.name}”`,
+              label: t("Mở không gian “{0}”", [workspace.name]),
               icon: "grid",
               action: async () => {
                 activeWorkspaceId = workspace.id;
@@ -380,13 +388,13 @@
           ]
         : [
             {
-              label: "Liên kết với không gian…",
+              label: t("Liên kết với không gian…"),
               icon: "link",
               action: () => openLinkDialog(node),
             },
           ]),
       {
-        label: "Mở tất cả thành nhóm tab",
+        label: t("Mở tất cả thành nhóm tab"),
         icon: "layers",
         action: () =>
           openTabsAsGroup(urls, {
@@ -453,8 +461,12 @@
       $("bm-crumbs").replaceChildren();
       const results = matches(query, 200);
       $("bm-status").textContent = results.length
-        ? `${results.length}${results.length === 200 ? "+" : ""} bookmark khớp “${$("search").value.trim()}”`
-        : "Không tìm thấy bookmark phù hợp.";
+        ? t("{0}{1} bookmark khớp “{2}”", [
+            results.length,
+            results.length === 200 ? "+" : "",
+            $("search").value.trim(),
+          ])
+        : t("Không tìm thấy bookmark phù hợp.");
       list.replaceChildren(
         ...results.map(({ node, path }) =>
           linkRow(node, path.join(" › ") || C.host(C.url(node.url))),
@@ -469,9 +481,12 @@
     const links = children.filter(isWeb);
     $("bm-status").textContent = children.length
       ? currentId === "0"
-        ? "Chọn một thư mục. Bấm ⋯ trên thư mục để liên kết với không gian."
-        : `${folders.length} thư mục · ${links.length} trang · kéo thả để sắp xếp`
-      : "Thư mục trống. Kéo bookmark vào tên thư mục ở trên để chuyển chỗ.";
+        ? t("Chọn một thư mục. Bấm ⋯ trên thư mục để liên kết với không gian.")
+        : t("{0} thư mục · {1} trang · kéo thả để sắp xếp", [
+            folders.length,
+            links.length,
+          ])
+      : t("Thư mục trống. Kéo bookmark vào tên thư mục ở trên để chuyển chỗ.");
     // Real bookmark order, so drag and drop matches the browser's own list.
     list.replaceChildren(
       ...children
@@ -580,7 +595,7 @@
     const label = element("span", "folder-toggle");
     label.append(
       makeIcon("bookmark"),
-      element("span", "folder-name", "Từ bookmark"),
+      element("span", "folder-name", t("Từ bookmark")),
       element("span", "group-count", results.length),
     );
     heading.append(label);
@@ -596,8 +611,9 @@
     const mode = $("link-mode").value;
     const target = $("link-target").value;
     $("link-name-wrap").hidden = target !== "__new";
-    $("link-save").textContent = mode === "copy" ? "Sao chép" : "Liên kết";
-    $("link-preview").textContent = "Đang xem trước…";
+    $("link-save").textContent =
+      mode === "copy" ? t("Sao chép") : t("Liên kết");
+    $("link-preview").textContent = t("Đang xem trước…");
     $("link-error").textContent = "";
     if (mode === "copy") {
       let count = 0;
@@ -607,8 +623,9 @@
           else if (child.children) walk(child);
       })(linkSource);
       $("link-preview").textContent =
-        `Sao chép ${count} bookmark vào không gian. Trang đã có được bỏ qua; ` +
-        "sau này sửa bookmark sẽ không ảnh hưởng tới sidebar.";
+        t("Sao chép {0} bookmark vào không gian. Trang đã có được bỏ qua; ", [
+          count,
+        ]) + t("sau này sửa bookmark sẽ không ảnh hưởng tới sidebar.");
       return;
     }
     try {
@@ -626,18 +643,24 @@
       const s = data.stats;
       $("link-preview").textContent =
         [
-          `Thêm ${s.added} trang từ bookmark`,
-          s.updated ? `cập nhật ${s.updated} trang` : "",
-          s.pushed ? `tạo ${s.pushed} bookmark từ trang ghim sẵn có` : "",
+          t("Thêm {0} trang từ bookmark", [s.added]),
+          s.updated ? t("cập nhật {0} trang", [s.updated]) : "",
+          s.pushed
+            ? t("tạo {0} bookmark từ trang ghim sẵn có", [s.pushed])
+            : "",
           s.duplicates || s.skipped
-            ? `bỏ qua ${s.duplicates + s.skipped} mục trùng hoặc không phải website`
+            ? t("bỏ qua {0} mục trùng hoặc không phải website", [
+                s.duplicates + s.skipped,
+              ])
             : "",
         ]
           .filter(Boolean)
           .join(" · ") +
         (mode === "two-way"
-          ? ". Từ nay sửa, thêm hoặc bỏ ghim trong không gian sẽ cập nhật thư mục bookmark và ngược lại."
-          : ". Từ nay thay đổi trong bookmark sẽ tự cập nhật không gian.");
+          ? t(
+              ". Từ nay sửa, thêm hoặc bỏ ghim trong không gian sẽ cập nhật thư mục bookmark và ngược lại.",
+            )
+          : t(". Từ nay thay đổi trong bookmark sẽ tự cập nhật không gian."));
     } catch (error) {
       if (request_ !== previewRequest) return;
       $("link-preview").textContent = "";
@@ -648,13 +671,13 @@
     linkSource = node;
     const entry = flat?.get(node.id);
     $("link-source").textContent =
-      "Thư mục: " +
+      t("Thư mục: ") +
       [...(entry?.path || []), node.title || "Bookmark"].join(" › ");
     const free = state.workspaces.filter(
       (workspace) => !workspaceLink(workspace.id),
     );
     $("link-target").replaceChildren(
-      new Option("Không gian mới", "__new"),
+      new Option(t("Không gian mới"), "__new"),
       ...free.map((workspace) => new Option(workspace.name, workspace.id)),
     );
     $("link-target").value = "__new";
@@ -700,8 +723,8 @@
         globalThis.render();
         toast(
           mode === "copy"
-            ? `Đã sao chép ${data.stats.added} bookmark.`
-            : "Đã liên kết thư mục bookmark với không gian.",
+            ? t("Đã sao chép {0} bookmark.", [data.stats.added])
+            : t("Đã liên kết thư mục bookmark với không gian."),
         );
       },
       $("link-error"),
@@ -711,12 +734,15 @@
     await ensurePermission();
     const linked = !!workspaceLink(workspace.id);
     const result = await choose(
-      "Xuất ra bookmark",
-      `Tạo thư mục “Pinned · ${workspace.name}” trong Bookmark khác, gồm các thư mục và website của không gian.` +
-        (linked ? "" : " Chọn Xuất và liên kết để hai bên luôn giống nhau."),
+      t("Xuất ra bookmark"),
+      t(
+        "Tạo thư mục “Pinned · {0}” trong Bookmark khác, gồm các thư mục và website của không gian.",
+        [workspace.name],
+      ) +
+        (linked ? "" : t(" Chọn Xuất và liên kết để hai bên luôn giống nhau.")),
       [
-        ...(linked ? [] : [{ label: "Xuất và liên kết", value: "link" }]),
-        { label: "Chỉ xuất", value: "export" },
+        ...(linked ? [] : [{ label: t("Xuất và liên kết"), value: "link" }]),
+        { label: t("Chỉ xuất"), value: "export" },
       ],
     );
     if (result !== "link" && result !== "export") return;
@@ -726,8 +752,8 @@
     });
     toast(
       result === "link"
-        ? "Đã xuất và liên kết không gian với bookmark."
-        : "Đã xuất không gian ra bookmark.",
+        ? t("Đã xuất và liên kết không gian với bookmark.")
+        : t("Đã xuất không gian ra bookmark."),
     );
   }
   $("bm-grant").onclick = () => run($("bm-grant"), ensurePermission);

@@ -1,6 +1,7 @@
 /* Isolated floating rail: no page CSS or storage writes. */
 (() => {
   "use strict";
+  const { t } = globalThis.PinnedI18n;
   if (
     window.top !== window.self ||
     document.getElementById("pinned-sidebar-v2")
@@ -27,7 +28,7 @@
     const response = await chrome.runtime.sendMessage({ type, ...extra });
     if (!response?.ok)
       throw new Error(
-        response?.error || "Hãy tải lại trang để kết nối extension.",
+        response?.error || t("Hãy tải lại trang để kết nối extension."),
       );
     return response;
   }
@@ -134,13 +135,15 @@
     } catch (error) {
       if (/context invalidated/i.test(error.message)) {
         message(
-          "Extension vừa được tải lại. Tải lại trang này (F5), rồi bấm icon để mở sidebar.",
+          t(
+            "Extension vừa được tải lại. Tải lại trang này (F5), rồi bấm icon để mở sidebar.",
+          ),
         );
         return;
       }
       message(
         error.message +
-          " Bạn có thể mở bằng biểu tượng extension trên thanh công cụ.",
+          t(" Bạn có thể mở bằng biểu tượng extension trên thanh công cụ."),
       );
     }
   }
@@ -181,19 +184,19 @@
     }
     const home = el("button", "home");
     home.type = "button";
-    home.title = "Mở Pinned Sidebar";
-    home.setAttribute("aria-label", "Mở Pinned Sidebar");
+    home.title = t("Mở Pinned Sidebar");
+    home.setAttribute("aria-label", t("Mở Pinned Sidebar"));
     home.append(
       el("span", "home-icon", "p."),
-      el("span", "label", "Không gian của bạn"),
+      el("span", "label", t("Không gian của bạn")),
     );
     home.onclick = () =>
       send("OPEN_PANEL").catch((error) => message(error.message));
     rail.append(home);
-    const close = el("button", "close-rail", "×");
+    const close = el("button", "close-rail", t("×"));
     close.type = "button";
-    close.title = "Tắt thanh icon dọc";
-    close.setAttribute("aria-label", "Tắt thanh icon dọc");
+    close.title = t("Tắt thanh icon dọc");
+    close.setAttribute("aria-label", t("Tắt thanh icon dọc"));
     close.onclick = async (event) => {
       event.preventDefault();
       event.stopPropagation();
@@ -206,8 +209,8 @@
     };
     rail.append(close);
     const moveHandle = el("div", "move-handle", "⠿");
-    moveHandle.title = "Kéo để di chuyển thanh icon";
-    moveHandle.setAttribute("aria-label", "Kéo để di chuyển thanh icon");
+    moveHandle.title = t("Kéo để di chuyển thanh icon");
+    moveHandle.setAttribute("aria-label", t("Kéo để di chuyển thanh icon"));
     // Any part of the rail can be dragged: a press that travels more than a
     // few pixels becomes a move (and swallows the click it would trigger);
     // a press that stays put is still an ordinary click on the icon.
@@ -305,13 +308,13 @@
     rail.append(list);
     if (data.pins.length > 100) {
       const more = el("button", "more", "+" + (data.pins.length - 100));
-      more.title = "Xem tất cả trong sidebar";
+      more.title = t("Xem tất cả trong sidebar");
       more.onclick = () =>
         send("OPEN_PANEL").catch((error) => message(error.message));
       rail.append(more);
     }
     const resizer = el("div", "resizer");
-    resizer.title = "Kéo để chỉnh độ rộng";
+    resizer.title = t("Kéo để chỉnh độ rộng");
     resizer.addEventListener("pointerdown", (event) => {
       if (event.button !== 0) return;
       event.preventDefault();
@@ -383,6 +386,7 @@
     const id = ++refreshId;
     try {
       const data = await send("OVERLAY_STATE");
+      globalThis.PinnedI18n.setLanguage(data.settings.language);
       if (id === refreshId) build(data);
     } catch (error) {
       // A transient service-worker restart must not make the rail disappear;

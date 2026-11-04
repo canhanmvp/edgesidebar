@@ -1,8 +1,10 @@
 /* Shared, DOM-free data model. Used by the worker, UI and Node tests. */
 (function (root) {
   "use strict";
+  const { t } = root.PinnedI18n || require("./i18n.js");
   const DEFAULTS = Object.freeze({
     theme: "system",
+    language: "auto",
     compact: false,
     overlay: true,
     overlaySide: "right",
@@ -15,21 +17,21 @@
     collapsed: [],
   });
   const THEMES = Object.freeze([
-    ["system", "Theo hệ thống"],
-    ["light", "Sáng"],
-    ["dark", "Tối"],
-    ["black", "Đen"],
+    ["system", t("Theo hệ thống")],
+    ["light", t("Sáng")],
+    ["dark", t("Tối")],
+    ["black", t("Đen")],
     ["pastel", "Pastel"],
-    ["ocean", "Đại dương"],
-    ["sunset", "Hoàng hôn"],
-    ["lavender", "Oải hương"],
-    ["rose", "Hồng đào"],
-    ["sand", "Cát"],
-    ["midnight", "Nửa đêm"],
-    ["forest", "Rừng"],
+    ["ocean", t("Đại dương")],
+    ["sunset", t("Hoàng hôn")],
+    ["lavender", t("Oải hương")],
+    ["rose", t("Hồng đào")],
+    ["sand", t("Cát")],
+    ["midnight", t("Nửa đêm")],
+    ["forest", t("Rừng")],
     ["nord", "Nord"],
     ["mocha", "Mocha"],
-    ["plum", "Mận"],
+    ["plum", t("Mận")],
     ["dracula", "Dracula"],
   ]);
   const DEFAULT_WORKSPACE_ID = "workspace-default";
@@ -58,22 +60,23 @@
   }
   function label(value, limit, fallback = "") {
     if (value == null || value === "") return fallback;
-    if (typeof value !== "string") fail("Tên phải là văn bản.");
+    if (typeof value !== "string") fail(t("Tên phải là văn bản."));
     const result = value.trim();
-    if (result.length > limit) fail(`Tên quá dài (tối đa ${limit} ký tự).`);
+    if (result.length > limit)
+      fail(t("Tên quá dài (tối đa {0} ký tự).", [limit]));
     return result || fallback;
   }
   function url(raw) {
     if (typeof raw !== "string" || !raw.trim())
-      fail("Hãy nhập địa chỉ website.");
+      fail(t("Hãy nhập địa chỉ website."));
     let input = raw.trim();
-    if (input.length > 4096) fail("Địa chỉ quá dài.");
+    if (input.length > 4096) fail(t("Địa chỉ quá dài."));
     if (!/^https?:\/\//i.test(input)) {
       if (
         /^[a-z][a-z\d+.-]*:/i.test(input) &&
         !/^[\w.-]+:\d+(\/|$)/.test(input)
       ) {
-        fail("Chỉ hỗ trợ địa chỉ http:// hoặc https://.");
+        fail(t("Chỉ hỗ trợ địa chỉ http:// hoặc https://."));
       }
       input = "https://" + input;
     }
@@ -81,7 +84,7 @@
     try {
       parsed = new URL(input);
     } catch {
-      fail("Địa chỉ website không hợp lệ.");
+      fail(t("Địa chỉ website không hợp lệ."));
     }
     if (
       !["http:", "https:"].includes(parsed.protocol) ||
@@ -89,7 +92,9 @@
       parsed.username ||
       parsed.password
     ) {
-      fail("Dùng địa chỉ HTTP/HTTPS không chứa tên đăng nhập hoặc mật khẩu.");
+      fail(
+        t("Dùng địa chỉ HTTP/HTTPS không chứa tên đăng nhập hoặc mật khẩu."),
+      );
     }
     return parsed.href;
   }
@@ -252,6 +257,7 @@
       theme: THEMES.map(([id]) => id),
       overlaySide: ["left", "right"],
       openMode: ["sidebar", "tab"],
+      language: ["auto", "vi", "en"],
     })) {
       if (choices.includes(input[key])) result[key] = input[key];
     }
@@ -278,7 +284,7 @@
       revision: 0,
       updatedAt: 0,
       workspaces: [
-        { id: DEFAULT_WORKSPACE_ID, name: "Mặc định", color: "#b5ef55" },
+        { id: DEFAULT_WORKSPACE_ID, name: t("Mặc định"), color: "#b5ef55" },
       ],
       pins: [],
       folders: [],
@@ -288,15 +294,16 @@
   function parse(input, { migration = false } = {}) {
     const source = Array.isArray(input) ? { pins: input } : input;
     if (!source || !Array.isArray(source.pins))
-      fail("File cần có danh sách pins.");
+      fail(t("File cần có danh sách pins."));
     if (source.schema != null && ![2, 3].includes(source.schema))
-      fail("Phiên bản dữ liệu chưa được hỗ trợ.");
-    if (source.pins.length > MAX_PINS) fail(`Tối đa ${MAX_PINS} trang ghim.`);
+      fail(t("Phiên bản dữ liệu chưa được hỗ trợ."));
+    if (source.pins.length > MAX_PINS)
+      fail(t("Tối đa {0} trang ghim.", [MAX_PINS]));
     const result = empty();
     result.workspaces = [];
     const workspaceMap = new Map();
     const workspaceIdsSeen = new Set();
-    function workspace(item, fallbackName = "Mặc định") {
+    function workspace(item, fallbackName = t("Mặc định")) {
       const raw = typeof item === "string" ? { name: item } : item || {};
       const name = label(raw.name, 80, fallbackName);
       const key = name.toLocaleLowerCase("vi");
@@ -321,7 +328,7 @@
     if (!result.workspaces.length)
       result.workspaces.push({
         id: DEFAULT_WORKSPACE_ID,
-        name: "Mặc định",
+        name: t("Mặc định"),
         color: "#b5ef55",
       });
     const defaultWorkspaceId = result.workspaces[0].id;
@@ -352,7 +359,7 @@
     if (Array.isArray(source.folders))
       for (const item of source.folders) {
         if (!item || typeof item.name !== "string")
-          fail("Thư mục không hợp lệ.");
+          fail(t("Thư mục không hợp lệ."));
         const workspaceId = workspaceIds.has(item.workspaceId)
           ? item.workspaceId
           : defaultWorkspaceId;
@@ -365,7 +372,8 @@
     let skipped = 0;
     source.pins.forEach((item, index) => {
       try {
-        if (!item || typeof item !== "object") fail("Trang ghim không hợp lệ.");
+        if (!item || typeof item !== "object")
+          fail(t("Trang ghim không hợp lệ."));
         const address = url(item.url);
         const requestedWorkspaceId = workspaceIds.has(item.workspaceId)
           ? item.workspaceId
@@ -403,12 +411,12 @@
         seen.add(dedupeKey);
       } catch (error) {
         if (migration) skipped++;
-        else fail(`Trang số ${index + 1}: ${error.message}`);
+        else fail(t("Trang số {0}: {1}", [index + 1, error.message]));
       }
     });
-    if (result.folders.length > 500) fail("Tối đa 500 thư mục.");
+    if (result.folders.length > 500) fail(t("Tối đa 500 thư mục."));
     if (result.workspaces.length > MAX_WORKSPACES)
-      fail(`Tối đa ${MAX_WORKSPACES} không gian.`);
+      fail(t("Tối đa {0} không gian.", [MAX_WORKSPACES]));
     result.settings = settings(source.settings || {});
     result.settings.workspaceId = workspaceIds.has(result.settings.workspaceId)
       ? result.settings.workspaceId
@@ -430,10 +438,10 @@
     const next = structuredClone(state);
     const findPin = (id) =>
       next.pins.find((p) => p.id === id) ||
-      fail("Trang ghim không còn tồn tại. Hãy thử lại.");
+      fail(t("Trang ghim không còn tồn tại. Hãy thử lại."));
     const checkFolder = (id) => {
       if (id && !next.folders.some((f) => f.id === id))
-        fail("Thư mục không còn tồn tại.");
+        fail(t("Thư mục không còn tồn tại."));
       return id || "";
     };
     switch (action.type) {
@@ -452,7 +460,7 @@
               p.id !== action.id,
           )
         )
-          fail("Website này đã được ghim.");
+          fail(t("Website này đã được ghim."));
         const workspaceId = next.workspaces.some(
           (item) => item.id === action.workspaceId,
         )
@@ -463,7 +471,7 @@
           ? next.folders.find((item) => item.id === folderId)
           : null;
         if (folder && folder.workspaceId !== workspaceId)
-          fail("Thư mục thuộc không gian khác.");
+          fail(t("Thư mục thuộc không gian khác."));
         const entry = {
           title: label(action.title, 180, host(address)),
           url: address,
@@ -499,7 +507,7 @@
               item.workspaceId === restoredWorkspace,
           )
         )
-          fail("Trang đã có trong danh sách.");
+          fail(t("Trang đã có trong danh sách."));
         next.pins.splice(
           Math.max(0, Math.min(next.pins.length, action.index || 0)),
           0,
@@ -522,10 +530,10 @@
       }
       case "SAVE_FOLDER": {
         const name = label(action.name, 80);
-        if (!name) fail("Hãy nhập tên thư mục.");
+        if (!name) fail(t("Hãy nhập tên thư mục."));
         const existing = action.id
           ? next.folders.find((f) => f.id === action.id) ||
-            fail("Thư mục không còn tồn tại.")
+            fail(t("Thư mục không còn tồn tại."))
           : null;
         // Folder names are unique per workspace, matching parse() and IMPORT.
         const workspaceId =
@@ -541,7 +549,7 @@
               f.id !== action.id,
           )
         )
-          fail("Tên thư mục đã tồn tại.");
+          fail(t("Tên thư mục đã tồn tại."));
         if (existing) existing.name = name;
         else
           next.folders.push({
@@ -553,7 +561,7 @@
       }
       case "SAVE_WORKSPACE": {
         const name = label(action.name, 80);
-        if (!name) fail("Hãy nhập tên không gian.");
+        if (!name) fail(t("Hãy nhập tên không gian."));
         if (
           next.workspaces.some(
             (item) =>
@@ -561,17 +569,17 @@
                 name.toLocaleLowerCase("vi") && item.id !== action.id,
           )
         )
-          fail("Tên không gian đã tồn tại.");
+          fail(t("Tên không gian đã tồn tại."));
         if (action.id) {
           const item =
             next.workspaces.find((entry) => entry.id === action.id) ||
-            fail("Không gian không còn tồn tại.");
+            fail(t("Không gian không còn tồn tại."));
           item.name = name;
           if (typeof action.color === "string")
             item.color = action.color.slice(0, 20);
         } else {
           if (next.workspaces.length >= MAX_WORKSPACES)
-            fail(`Tối đa ${MAX_WORKSPACES} không gian.`);
+            fail(t("Tối đa {0} không gian.", [MAX_WORKSPACES]));
           next.workspaces.push({
             id: id(action.workspaceId, uid),
             name,
@@ -595,10 +603,10 @@
         break;
       case "DELETE_WORKSPACE": {
         if (next.workspaces.length < 2)
-          fail("Cần giữ lại ít nhất một không gian.");
+          fail(t("Cần giữ lại ít nhất một không gian."));
         const workspace =
           next.workspaces.find((item) => item.id === action.id) ||
-          fail("Không gian không còn tồn tại.");
+          fail(t("Không gian không còn tồn tại."));
         const fallback = next.workspaces.find(
           (item) => item.id !== workspace.id,
         );
@@ -624,7 +632,7 @@
           ? next.folders.find((item) => item.id === action.beforeId)
           : null;
         if (before && before.workspaceId !== folder.workspaceId)
-          fail("Chỉ sắp xếp bộ sưu tập trong cùng không gian.");
+          fail(t("Chỉ sắp xếp bộ sưu tập trong cùng không gian."));
         const peers = next.folders.filter(
           (item) =>
             item.workspaceId === folder.workspaceId && item.id !== folder.id,
@@ -645,10 +653,10 @@
           action.ids.length !== next.folders.length ||
           new Set(action.ids).size !== next.folders.length
         )
-          fail("Thứ tự bộ sưu tập không hợp lệ.");
+          fail(t("Thứ tự bộ sưu tập không hợp lệ."));
         const folders = new Map(next.folders.map((item) => [item.id, item]));
         if (action.ids.some((id) => !folders.has(id)))
-          fail("Thứ tự bộ sưu tập không hợp lệ.");
+          fail(t("Thứ tự bộ sưu tập không hợp lệ."));
         next.folders = action.ids.map((id) => folders.get(id));
         break;
       }
@@ -659,10 +667,10 @@
           ? next.folders.find((item) => item.id === folderId)
           : null;
         if (folder && folder.workspaceId !== pin.workspaceId)
-          fail("Chỉ sắp xếp website trong cùng không gian.");
+          fail(t("Chỉ sắp xếp website trong cùng không gian."));
         if (action.beforeId === pin.id) break;
         if (action.beforeId && findPin(action.beforeId).folderId !== folderId)
-          fail("Vị trí thả không hợp lệ.");
+          fail(t("Vị trí thả không hợp lệ."));
         next.pins = next.pins.filter((p) => p.id !== pin.id);
         pin.folderId = folderId;
         const index = action.beforeId
@@ -675,7 +683,7 @@
         // Peers are the pins shown together: same workspace and same folder.
         const pin = findPin(action.id);
         if (![-1, 1].includes(action.direction))
-          fail("Hướng di chuyển không hợp lệ.");
+          fail(t("Hướng di chuyển không hợp lệ."));
         const peers = next.pins.filter(
           (p) =>
             p.workspaceId === pin.workspaceId && p.folderId === pin.folderId,
@@ -700,7 +708,7 @@
       }
       case "IMPORT": {
         if (!["merge", "replace"].includes(action.mode))
-          fail("Hãy chọn gộp hoặc thay thế.");
+          fail(t("Hãy chọn gộp hoặc thay thế."));
         const incoming = parse(action.data).state;
         if (action.mode === "replace") {
           next.pins = incoming.pins;
@@ -777,9 +785,9 @@
         // linked bookmark folder. Given IDs are kept so tags/notes survive.
         const workspaceId = action.workspaceId;
         if (!next.workspaces.some((item) => item.id === workspaceId))
-          fail("Không gian không còn tồn tại.");
+          fail(t("Không gian không còn tồn tại."));
         if (!Array.isArray(action.folders) || !Array.isArray(action.pins))
-          fail("Dữ liệu không gian không hợp lệ.");
+          fail(t("Dữ liệu không gian không hợp lệ."));
         const otherFolders = next.folders.filter(
           (item) => item.workspaceId !== workspaceId,
         );
@@ -795,9 +803,9 @@
         const folders = [];
         for (const item of action.folders) {
           const name = label(item?.name, 80);
-          if (!name) fail("Hãy nhập tên thư mục.");
+          if (!name) fail(t("Hãy nhập tên thư mục."));
           const key = name.toLocaleLowerCase("vi");
-          if (folderNames.has(key)) fail("Tên thư mục đã tồn tại.");
+          if (folderNames.has(key)) fail(t("Tên thư mục đã tồn tại."));
           folderNames.add(key);
           let folderId = id(item.id, uid);
           while (takenIds.has(folderId)) folderId = uid();
@@ -809,7 +817,7 @@
         const pins = [];
         for (const item of action.pins) {
           const address = url(item?.url);
-          if (urls.has(address)) fail("Website này đã được ghim.");
+          if (urls.has(address)) fail(t("Website này đã được ghim."));
           urls.add(address);
           let pinId = id(item.id, uid);
           while (takenIds.has(pinId)) pinId = uid();
@@ -834,13 +842,13 @@
         break;
       }
       default:
-        fail("Thao tác không được hỗ trợ.");
+        fail(t("Thao tác không được hỗ trợ."));
     }
     if (next.pins.length > MAX_PINS || next.folders.length > 500)
-      fail("Đã đạt giới hạn 5.000 trang hoặc 500 thư mục.");
+      fail(t("Đã đạt giới hạn 5.000 trang hoặc 500 thư mục."));
     // parse() rejects larger states, so another device could never read them.
     if (next.workspaces.length > MAX_WORKSPACES)
-      fail(`Tối đa ${MAX_WORKSPACES} không gian.`);
+      fail(t("Tối đa {0} không gian.", [MAX_WORKSPACES]));
     next.revision = state.revision + 1;
     next.updatedAt = Date.now();
     return next;

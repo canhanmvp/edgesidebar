@@ -8,6 +8,8 @@ const grantOptional = process.argv.includes("--grant-optional");
 fs.rmSync(output, { recursive: true, force: true });
 const files = [
   "manifest.json",
+  "i18n-en.js",
+  "i18n.js",
   "core.js",
   "bookmarks-core.js",
   "background.js",
@@ -19,6 +21,8 @@ const files = [
   "sidebar.css",
   "content.js",
   "content.css",
+  "_locales/en/messages.json",
+  "_locales/vi/messages.json",
   "icons/icon16.png",
   "icons/icon32.png",
   "icons/icon48.png",

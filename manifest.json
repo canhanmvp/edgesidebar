@@ -1,9 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "Pinned Sidebar",
+  "name": "__MSG_appName__",
   "version": "4.1.0",
   "minimum_chrome_version": "120",
-  "description": "Không gian làm việc bên cạnh trình duyệt: ghim, tìm, sắp xếp website và lưu phiên tab.",
+  "default_locale": "en",
+  "description": "__MSG_appDesc__",
   "permissions": [
     "sidePanel",
     "storage",
@@ -15,7 +16,7 @@
   "host_permissions": ["http://*/*", "https://*/*"],
   "optional_permissions": ["bookmarks"],
   "action": {
-    "default_title": "Mở Pinned Sidebar"
+    "default_title": "__MSG_actionTitle__"
   },
   "background": {
     "service_worker": "background.js"
@@ -29,7 +30,7 @@
   "content_scripts": [
     {
       "matches": ["http://*/*", "https://*/*"],
-      "js": ["content.js"],
+      "js": ["i18n-en.js", "i18n.js", "content.js"],
       "run_at": "document_idle",
       "all_frames": false
     }
@@ -45,13 +46,13 @@
       "suggested_key": {
         "default": "Ctrl+Shift+Y"
       },
-      "description": "Mở Pinned Sidebar"
+      "description": "__MSG_cmdOpen__"
     },
     "open-sidebar": {
       "suggested_key": {
         "default": "Ctrl+M"
       },
-      "description": "Mở Pinned Sidebar nhanh"
+      "description": "__MSG_cmdOpenFast__"
     }
   },
   "icons": {

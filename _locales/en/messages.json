@@ -1,0 +1,17 @@
+{
+  "appName": {
+    "message": "Pinned Sidebar"
+  },
+  "appDesc": {
+    "message": "A workspace beside your browser: pin, search and organize websites, bookmarks and tab sessions."
+  },
+  "actionTitle": {
+    "message": "Open Pinned Sidebar"
+  },
+  "cmdOpen": {
+    "message": "Open Pinned Sidebar"
+  },
+  "cmdOpenFast": {
+    "message": "Quickly open Pinned Sidebar"
+  }
+}

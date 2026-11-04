@@ -69,7 +69,10 @@ async function waitState(page, count) {
     channel: "chromium",
     headless: true,
     viewport: { width: 380, height: 850 },
+    // The checks below read Vietnamese labels; "auto" language follows this.
+    locale: "vi-VN",
     args: [
+      "--lang=vi",
       `--disable-extensions-except=${extension}`,
       `--load-extension=${extension}`,
     ],
@@ -640,7 +643,11 @@ async function waitState(page, count) {
   await bm.goto(`chrome-extension://${id}/sidebar.html`);
   await bm.locator("#bookmarks-tab").click();
   await bm.locator("#bm-browser").waitFor();
-  await bm.locator("#bm-list .pin-link", { hasText: "Bookmarks bar" }).click();
+  // Root folder names follow the browser language ("Thanh dấu trang"…).
+  const [barTitle, otherTitle] = await sw.evaluate(async () =>
+    (await chrome.bookmarks.get(["1", "2"])).map((node) => node.title),
+  );
+  await bm.locator("#bm-list .pin-link", { hasText: barTitle }).click();
   const projectRow = bm.locator("#bm-list .pin-row", { hasText: "Dự án" });
   await projectRow.locator(".row-more").click();
   await bm
@@ -824,9 +831,7 @@ async function waitState(page, count) {
     .locator("#bm-crumbs")
     .getByRole("button", { name: "Bookmark", exact: true })
     .click();
-  await bm
-    .locator("#bm-list .pin-link", { hasText: "Other bookmarks" })
-    .click();
+  await bm.locator("#bm-list .pin-link", { hasText: otherTitle }).click();
   await bm.locator("#bm-list .pin-link", { hasText: "Sắp xếp" }).click();
   await bmRow("C").waitFor();
   await bmRow("C").dragTo(bmRow("A"), { targetPosition: { x: 40, y: 4 } });
@@ -855,6 +860,53 @@ async function waitState(page, count) {
   await waitTitles(sortId, ["A", "C"]);
   passed("bookmarks move by keyboard and delete with undo");
   await bm.close();
+  const english = await context.newPage();
+  english.on("pageerror", (error) => errors.push(error.message));
+  await english.goto(`chrome-extension://${id}/sidebar.html`);
+  await english.locator("#settings-btn").click();
+  await Promise.all([
+    english.waitForEvent("load"),
+    english.locator("#setting-language").selectOption("en"),
+  ]);
+  // The previous checks left the Bookmarks tab open; search pins instead.
+  await english.locator("#pins-tab").click();
+  await english.waitForFunction(
+    () =>
+      document.querySelector("#search").placeholder ===
+      "Search sites or folders…",
+  );
+  assert.equal(
+    await english.locator("#pins-tab .view-tab-label").textContent(),
+    "Pins",
+  );
+  assert.equal(
+    await english.locator("#pin-current .pin-label").textContent(),
+    "Pin",
+  );
+  assert.equal(
+    await english.locator("#settings-btn").getAttribute("title"),
+    "Settings",
+  );
+  // This error comes from core.js running in the worker, so it proves the
+  // worker switched language too.
+  await english.locator("#add-pin").click();
+  await english.locator("#pin-url").fill("ftp://files.example");
+  await english.locator("#pin-save").click();
+  await english
+    .locator("#pin-error", {
+      hasText: "Only http:// or https:// addresses are supported.",
+    })
+    .waitFor();
+  await english.keyboard.press("Escape");
+  const menuTitle = await sw.evaluate(() =>
+    PinnedI18n.t("Ghim vào Pinned Sidebar"),
+  );
+  assert.equal(menuTitle, "Pin to Pinned Sidebar");
+  // Last check: the profile is thrown away, so English is left switched on.
+  await english.close();
+  passed(
+    "English UI: static text, dynamic errors and worker strings switch language",
+  );
   assert.deepEqual(errors, []);
   fs.writeFileSync(
     path.join(out, "browser-report.json"),

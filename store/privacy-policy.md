@@ -1,6 +1,6 @@
 # Chính sách quyền riêng tư — Pinned Sidebar
 
-Cập nhật lần cuối: 2026-10-30
+Cập nhật lần cuối: 2026-11-04
 
 Pinned Sidebar ("Tiện ích") là tiện ích trình duyệt cho Microsoft Edge và Google Chrome, giúp ghim, tìm và sắp xếp website, lưu phiên tab trong thanh bên.
 
@@ -36,13 +36,13 @@ Tiện ích không nhắm tới trẻ em và không thu thập thông tin cá nh
 
 ## Thay đổi và liên hệ
 
-Thay đổi chính sách sẽ được cập nhật tại trang này kèm ngày mới. Liên hệ: **[EMAIL LIÊN HỆ CỦA BẠN]**.
+Thay đổi chính sách sẽ được cập nhật tại trang này kèm ngày mới. Liên hệ: **canhanmvp@gmail.com**.
 
 ---
 
 # Privacy Policy — Pinned Sidebar (English)
 
-Last updated: 2026-10-30
+Last updated: 2026-11-04
 
 Pinned Sidebar is a browser extension for Microsoft Edge and Google Chrome that lets you pin, search and organize websites and save tab sessions in a side panel.
 
@@ -52,4 +52,4 @@ Pinned Sidebar is a browser extension for Microsoft Edge and Google Chrome that 
 
 **Web pages.** A small floating rail (content script) is injected into http/https pages to show your pinned sites; it does not read, store or transmit page content. For websites you explicitly allow to be embedded, the extension removes `X-Frame-Options` and `Content-Security-Policy` response headers for that exact site (and its www twin) and marks the request as a page load (`Sec-Fetch-Dest: document`) instead of an iframe load, only for frames shown inside the extension's side panel; you can revoke this at any time.
 
-**Your controls.** Export, import or delete data in the extension, or uninstall it to remove local data. **Children:** not directed to children. **Contact:** [YOUR CONTACT EMAIL].
+**Your controls.** Export, import or delete data in the extension, or uninstall it to remove local data. **Children:** not directed to children. **Contact:** canhanmvp@gmail.com.

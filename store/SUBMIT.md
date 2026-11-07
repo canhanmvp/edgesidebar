@@ -9,7 +9,7 @@ npm run package      # -> release/pinned-sidebar-<version>.zip (đã validate)
 npm run screenshots  # -> store/assets/*.png (tùy chọn)
 ```
 
-Trước khi gửi: **tăng `version`** trong `manifest.json` và `package.json` (store từ chối version trùng hoặc thấp hơn), và host `store/privacy-policy.md` tại một URL công khai (điền email liên hệ).
+Trước khi gửi: **tăng `version`** trong `manifest.json` và `package.json` (store từ chối version trùng hoặc thấp hơn), và host thư mục `site/` (landing page + `privacy.html`, `terms.html`, `refund.html`) tại một URL công khai; dùng `https://<tên-miền>/privacy.html` làm privacy policy URL.
 
 ## Chrome Web Store
 1. Đăng ký tại https://chrome.google.com/webstore/devconsole (phí 5 USD một lần, cần bật xác minh 2 bước).

@@ -1,0 +1,536 @@
+<!doctype html>
+<html
+  lang="vi"
+  data-title-vi="Pinned Sidebar — Không gian làm việc ngay bên cạnh trình duyệt"
+  data-title-en="Pinned Sidebar — Your workspace in the browser side panel"
+  data-desc-vi="Ghim, tìm, sắp xếp website và mở web ngay trong thanh bên của Edge và Chrome. Lưu phiên tab, đồng bộ hai chiều với bookmark. Dữ liệu ở trên máy bạn."
+  data-desc-en="Pin, search and organize websites and open them right in the Edge and Chrome side panel. Save tab sessions and two-way sync with bookmarks. Your data stays on your device."
+>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pinned Sidebar — Không gian làm việc ngay bên cạnh trình duyệt</title>
+    <meta
+      name="description"
+      content="Ghim, tìm, sắp xếp website và mở web ngay trong thanh bên của Edge và Chrome. Lưu phiên tab, đồng bộ hai chiều với bookmark. Dữ liệu ở trên máy bạn."
+    />
+    <meta name="theme-color" content="#236b55" />
+    <meta property="og:title" content="Pinned Sidebar" />
+    <meta property="og:description" content="Your workspace in the browser side panel. Không gian làm việc ngay bên cạnh trình duyệt." />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="assets/icon-128.png" />
+    <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png" />
+    <link rel="apple-touch-icon" href="assets/icon-128.png" />
+    <link rel="stylesheet" href="style.css" />
+    <script src="lang.js"></script>
+  </head>
+  <body>
+    <a class="skip" href="#main"><span lang="vi">Bỏ qua tới nội dung</span><span lang="en">Skip to content</span></a>
+
+    <header class="site-header">
+      <div class="wrap">
+        <a class="brand" href="index.html" aria-label="Pinned Sidebar">
+          <img src="assets/logo.svg" alt="" width="30" height="30" />
+          <span>pinned<span class="brand-dot">.</span></span>
+        </a>
+        <nav class="nav" aria-label="Main">
+          <a href="#features"><span lang="vi">Tính năng</span><span lang="en">Features</span></a>
+          <a href="#compare"><span lang="vi">So sánh</span><span lang="en">Compare</span></a>
+          <a href="#pricing"><span lang="vi">Bảng giá</span><span lang="en">Pricing</span></a>
+          <a href="#faq">FAQ</a>
+        </nav>
+        <div class="lang-toggle" role="group" aria-label="Ngôn ngữ / Language">
+          <button type="button" data-set-lang="vi" aria-pressed="true" title="Tiếng Việt">VI</button>
+          <button type="button" data-set-lang="en" aria-pressed="false" title="English">EN</button>
+        </div>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- Hero -->
+      <section class="hero">
+        <div class="wrap">
+          <div>
+            <span class="chip"><span lang="vi">Phiên bản 4.1 · Edge &amp; Chrome</span><span lang="en">Version 4.1 · Edge &amp; Chrome</span></span>
+            <h1>
+              <span lang="vi">Mọi website quen thuộc, ngay bên cạnh.</span>
+              <span lang="en">Every site you use, right beside you.</span>
+            </h1>
+            <p class="hero-lead">
+              <span lang="vi">Pinned Sidebar biến thanh bên của trình duyệt thành không gian làm việc: ghim, tìm, sắp xếp website, mở web ngay trong sidebar, lưu phiên tab và đồng bộ hai chiều với bookmark.</span>
+              <span lang="en">Pinned Sidebar turns your browser's side panel into a workspace: pin, search and organize sites, open them right in the sidebar, save tab sessions and keep a two-way link with your bookmarks.</span>
+            </p>
+            <div class="hero-cta">
+              <a class="btn btn-primary" href="https://github.com/canhanmvp/edgesidebar">
+                <span lang="vi">Dùng miễn phí</span><span lang="en">Get it free</span>
+              </a>
+              <a class="btn btn-ghost" href="#pricing">
+                <span lang="vi">Xem bảng giá</span><span lang="en">See pricing</span>
+              </a>
+            </div>
+            <ul class="hero-points">
+              <li><span lang="vi">Không cần tài khoản</span><span lang="en">No account needed</span></li>
+              <li><span lang="vi">Dữ liệu ở trên máy bạn</span><span lang="en">Your data stays on your device</span></li>
+              <li><span lang="vi">Không quảng cáo, không theo dõi</span><span lang="en">No ads, no tracking</span></li>
+              <li><span lang="vi">Giao diện tiếng Việt</span><span lang="en">Made in Vietnam</span></li>
+            </ul>
+            <p class="note">
+              <span lang="vi">Sắp có trên Chrome Web Store và Microsoft Edge Add-ons. Hiện có thể cài từ GitHub.</span>
+              <span lang="en">Coming soon to the Chrome Web Store and Microsoft Edge Add-ons. Install from GitHub today.</span>
+            </p>
+          </div>
+
+          <div class="mock" aria-hidden="true">
+            <div class="mock-rail">
+              <span class="fav" style="background: #4285f4">G</span>
+              <span class="fav" style="background: #e53935">Y</span>
+              <span class="fav" style="background: #24292f">GH</span>
+              <span class="fav" style="background: #8b5cf6">N</span>
+            </div>
+            <div class="mock-page"><i></i><i></i><i></i><i></i><b></b><i></i><i></i></div>
+            <div class="mock-panel">
+              <div class="mock-head">
+                <img src="assets/logo.svg" alt="" width="20" height="20" />
+                <span>pinned<span class="brand-dot">.</span></span>
+              </div>
+              <div class="mock-search">
+                <span lang="vi">Tìm trang hoặc thư mục…  /</span><span lang="en">Search sites or folders…  /</span>
+              </div>
+              <div class="mock-label"><span lang="vi">Hằng ngày</span><span lang="en">Daily</span></div>
+              <ul class="mock-list">
+                <li><span class="fav" style="background: #4285f4">G</span><span>Google</span></li>
+                <li><span class="fav" style="background: #e53935">Y</span><span>YouTube</span></li>
+              </ul>
+              <div class="mock-label"><span lang="vi">Công việc</span><span lang="en">Work</span></div>
+              <ul class="mock-list">
+                <li><span class="fav" style="background: #24292f">GH</span><span>GitHub</span></li>
+                <li><span class="fav" style="background: #8b5cf6">N</span><span>Notion</span></li>
+                <li><span class="fav" style="background: #f24e1e">F</span><span>Figma</span></li>
+                <li><span class="fav" style="background: #c5221f">M</span><span>Gmail</span></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Features -->
+      <section class="section section-alt" id="features">
+        <div class="wrap">
+          <div class="section-head">
+            <span class="eyebrow"><span lang="vi">Tính năng</span><span lang="en">Features</span></span>
+            <h2>
+              <span lang="vi">Mọi thứ bạn cần, gọn trong một thanh bên</span>
+              <span lang="en">Everything you need, in one side panel</span>
+            </h2>
+            <p>
+              <span lang="vi">Không phải mở tab mới, không phải chuyển cửa sổ. Bản 4.1 thêm tab Bookmark, liên kết hai chiều, omnibox, nhóm tab và Dọn dẹp.</span>
+              <span lang="en">No new tabs, no window juggling. Version 4.1 adds a Bookmarks tab, two-way bookmark links, an omnibox shortcut, tab groups and Cleanup.</span>
+            </p>
+          </div>
+
+          <div class="features">
+            <article class="feature">
+              <div class="feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M15 4v16"/></svg>
+              </div>
+              <h3><span lang="vi">Mở web ngay trong thanh bên</span><span lang="en">Open sites in the side panel</span></h3>
+              <p>
+                <span lang="vi">Xem website cạnh trang đang đọc. Thanh nổi tùy chọn trên mọi trang, kéo đặt ở đâu cũng được, có 16 giao diện màu.</span>
+                <span lang="en">View a site next to the page you are reading. An optional floating rail sits on any page, wherever you drag it, in 16 color themes.</span>
+              </p>
+            </article>
+
+            <article class="feature">
+              <div class="feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>
+              </div>
+              <h3><span lang="vi">Không gian làm việc</span><span lang="en">Workspaces</span></h3>
+              <p>
+                <span lang="vi">Tách website theo Công việc, Cá nhân, Dự án. Bộ sưu tập, nhãn, ghi chú, yêu thích và kéo-thả để sắp xếp.</span>
+                <span lang="en">Keep work, personal and project sites apart. Collections, tags, notes, favorites and drag-and-drop ordering.</span>
+              </p>
+            </article>
+
+            <article class="feature">
+              <div class="feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              </div>
+              <h3><span lang="vi">Tìm kiếm không dấu</span><span lang="en">Accent-insensitive search</span></h3>
+              <p>
+                <span lang="vi">Nhấn <kbd>/</kbd> rồi gõ "cong viec" vẫn ra "Công việc". Tìm theo tên, tên miền, thư mục, nhãn và ghi chú.</span>
+                <span lang="en">Press <kbd>/</kbd> and type: "cong viec" still finds "Công việc". Searches names, domains, folders, tags and notes.</span>
+              </p>
+            </article>
+
+            <article class="feature">
+              <div class="feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/></svg>
+              </div>
+              <h3><span lang="vi">Tab Bookmark</span><span lang="en">Bookmarks tab</span><span class="chip"><span lang="vi">Mới 4.1</span><span lang="en">New in 4.1</span></span></h3>
+              <p>
+                <span lang="vi">Duyệt bookmark (Favorites trên Edge) theo thư mục, tìm không dấu, kéo-thả, xóa có Hoàn tác và ghim nhanh vào không gian.</span>
+                <span lang="en">Browse bookmarks (Favorites on Edge) folder by folder, search without accents, drag and drop, delete with Undo and pin to a workspace.</span>
+              </p>
+            </article>
+
+            <article class="feature">
+              <div class="feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></svg>
+              </div>
+              <h3><span lang="vi">Liên kết hai chiều</span><span lang="en">Two-way bookmark link</span><span class="chip"><span lang="vi">Mới 4.1</span><span lang="en">New in 4.1</span></span></h3>
+              <p>
+                <span lang="vi">Gắn một thư mục bookmark với một không gian. Sửa ở đâu, bên kia cũng cập nhật; có chế độ chỉ kéo về hoặc sao chép một lần.</span>
+                <span lang="en">Link a bookmark folder to a workspace. Change either side and the other follows; pull-only and one-time copy modes too.</span>
+              </p>
+            </article>
+
+            <article class="feature">
+              <div class="feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="6"/><path d="M8 12h.01M12 12h4"/></svg>
+              </div>
+              <h3><span lang="vi">Gõ "p" trên thanh địa chỉ</span><span lang="en">Type "p" in the address bar</span><span class="chip"><span lang="vi">Mới 4.1</span><span lang="en">New in 4.1</span></span></h3>
+              <p>
+                <span lang="vi">Gõ <kbd>p</kbd>, phím cách rồi từ khóa để mở trang ghim ở mọi không gian. <kbd>p +</kbd> ghim tab hiện tại.</span>
+                <span lang="en">Type <kbd>p</kbd>, a space and a keyword to open a pinned site from any workspace. <kbd>p +</kbd> pins the current tab.</span>
+              </p>
+            </article>
+
+            <article class="feature">
+              <div class="feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h6l2 2h10v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7V5a2 2 0 0 1 2-2h4"/></svg>
+              </div>
+              <h3><span lang="vi">Phiên tab và nhóm tab</span><span lang="en">Tab sessions and groups</span><span class="chip"><span lang="vi">Mới 4.1</span><span lang="en">New in 4.1</span></span></h3>
+              <p>
+                <span lang="vi">Lưu cả cửa sổ hoặc một nhóm tab thành phiên; mở lại là nhóm tab có tên và màu được tạo lại. Xuất/nhập phiên riêng.</span>
+                <span lang="en">Save a whole window or one tab group as a session; reopening rebuilds named, colored tab groups. Export and import sessions separately.</span>
+              </p>
+            </article>
+
+            <article class="feature">
+              <div class="feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/><path d="M10 11v5M14 11v5"/></svg>
+              </div>
+              <h3><span lang="vi">Dọn dẹp</span><span lang="en">Cleanup</span><span class="chip"><span lang="vi">Mới 4.1</span><span lang="en">New in 4.1</span></span></h3>
+              <p>
+                <span lang="vi">Tìm link hỏng (404/410), link đã chuyển địa chỉ (cập nhật một chạm), website không truy cập được và trang gần trùng.</span>
+                <span lang="en">Find dead links (404/410), moved links (update in one tap), unreachable sites and near-duplicate pages.</span>
+              </p>
+            </article>
+
+            <article class="feature">
+              <div class="feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z"/><path d="m9 12 2 2 4-4"/></svg>
+              </div>
+              <h3><span lang="vi">Riêng tư từ đầu</span><span lang="en">Private by design</span></h3>
+              <p>
+                <span lang="vi">Dữ liệu ở trong trình duyệt, chỉ đồng bộ qua tài khoản Edge/Chrome khi bạn bật. Quyền bookmark là tùy chọn, chỉ xin khi bạn cần.</span>
+                <span lang="en">Data lives in your browser and syncs through your Edge/Chrome account only if you turn sync on. The bookmarks permission is optional and asked for only when needed.</span>
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- Comparison -->
+      <section class="section" id="compare">
+        <div class="wrap">
+          <div class="section-head">
+            <span class="eyebrow"><span lang="vi">So sánh</span><span lang="en">Compare</span></span>
+            <h2>
+              <span lang="vi">Nhiều việc hơn, giá thấp hơn</span>
+              <span lang="en">Does more, costs less</span>
+            </h2>
+            <p>
+              <span lang="vi">Pinned Sidebar là công cụ duy nhất trong bảng vừa mở website ngay trong thanh bên vừa quản lý không gian, phiên tab và bookmark.</span>
+              <span lang="en">Pinned Sidebar is the only tool here that opens sites inside the side panel and also manages workspaces, tab sessions and bookmarks.</span>
+            </p>
+          </div>
+
+          <div class="table-scroll" tabindex="0" role="region" aria-label="Bảng so sánh / Comparison table">
+            <table class="compare">
+              <thead>
+                <tr>
+                  <th scope="col"><span class="sr-only"><span lang="vi">Tính năng</span><span lang="en">Feature</span></span></th>
+                  <th scope="col" class="us">Pinned Sidebar</th>
+                  <th scope="col">Workona</th>
+                  <th scope="col">Toby</th>
+                  <th scope="col">Raindrop.io</th>
+                  <th scope="col">OneTab</th>
+                  <th scope="col"><span lang="vi">Thanh bên Edge</span><span lang="en">Edge sidebar</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row"><span lang="vi">Mở website trong thanh bên</span><span lang="en">Open websites in the side panel</span></th>
+                  <td class="us"><span class="yes" role="img" aria-label="yes">✓</span></td>
+                  <td><span class="no" role="img" aria-label="no">—</span></td>
+                  <td><span class="no" role="img" aria-label="no">—</span></td>
+                  <td><span class="no" role="img" aria-label="no">—</span></td>
+                  <td><span class="no" role="img" aria-label="no">—</span></td>
+                  <td><span class="part" role="img" aria-label="partial">½</span><br /><small><span lang="vi">chỉ trên Edge</span><span lang="en">Edge only</span></small></td>
+                </tr>
+                <tr>
+                  <th scope="row"><span lang="vi">Không gian làm việc</span><span lang="en">Workspaces</span></th>
+                  <td class="us"><span class="yes" role="img" aria-label="yes">✓</span></td>
+                  <td><span class="yes" role="img" aria-label="yes">✓</span></td>
+                  <td><span class="yes" role="img" aria-label="yes">✓</span></td>
+                  <td><span class="part" role="img" aria-label="partial">½</span><br /><small><span lang="vi">bộ sưu tập</span><span lang="en">collections</span></small></td>
+                  <td><span class="no" role="img" aria-label="no">—</span></td>
+                  <td><span class="no" role="img" aria-label="no">—</span></td>
+                </tr>
+                <tr>
+                  <th scope="row"><span lang="vi">Lưu và mở lại phiên tab</span><span lang="en">Save and restore tab sessions</span></th>
+                  <td class="us"><span class="yes" role="img" aria-label="yes">✓</span></td>
+                  <td><span class="yes" role="img" aria-label="yes">✓</span></td>
+                  <td><span class="yes" role="img" aria-label="yes">✓</span></td>
+                  <td><span class="part" role="img" aria-label="partial">½</span><br /><small><span lang="vi">lưu tab thành bookmark</span><span lang="en">saves tabs as bookmarks</span></small></td>
+                  <td><span class="yes" role="img" aria-label="yes">✓</span></td>
+                  <td><span class="no" role="img" aria-label="no">—</span></td>
+                </tr>
+                <tr>
+                  <th scope="row"><span lang="vi">Đồng bộ hai chiều với bookmark trình duyệt</span><span lang="en">Two-way sync with browser bookmarks</span></th>
+                  <td class="us"><span class="yes" role="img" aria-label="yes">✓</span></td>
+                  <td><span class="no" role="img" aria-label="no">—</span></td>
+                  <td><span class="no" role="img" aria-label="no">—</span></td>
+                  <td><span class="no" role="img" aria-label="no">—</span></td>
+                  <td><span class="no" role="img" aria-label="no">—</span></td>
+                  <td><span class="no" role="img" aria-label="no">—</span></td>
+                </tr>
+                <tr>
+                  <th scope="row"><span lang="vi">Dùng không cần tài khoản</span><span lang="en">Works without an account</span></th>
+                  <td class="us"><span class="yes" role="img" aria-label="yes">✓</span></td>
+                  <td><span class="no" role="img" aria-label="no">—</span></td>
+                  <td><span class="no" role="img" aria-label="no">—</span></td>
+                  <td><span class="no" role="img" aria-label="no">—</span></td>
+                  <td><span class="yes" role="img" aria-label="yes">✓</span></td>
+                  <td><span class="yes" role="img" aria-label="yes">✓</span></td>
+                </tr>
+                <tr>
+                  <th scope="row"><span lang="vi">Gói trả phí</span><span lang="en">Paid plan</span></th>
+                  <td class="us">
+                    <span lang="vi">49.000đ/tháng<br />399.000đ/năm</span><span lang="en">$2.5/mo<br />$24/yr</span><br /><small><span lang="vi">sắp ra mắt</span><span lang="en">coming soon</span></small>
+                  </td>
+                  <td><span lang="vi">~$6–7/tháng</span><span lang="en">~$6–7/mo</span></td>
+                  <td><span lang="vi">~$4.5–6/tháng</span><span lang="en">~$4.5–6/mo</span></td>
+                  <td><span lang="vi">~$28/năm</span><span lang="en">~$28/yr</span></td>
+                  <td><span lang="vi">Miễn phí</span><span lang="en">Free</span></td>
+                  <td><span lang="vi">Miễn phí</span><span lang="en">Free</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="legend">
+            <span><span class="yes" aria-hidden="true">✓</span><span lang="vi">Có</span><span lang="en">Yes</span></span>
+            <span><span class="part" aria-hidden="true">½</span><span lang="vi">Một phần</span><span lang="en">Partly</span></span>
+            <span><span class="no" aria-hidden="true">—</span><span lang="vi">Không</span><span lang="en">No</span></span>
+          </div>
+          <p class="note">
+            <span lang="vi">Thông tin về sản phẩm khác dựa trên tài liệu công khai năm 2026, giá đã làm tròn và có thể đã thay đổi; hãy kiểm tra trên trang của từng sản phẩm. Workona, Toby, Raindrop.io, OneTab và Microsoft Edge là thương hiệu của chủ sở hữu tương ứng; Pinned Sidebar không liên kết với họ.</span>
+            <span lang="en">Information about other products is based on public material from 2026; prices are rounded and may have changed, so please check each product's own site. Workona, Toby, Raindrop.io, OneTab and Microsoft Edge are trademarks of their respective owners; Pinned Sidebar is not affiliated with them.</span>
+          </p>
+        </div>
+      </section>
+
+      <!-- Pricing -->
+      <section class="section section-alt" id="pricing">
+        <div class="wrap">
+          <div class="section-head">
+            <span class="eyebrow"><span lang="vi">Bảng giá</span><span lang="en">Pricing</span></span>
+            <h2>
+              <span lang="vi">Miễn phí hôm nay. Pro sắp ra mắt.</span>
+              <span lang="en">Free today. Pro is coming soon.</span>
+            </h2>
+            <p>
+              <span lang="vi">Mọi tính năng hiện có đều miễn phí. Gói trả phí chưa mở bán; giá dưới đây là giá dự kiến.</span>
+              <span lang="en">Every current feature is free. Paid plans are not on sale yet; the prices below are planned.</span>
+            </p>
+          </div>
+
+          <div class="plans">
+            <article class="plan">
+              <h3>Free</h3>
+              <div class="price">
+                <span lang="vi">0đ</span><span lang="en">$0</span>
+              </div>
+              <div class="price-alt"><span lang="vi">Mãi mãi</span><span lang="en">Forever</span></div>
+              <ul>
+                <li><span lang="vi">Mọi tính năng của bản 4.1</span><span lang="en">Every feature in version 4.1</span></li>
+                <li><span lang="vi">Khi có Pro: 3 không gian, 1 liên kết bookmark, 10 phiên</span><span lang="en">Once Pro launches: 3 workspaces, 1 bookmark link, 10 sessions</span></li>
+                <li><span lang="vi">Dữ liệu cũ không bao giờ bị khóa</span><span lang="en">Existing data is never locked</span></li>
+              </ul>
+              <a class="btn btn-ghost" href="https://github.com/canhanmvp/edgesidebar"><span lang="vi">Dùng miễn phí</span><span lang="en">Get it free</span></a>
+            </article>
+
+            <article class="plan plan-featured">
+              <h3>Pro <span class="chip chip-soon"><span lang="vi">Sắp ra mắt</span><span lang="en">Coming soon</span></span></h3>
+              <div class="price">
+                <span lang="vi">49.000đ<small>/tháng</small></span><span lang="en">$2.5<small>/month</small></span>
+              </div>
+              <div class="price-alt">
+                <span lang="vi">hoặc 399.000đ/năm · quốc tế $2.5/tháng, $24/năm</span><span lang="en">or $24/year · in Vietnam 49,000₫/month</span>
+              </div>
+              <ul>
+                <li><span lang="vi">Không giới hạn không gian, liên kết, phiên</span><span lang="en">Unlimited workspaces, links and sessions</span></li>
+                <li><span lang="vi">Đồng bộ đám mây riêng, chéo trình duyệt</span><span lang="en">Private cross-browser cloud sync</span></li>
+                <li><span lang="vi">Tự động hóa và AI (có hạn mức)</span><span lang="en">Automation and AI (with a quota)</span></li>
+              </ul>
+              <a class="btn btn-primary" href="#pricing" aria-disabled="true" tabindex="-1"><span lang="vi">Sắp ra mắt</span><span lang="en">Coming soon</span></a>
+            </article>
+
+            <article class="plan">
+              <h3><span lang="vi">Trọn đời</span><span lang="en">Lifetime</span> <span class="chip chip-soon">Early bird</span></h3>
+              <div class="price">
+                <span lang="vi">790.000đ</span><span lang="en">$39</span>
+              </div>
+              <div class="price-alt">
+                <span lang="vi">Trả một lần · $39 · chỉ 500 suất đầu</span><span lang="en">Pay once · first 500 buyers only</span>
+              </div>
+              <ul>
+                <li><span lang="vi">Mọi quyền lợi Pro</span><span lang="en">Everything in Pro</span></li>
+                <li><span lang="vi">Hạn mức AI thấp hơn Pro</span><span lang="en">Lower AI quota than Pro</span></li>
+                <li><span lang="vi">Không phí gia hạn</span><span lang="en">No renewals</span></li>
+              </ul>
+              <a class="btn btn-ghost" href="#pricing" aria-disabled="true" tabindex="-1"><span lang="vi">Sắp ra mắt</span><span lang="en">Coming soon</span></a>
+            </article>
+
+            <article class="plan">
+              <h3>Team <span class="chip"><span lang="vi">Ra mắt sau</span><span lang="en">Later</span></span></h3>
+              <div class="price">
+                <span lang="vi">79.000đ<small>/người/tháng</small></span><span lang="en">$4<small>/user/mo</small></span>
+              </div>
+              <div class="price-alt"><span lang="vi">Quốc tế $4/người/tháng</span><span lang="en">In Vietnam 79,000₫/user/month</span></div>
+              <ul>
+                <li><span lang="vi">Mọi quyền lợi Pro</span><span lang="en">Everything in Pro</span></li>
+                <li><span lang="vi">Không gian dùng chung cho nhóm</span><span lang="en">Shared team workspaces</span></li>
+              </ul>
+              <a class="btn btn-ghost" href="#pricing" aria-disabled="true" tabindex="-1"><span lang="vi">Ra mắt sau</span><span lang="en">Later</span></a>
+            </article>
+          </div>
+
+          <p class="pricing-note">
+            <span lang="vi">Khi mở bán: thẻ quốc tế qua Lemon Squeezy, VietQR/chuyển khoản qua payOS. Hoàn tiền 14 ngày, không cần lý do; xem <a href="refund.html">Chính sách hoàn tiền</a>.</span>
+            <span lang="en">At launch: international cards via Lemon Squeezy, VietQR/bank transfer via payOS in Vietnam. 14-day no-questions refund; see the <a href="refund.html">Refund Policy</a>.</span>
+          </p>
+        </div>
+      </section>
+
+      <!-- FAQ -->
+      <section class="section" id="faq">
+        <div class="wrap">
+          <div class="section-head">
+            <span class="eyebrow">FAQ</span>
+            <h2><span lang="vi">Câu hỏi thường gặp</span><span lang="en">Frequently asked questions</span></h2>
+          </div>
+          <div class="faq">
+            <details>
+              <summary><span lang="vi">Pinned Sidebar có miễn phí không?</span><span lang="en">Is Pinned Sidebar free?</span></summary>
+              <div>
+                <p lang="vi">Có. Mọi tính năng hiện có đều miễn phí. Khi gói Pro ra mắt, gói Free có thêm giới hạn mềm, nhưng dữ liệu bạn đã có sẽ được giữ nguyên, không bao giờ bị khóa hay xóa.</p>
+                <p lang="en">Yes. Every current feature is free. When Pro launches, Free gets soft limits, but the data you already have stays as it is and is never locked or deleted.</p>
+              </div>
+            </details>
+            <details>
+              <summary><span lang="vi">Dữ liệu của tôi lưu ở đâu?</span><span lang="en">Where is my data stored?</span></summary>
+              <div>
+                <p lang="vi">Trong trình duyệt của bạn. Nếu bạn bật đồng bộ của Edge/Chrome, bản sao đi qua tài khoản trình duyệt. Chúng tôi không có máy chủ, không thu thập dữ liệu, không quảng cáo. Xem <a href="privacy.html">Chính sách quyền riêng tư</a>.</p>
+                <p lang="en">In your browser. If you turn on Edge/Chrome sync, a copy goes through your browser account. We run no server, collect no data and show no ads. See the <a href="privacy.html">Privacy Policy</a>.</p>
+              </div>
+            </details>
+            <details>
+              <summary><span lang="vi">Dùng được trên trình duyệt nào?</span><span lang="en">Which browsers are supported?</span></summary>
+              <div>
+                <p lang="vi">Microsoft Edge và Google Chrome bản 120 trở lên (cần Side Panel API). Bản Firefox đang được lên kế hoạch.</p>
+                <p lang="en">Microsoft Edge and Google Chrome 120 or later (the Side Panel API is required). A Firefox version is planned.</p>
+              </div>
+            </details>
+            <details>
+              <summary><span lang="vi">Vì sao một số website không hiện trong thanh bên?</span><span lang="en">Why do some sites not load in the side panel?</span></summary>
+              <div>
+                <p lang="vi">Nhiều website chặn hiển thị trong khung. Với website bạn chọn, Pinned Sidebar bật ngoại lệ nhúng chỉ cho đúng website đó và chỉ trong thanh bên của tiện ích. Một số trang vẫn cần đăng nhập hoặc kiểm tra bảo mật riêng; khi đó hãy dùng nút mở tab mới.</p>
+                <p lang="en">Many sites refuse to be shown in a frame. For a site you choose, Pinned Sidebar enables an embedding exception for that site only, and only inside the extension's side panel. Some pages still need their own login or security check; use the open-in-new-tab button for those.</p>
+              </div>
+            </details>
+            <details>
+              <summary><span lang="vi">Tôi chuyển từ Workona, Toby, OneTab hay Raindrop được không?</span><span lang="en">Can I move over from Workona, Toby, OneTab or Raindrop?</span></summary>
+              <div>
+                <p lang="vi">Công cụ nhập trực tiếp từ các dịch vụ này đang được phát triển. Hiện tại, bạn có thể xuất từ dịch vụ cũ ra file bookmark HTML, nhập vào trình duyệt, rồi liên kết thư mục đó với một không gian.</p>
+                <p lang="en">Direct import from these services is in development. For now, export from your old tool to a bookmarks HTML file, import it into your browser, then link that folder to a workspace.</p>
+              </div>
+            </details>
+            <details>
+              <summary><span lang="vi">Khi nào có Pro? Thanh toán thế nào?</span><span lang="en">When is Pro coming, and how do I pay?</span></summary>
+              <div>
+                <p lang="vi">Pro đang được xây dựng. Khi mở bán, bạn có thể trả bằng thẻ quốc tế (qua Lemon Squeezy) hoặc VietQR/chuyển khoản (qua payOS). Gói Trọn đời giá early bird chỉ dành cho 500 người đầu tiên.</p>
+                <p lang="en">Pro is being built. At launch you can pay by international card (via Lemon Squeezy) or VietQR/bank transfer in Vietnam (via payOS). The early-bird Lifetime price is for the first 500 buyers only.</p>
+              </div>
+            </details>
+            <details>
+              <summary><span lang="vi">Có hoàn tiền không?</span><span lang="en">Can I get a refund?</span></summary>
+              <div>
+                <p lang="vi">Có. Hoàn toàn bộ trong 14 ngày, không cần lý do, cho lần mua đầu, gia hạn năm và gói Trọn đời. Xem <a href="refund.html">Chính sách hoàn tiền</a>.</p>
+                <p lang="en">Yes. A full refund within 14 days, no questions asked, for first purchases, yearly renewals and Lifetime. See the <a href="refund.html">Refund Policy</a>.</p>
+              </div>
+            </details>
+            <details>
+              <summary><span lang="vi">Mã nguồn có công khai không?</span><span lang="en">Is the source code public?</span></summary>
+              <div>
+                <p lang="vi">Có, trên <a href="https://github.com/canhanmvp/edgesidebar">GitHub</a>, theo giấy phép FSL-1.1-ALv2: bạn được xem, chạy, sửa và dùng nội bộ; mỗi phiên bản chuyển sang Apache 2.0 sau 2 năm. Tên và logo Pinned Sidebar không nằm trong giấy phép.</p>
+                <p lang="en">Yes, on <a href="https://github.com/canhanmvp/edgesidebar">GitHub</a>, under FSL-1.1-ALv2: you may read, run, modify and use it internally, and each version becomes Apache 2.0 after two years. The Pinned Sidebar name and logo are not covered by the license.</p>
+              </div>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" style="padding-top: 0">
+        <div class="wrap">
+          <div class="cta-band">
+            <h2><span lang="vi">Đặt mọi thứ ngay bên cạnh bạn</span><span lang="en">Keep everything one click away</span></h2>
+            <p><span lang="vi">Miễn phí, không cần tài khoản, dữ liệu ở trên máy bạn.</span><span lang="en">Free, no account, your data stays on your device.</span></p>
+            <a class="btn btn-primary" href="https://github.com/canhanmvp/edgesidebar"><span lang="vi">Dùng miễn phí</span><span lang="en">Get it free</span></a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap">
+        <div class="footer-grid">
+          <div>
+            <a class="brand" href="index.html" aria-label="Pinned Sidebar">
+              <img src="assets/logo.svg" alt="" width="30" height="30" />
+              <span>pinned<span class="brand-dot">.</span></span>
+            </a>
+            <p style="margin-top: 12px">
+              <span lang="vi">Không gian làm việc ngay bên cạnh trình duyệt.</span>
+              <span lang="en">Your workspace in the browser side panel.</span>
+            </p>
+            <p><span lang="vi">Liên hệ:</span><span lang="en">Contact:</span> <a href="mailto:canhanmvp@gmail.com">canhanmvp@gmail.com</a></p>
+          </div>
+          <div>
+            <h3><span lang="vi">Sản phẩm</span><span lang="en">Product</span></h3>
+            <ul>
+              <li><a href="#features"><span lang="vi">Tính năng</span><span lang="en">Features</span></a></li>
+              <li><a href="#compare"><span lang="vi">So sánh</span><span lang="en">Compare</span></a></li>
+              <li><a href="#pricing"><span lang="vi">Bảng giá</span><span lang="en">Pricing</span></a></li>
+              <li><a href="https://github.com/canhanmvp/edgesidebar">GitHub</a></li>
+              <li><a href="https://github.com/canhanmvp/edgesidebar/issues"><span lang="vi">Báo lỗi, góp ý</span><span lang="en">Report a problem</span></a></li>
+            </ul>
+          </div>
+          <div>
+            <h3><span lang="vi">Pháp lý</span><span lang="en">Legal</span></h3>
+            <ul>
+              <li><a href="privacy.html"><span lang="vi">Chính sách quyền riêng tư</span><span lang="en">Privacy Policy</span></a></li>
+              <li><a href="terms.html"><span lang="vi">Điều khoản sử dụng</span><span lang="en">Terms of Service</span></a></li>
+              <li><a href="refund.html"><span lang="vi">Chính sách hoàn tiền</span><span lang="en">Refund Policy</span></a></li>
+              <li><a href="https://github.com/canhanmvp/edgesidebar/blob/main/TRADEMARK.md"><span lang="vi">Thương hiệu</span><span lang="en">Trademark</span></a></li>
+              <li><a href="https://github.com/canhanmvp/edgesidebar/blob/main/LICENSE.md"><span lang="vi">Giấy phép FSL-1.1-ALv2</span><span lang="en">License FSL-1.1-ALv2</span></a></li>
+            </ul>
+          </div>
+        </div>
+        <p class="footer-small">© 2026 MAI VAN PHO. <span lang="vi">"Pinned Sidebar" và logo là thương hiệu của MAI VAN PHO.</span><span lang="en">"Pinned Sidebar" and its logo are trademarks of MAI VAN PHO.</span></p>
+      </div>
+    </footer>
+  </body>
+</html>

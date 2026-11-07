@@ -245,6 +245,33 @@
     "Mở nhiều tab?": "Open many tabs?",
     "Mở sidebar": "Open sidebar",
     "Mở tab mới": "Open in new tab",
+    "Chào mừng tới Pinned Sidebar": "Welcome to Pinned Sidebar",
+    "Ghim trang đầu tiên": "Pin your first page",
+    "Vài mẹo nhỏ": "A few tips",
+    "Bắt đầu": "Get started",
+    Tiếp: "Next",
+    "Bỏ qua": "Skip",
+    "Không gian làm việc ngay cạnh trình duyệt: mở website thật trong sidebar, ghim, sắp xếp và lưu phiên tab. Dữ liệu lưu trên máy bạn.":
+      "A workspace right beside your browser: open real websites in the sidebar, pin, organize and save tab sessions. Your data stays on your device.",
+    "Ghim trang bạn đang xem để mở lại chỉ bằng một cú bấm. Đã có sẵn vài trang mẫu; bạn có thể xóa bất cứ lúc nào.":
+      "Pin the page you're viewing to reopen it in one click. A few sample sites are already there; delete them any time.",
+    "Đang dùng OneTab, Toby, Workona hay Raindrop? Vào Cài đặt → Nhập dữ liệu để chuyển sang.":
+      "Using OneTab, Toby, Workona or Raindrop? Go to Settings → Import data to switch over.",
+    "mở sidebar ở bất kỳ đâu.": "opens the sidebar anywhere.",
+    Gõ: "Type",
+    "rồi phím cách trên thanh địa chỉ để tìm trang ghim.":
+      "then space in the address bar to search your pins.",
+    "Thanh icon nhỏ trên mỗi website mở nhanh trang ghim; kéo để đổi chỗ.":
+      "The small icon rail on every website opens pins fast; drag it to move it.",
+    "Tab Bookmark: duyệt, tìm và liên kết bookmark với không gian.":
+      "Bookmarks tab: browse, search and link bookmarks with a workspace.",
+    "Hiển thị {0} trong sidebar?": "Show {0} in the sidebar?",
+    "Để hiện website này trong sidebar, extension sẽ bỏ lệnh chặn nhúng khung (X-Frame-Options, CSP) chỉ cho đúng website này và chỉ khi sidebar mở nó. Bạn có thể thu hồi trong Cài đặt.":
+      "To show this website in the sidebar, the extension bypasses its frame-blocking headers (X-Frame-Options, CSP) for this website only, and only when the sidebar opens it. You can revoke this in Settings.",
+    "Luôn cho phép": "Always allow",
+    "Cho phép": "Allow",
+    "Mở website mới trong sidebar": "Opening a new website in the sidebar",
+    "Hỏi trước": "Ask first",
     "Mở thành một nhóm tab": "Open as one tab group",
     "Mở trong sidebar": "Open in sidebar",
     "Mở tất cả thành nhóm tab": "Open all as a tab group",
@@ -253,6 +280,16 @@
     Nhãn: "Tags",
     "Ngôn ngữ": "Language",
     "Nhập JSON": "Import JSON",
+    "Nhập dữ liệu": "Import data",
+    "file bookmark HTML": "bookmark HTML file",
+    "File trống.": "The file is empty.",
+    "Chưa nhận ra định dạng file. Hỗ trợ: JSON của Pinned Sidebar, OneTab, Toby, Workona, Raindrop.io và file bookmark HTML.":
+      "Unrecognized file format. Supported: Pinned Sidebar JSON, OneTab, Toby, Workona, Raindrop.io and bookmark HTML files.",
+    Tab: "Tabs",
+    "Đã nhập": "Imported",
+    "Định dạng: {0}. ": "Format: {0}. ",
+    " Bỏ qua {0} mục trùng hoặc không phải website.":
+      " Skipped {0} duplicates or non-website items.",
     "Nhập bộ sưu tập": "Import collection",
     "Nhập hoặc dán văn bản vào đây…": "Type or paste text here…",
     "Nhập phiên": "Import sessions",
@@ -269,8 +306,8 @@
     "Phiên tab": "Tab sessions",
     "Phím tắt tìm kiếm": "Search shortcut",
     "Phạm vi": "Scope",
-    "Pinned Sidebar 4.1 · Ctrl + M hoặc Ctrl + Shift + Y để mở":
-      "Pinned Sidebar 4.1 · Ctrl + M or Ctrl + Shift + Y to open",
+    "Pinned Sidebar 4.2 · Ctrl + M hoặc Ctrl + Shift + Y để mở":
+      "Pinned Sidebar 4.2 · Ctrl + M or Ctrl + Shift + Y to open",
     "Quản lý không gian hiện tại": "Manage current workspace",
     "Quản lý thư mục ": "Manage folder ",
     "Rê chuột để xem tên, kéo bất kỳ đâu trên thanh để di chuyển (thả gần mép sẽ tự dính vào mép), kéo mép để đổi độ rộng.":

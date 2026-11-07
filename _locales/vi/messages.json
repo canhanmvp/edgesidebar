@@ -1,0 +1,17 @@
+{
+  "appName": {
+    "message": "Pinned Sidebar"
+  },
+  "appDesc": {
+    "message": "Không gian làm việc bên cạnh trình duyệt: ghim, tìm, sắp xếp website và lưu phiên tab."
+  },
+  "actionTitle": {
+    "message": "Mở Pinned Sidebar"
+  },
+  "cmdOpen": {
+    "message": "Mở Pinned Sidebar"
+  },
+  "cmdOpenFast": {
+    "message": "Mở Pinned Sidebar nhanh"
+  }
+}

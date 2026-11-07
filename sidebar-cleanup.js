@@ -58,7 +58,7 @@
     const index = state.pins.findIndex((item) => item.id === pin.id);
     await mutate({ type: "DELETE_PIN", id: pin.id });
     renderResults();
-    toast(`Đã bỏ ghim ${pin.title}`, {
+    toast(t("Đã bỏ ghim {0}", [pin.title]), {
       undo: async () => {
         await mutate({ type: "RESTORE_PIN", pin, index });
         renderResults();
@@ -80,7 +80,7 @@
     delete results[pin.id];
     await save();
     renderResults();
-    toast("Đã cập nhật địa chỉ mới.");
+    toast(t("Đã cập nhật địa chỉ mới."));
   }
   const openTab = (pin) => () => openPin(pin, "tab", true);
   function section(title, rows, extra) {
@@ -99,21 +99,24 @@
     const deleteAll = element(
       "button",
       "text-button danger",
-      "Bỏ ghim tất cả link hỏng",
+      t("Bỏ ghim tất cả link hỏng"),
     );
     deleteAll.type = "button";
     deleteAll.onclick = () =>
       run(deleteAll, async () => {
         const ok = await choose(
-          "Bỏ ghim link hỏng?",
-          `Bỏ ghim ${broken.length} website trả về lỗi 404/410. Bạn có thể xuất JSON trước để sao lưu.`,
-          [{ label: "Bỏ ghim tất cả", value: "delete", danger: true }],
+          t("Bỏ ghim link hỏng?"),
+          t(
+            "Bỏ ghim {0} website trả về lỗi 404/410. Bạn có thể xuất JSON trước để sao lưu.",
+            [broken.length],
+          ),
+          [{ label: t("Bỏ ghim tất cả"), value: "delete", danger: true }],
         );
         if (ok !== "delete") return;
         for (const pin of broken)
           await mutate({ type: "DELETE_PIN", id: pin.id });
         renderResults();
-        toast(`Đã bỏ ghim ${broken.length} link hỏng.`);
+        toast(t("Đã bỏ ghim {0} link hỏng.", [broken.length]));
       });
     const groups = C.duplicateGroups(
       { ...state, pins: [...live.values()] },
@@ -125,76 +128,83 @@
     $("cleanup-results").replaceChildren(
       ...[
         section(
-          "Link hỏng",
+          t("Link hỏng"),
           broken.map((pin) =>
             row(
               pin,
-              detail(pin, `Lỗi ${results[pin.id].code} · ${C.host(pin.url)}`),
+              detail(
+                pin,
+                t("Lỗi {0} · {1}", [results[pin.id].code, C.host(pin.url)]),
+              ),
               [
-                ["Mở", openTab(pin)],
-                ["Bỏ ghim", () => removePin(pin), true],
+                [t("Mở"), openTab(pin)],
+                [t("Bỏ ghim"), () => removePin(pin), true],
               ],
             ),
           ),
           broken.length > 1 ? deleteAll : null,
         ),
         section(
-          "Đã chuyển địa chỉ",
+          t("Đã chuyển địa chỉ"),
           by("redirect").map((pin) =>
             row(pin, detail(pin, "→ " + results[pin.id].finalUrl), [
-              ["Cập nhật", () => updateUrl(pin, results[pin.id].finalUrl)],
-              ["Mở", openTab(pin)],
+              [t("Cập nhật"), () => updateUrl(pin, results[pin.id].finalUrl)],
+              [t("Mở"), openTab(pin)],
             ]),
           ),
         ),
         section(
-          "Không truy cập được",
+          t("Không truy cập được"),
           by("unreachable").map((pin) =>
             row(
               pin,
               detail(
                 pin,
                 (results[pin.id].code
-                  ? `Lỗi ${results[pin.id].code} · `
-                  : "Hết thời gian hoặc lỗi mạng · ") + C.host(pin.url),
+                  ? t("Lỗi {0} · ", [results[pin.id].code])
+                  : t("Hết thời gian hoặc lỗi mạng · ")) + C.host(pin.url),
               ),
               [
-                ["Mở", openTab(pin)],
-                ["Bỏ ghim", () => removePin(pin), true],
+                [t("Mở"), openTab(pin)],
+                [t("Bỏ ghim"), () => removePin(pin), true],
               ],
             ),
           ),
         ),
         section(
-          "Cần đăng nhập hoặc bị chặn",
+          t("Cần đăng nhập hoặc bị chặn"),
           by("blocked").map((pin) =>
             row(
               pin,
               detail(
                 pin,
-                `Mã ${results[pin.id].code}: thường vẫn dùng được khi đã đăng nhập`,
+                t("Mã {0}: thường vẫn dùng được khi đã đăng nhập", [
+                  results[pin.id].code,
+                ]),
               ),
-              [["Mở", openTab(pin)]],
+              [[t("Mở"), openTab(pin)]],
             ),
           ),
         ),
         section(
-          "Gần trùng",
+          t("Gần trùng"),
           groups.flatMap((pins) =>
             pins.map((pin, i) =>
               row(
                 pin,
-                (i ? "Trùng với “" + pins[0].title + "” · " : "Giữ lại · ") +
+                (i
+                  ? t("Trùng với “") + pins[0].title + "” · "
+                  : t("Giữ lại · ")) +
                   (across || $("cleanup-across").checked
                     ? workspaceName(pin) + " · "
                     : "") +
                   pin.url,
                 i
                   ? [
-                      ["Mở", openTab(pin)],
-                      ["Bỏ ghim", () => removePin(pin), true],
+                      [t("Mở"), openTab(pin)],
+                      [t("Bỏ ghim"), () => removePin(pin), true],
                     ]
-                  : [["Mở", openTab(pin)]],
+                  : [[t("Mở"), openTab(pin)]],
               ),
             ),
           ),
@@ -224,8 +234,10 @@
     renderResults();
     const queue = [...pins];
     const status = () => {
-      $("cleanup-status").textContent =
-        `Đã kiểm tra ${done}/${pins.length} trang…`;
+      $("cleanup-status").textContent = t("Đã kiểm tra {0}/{1} trang…", [
+        done,
+        pins.length,
+      ]);
       $("cleanup-bar").style.width =
         (pins.length ? (done / pins.length) * 100 : 100) + "%";
     };
@@ -254,7 +266,7 @@
     } finally {
       controller = null;
       $("cleanup-run").hidden = false;
-      $("cleanup-run").textContent = "Kiểm tra lại";
+      $("cleanup-run").textContent = t("Kiểm tra lại");
       $("cleanup-stop").hidden = true;
       await save();
       renderResults();
@@ -263,9 +275,11 @@
       ).length;
       $("cleanup-status").textContent =
         (signal.aborted
-          ? `Đã dừng sau ${done}/${pins.length} trang. `
-          : `Đã kiểm tra ${done} trang. `) +
-        (issues ? `Có ${issues} trang cần xem lại.` : "Không thấy link hỏng.");
+          ? t("Đã dừng sau {0}/{1} trang. ", [done, pins.length])
+          : t("Đã kiểm tra {0} trang. ", [done])) +
+        (issues
+          ? t("Có {0} trang cần xem lại.", [issues])
+          : t("Không thấy link hỏng."));
     }
   }
   function stop() {
@@ -276,7 +290,7 @@
     results = {};
     $("cleanup-status").textContent = "";
     $("cleanup-progress").hidden = true;
-    $("cleanup-run").textContent = "Bắt đầu kiểm tra";
+    $("cleanup-run").textContent = t("Bắt đầu kiểm tra");
     showDialog($("cleanup-dialog"));
     renderResults();
   }

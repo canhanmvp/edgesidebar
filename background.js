@@ -1,6 +1,7 @@
 /* Single writer: mutations and cloud deliveries share the same durable queue. */
 "use strict";
-importScripts("core.js", "bookmarks-core.js");
+importScripts("i18n-en.js", "i18n.js", "core.js", "bookmarks-core.js");
+const { t } = PinnedI18n;
 const C = Pinned;
 const B = BookmarkSync;
 const STATE_KEY = "pinned.v2";
@@ -74,6 +75,8 @@ async function readCloud() {
 function initialize() {
   if (!initialized)
     initialized = (async () => {
+      // Starter names ("Default", "Daily"…) follow the browser language.
+      PinnedI18n.setLanguage("auto");
       await chrome.storage.local.setAccessLevel({
         accessLevel: "TRUSTED_CONTEXTS",
       });
@@ -90,9 +93,13 @@ function initialize() {
           await chrome.storage.local.set({
             [STATE_KEY]: converted.state,
             migration:
-              `Đã nâng dữ liệu lên bản mới. Giữ lại ${converted.state.pins.length} trang` +
+              t("Đã nâng dữ liệu lên bản mới. Giữ lại {0} trang", [
+                converted.state.pins.length,
+              ]) +
               (converted.skipped
-                ? `; bỏ qua ${converted.skipped} mục trùng hoặc không hợp lệ.`
+                ? t("; bỏ qua {0} mục trùng hoặc không hợp lệ.", [
+                    converted.skipped,
+                  ])
                 : "."),
             recoveryBackup: {
               time: Date.now(),
@@ -111,9 +118,12 @@ function initialize() {
         const converted = C.parse(legacy, { migration: true });
         state = converted.state;
         migration =
-          `Đã chuyển ${state.pins.length} trang từ bản cũ.` +
+          t("Đã chuyển {0} trang từ bản cũ.", [state.pins.length]) +
           (converted.skipped
-            ? ` Bỏ qua ${converted.skipped} mục trùng hoặc không hợp lệ; bản gốc vẫn được giữ.`
+            ? t(
+                " Bỏ qua {0} mục trùng hoặc không hợp lệ; bản gốc vẫn được giữ.",
+                [converted.skipped],
+              )
             : "");
         await chrome.storage.local.set({
           legacyBackup: legacy,
@@ -125,14 +135,18 @@ function initialize() {
             {
               title: "Google",
               url: "https://www.google.com",
-              folder: "Hằng ngày",
+              folder: t("Hằng ngày"),
             },
             {
               title: "YouTube",
               url: "https://www.youtube.com",
-              folder: "Hằng ngày",
+              folder: t("Hằng ngày"),
             },
-            { title: "GitHub", url: "https://github.com", folder: "Công việc" },
+            {
+              title: "GitHub",
+              url: "https://github.com",
+              folder: t("Công việc"),
+            },
           ],
         }).state;
       }
@@ -158,7 +172,10 @@ async function scheduleSync() {
 }
 async function readState() {
   await initialize();
-  return (await chrome.storage.local.get(STATE_KEY))[STATE_KEY];
+  const state = (await chrome.storage.local.get(STATE_KEY))[STATE_KEY];
+  // Messages built by the worker (errors, menus, omnibox) follow the setting.
+  if (state) PinnedI18n.setLanguage(state.settings.language);
+  return state;
 }
 // Settings are per device: receiveCloud keeps local settings, so changing them
 // (theme, rail position, collapsed folders…) must not mark the list dirty and
@@ -190,6 +207,12 @@ async function commit(action) {
   else if (!deviceOnly || (!state.settings.sync && syncStatus.dirty))
     await scheduleSync();
   if (!deviceOnly && !action.fromBookmarks) await afterStateChange(state, next);
+  if (action.type === "SETTINGS" && "language" in (action.patch || {})) {
+    PinnedI18n.setLanguage(next.settings.language);
+    await chrome.contextMenus
+      .update("pin-to-sidebar", { title: t("Ghim vào Pinned Sidebar") })
+      .catch(() => {});
+  }
   return next;
 }
 /* Bookmark links are per device: bookmark IDs differ between computers, so
@@ -204,12 +227,14 @@ async function setLinks(links) {
 }
 function requireBookmarks() {
   if (!chrome.bookmarks)
-    throw new Error("Hãy cho phép truy cập bookmark trước trong tab Bookmark.");
+    throw new Error(
+      t("Hãy cho phép truy cập bookmark trước trong tab Bookmark."),
+    );
 }
 async function bookmarkNode(id) {
   const [node] = await chrome.bookmarks.getSubTree(String(id));
   if (!node || node.url != null)
-    throw new Error("Hãy chọn một thư mục bookmark.");
+    throw new Error(t("Hãy chọn một thư mục bookmark."));
   return node;
 }
 async function bookmarkPath(id) {
@@ -243,7 +268,7 @@ async function pushLink(link, state) {
   );
   link.map = result.map;
   link.message = result.failed
-    ? "Một số bookmark chưa cập nhật được; sẽ thử lại ở lần đồng bộ sau."
+    ? t("Một số bookmark chưa cập nhật được; sẽ thử lại ở lần đồng bộ sau.")
     : "";
 }
 // Sidebar edits on a linked workspace are written to its bookmark folder.
@@ -279,7 +304,7 @@ async function pullLink(link) {
     node = await bookmarkNode(link.rootId);
   } catch {
     link.status = "broken";
-    link.message = "Thư mục bookmark đã bị xóa hoặc không đọc được.";
+    link.message = t("Thư mục bookmark đã bị xóa hoặc không đọc được.");
     return;
   }
   const state = await readState();
@@ -361,7 +386,7 @@ chrome.permissions?.onRemoved.addListener((permissions) => {
     for (const link of links)
       if (link.status === "ok") {
         link.status = "paused";
-        link.message = "Đã mất quyền truy cập bookmark.";
+        link.message = t("Đã mất quyền truy cập bookmark.");
       }
     await setLinks(links);
   }).catch(console.warn);
@@ -383,19 +408,21 @@ async function linkBookmarks(message) {
   const node = await bookmarkNode(message.rootId);
   if (node.unmodifiable && direction === "two-way")
     throw new Error(
-      "Thư mục này do tổ chức quản lý nên chỉ có thể sao chép hoặc chỉ kéo về.",
+      t(
+        "Thư mục này do tổ chức quản lý nên chỉ có thể sao chép hoặc chỉ kéo về.",
+      ),
     );
   const links = await getLinks();
   if (links.some((link) => link.rootId === node.id))
     throw new Error(
-      "Thư mục bookmark này đã liên kết với một không gian khác.",
+      t("Thư mục bookmark này đã liên kết với một không gian khác."),
     );
   if (
     !message.newWorkspaceName &&
     links.some((link) => link.workspaceId === message.workspaceId)
   )
     throw new Error(
-      "Không gian này đã có liên kết. Hãy hủy liên kết cũ trước.",
+      t("Không gian này đã có liên kết. Hãy hủy liên kết cũ trước."),
     );
   let state = await readState();
   const draft = {
@@ -473,13 +500,13 @@ async function exportBookmarks(message) {
   const workspace = state.workspaces.find(
     (item) => item.id === message.workspaceId,
   );
-  if (!workspace) throw new Error("Không gian không còn tồn tại.");
+  if (!workspace) throw new Error(t("Không gian không còn tồn tại."));
   if (
     message.link &&
     (await getLinks()).some((link) => link.workspaceId === workspace.id)
   )
     throw new Error(
-      "Không gian này đã có liên kết. Hãy hủy liên kết cũ trước.",
+      t("Không gian này đã có liên kết. Hãy hủy liên kết cũ trước."),
     );
   const parent = await bookmarkNode(message.parentId || "2");
   const folder = await chrome.bookmarks.create({
@@ -510,7 +537,7 @@ async function upload(force = false) {
   const { syncStatus = {} } = await chrome.storage.local.get("syncStatus");
   if (syncStatus.conflict)
     throw new Error(
-      "Có thay đổi trên thiết bị khác. Chọn bản cần giữ trong cài đặt.",
+      t("Có thay đổi trên thiết bị khác. Chọn bản cần giữ trong cài đặt."),
     );
   // Check the latest remote manifest before writing after a worker restart.
   const remote = await readCloud();
@@ -519,14 +546,16 @@ async function upload(force = false) {
       syncStatus: { ...syncStatus, conflict: true },
     });
     throw new Error(
-      "Có thay đổi trên thiết bị khác. Chọn bản cần giữ trong cài đặt.",
+      t("Có thay đổi trên thiết bị khác. Chọn bản cần giữ trong cài đặt."),
     );
   }
   const text = JSON.stringify(state);
   const parts = C.chunks(text);
   if (parts.length > 12)
     throw new Error(
-      "Danh sách vượt dung lượng đồng bộ. Dữ liệu vẫn an toàn trên máy; hãy xuất file để sao lưu.",
+      t(
+        "Danh sách vượt dung lượng đồng bộ. Dữ liệu vẫn an toàn trên máy; hãy xuất file để sao lưu.",
+      ),
     );
   const digest = await hash(text);
   const values = Object.fromEntries(
@@ -548,7 +577,9 @@ async function upload(force = false) {
     ) > 100000
   ) {
     throw new Error(
-      "Tài khoản không còn đủ dung lượng đồng bộ. Dữ liệu trên máy vẫn được giữ.",
+      t(
+        "Tài khoản không còn đủ dung lượng đồng bộ. Dữ liệu trên máy vẫn được giữ.",
+      ),
     );
   }
   await chrome.storage.sync.set(values);
@@ -578,7 +609,7 @@ async function receiveCloud() {
       syncStatus: {
         ...syncStatus,
         conflict: true,
-        message: "Có thay đổi trên thiết bị khác. Chọn bản cần giữ.",
+        message: t("Có thay đổi trên thiết bị khác. Chọn bản cần giữ."),
       },
     });
     return;
@@ -617,7 +648,7 @@ async function setEmbed(origin, enabled) {
   const origins = new Set(embedOrigins);
   enabled ? origins.add(parsed.origin) : origins.delete(parsed.origin);
   if (origins.size > 100)
-    throw new Error("Tối đa 100 website được cho phép nhúng.");
+    throw new Error(t("Tối đa 100 website được cho phép nhúng."));
   await applyEmbedRules([...origins]);
   await chrome.storage.local.set({ embedOrigins: [...origins] });
 }
@@ -662,6 +693,7 @@ const OVERLAY_SETTINGS = [
   "overlayX",
   "overlayY",
   "overlayWidth",
+  "language",
 ];
 async function activeWorkspace(state) {
   const local = await chrome.storage.local.get("activeWorkspaceId");
@@ -689,13 +721,13 @@ async function overlayState() {
 }
 async function handle(message, sender) {
   if (message.type === "OVERLAY_WIDTH") {
-    if (!sender.tab) throw new Error("Nguồn yêu cầu không hợp lệ.");
+    if (!sender.tab) throw new Error(t("Nguồn yêu cầu không hợp lệ."));
     await commit({ type: "SETTINGS", patch: { overlayWidth: message.width } });
     return {};
   }
   if (message.type === "OVERLAY_ENABLED") {
     if (!sender.tab || typeof message.enabled !== "boolean")
-      throw new Error("Trạng thái thanh icon không hợp lệ.");
+      throw new Error(t("Trạng thái thanh icon không hợp lệ."));
     await commit({
       type: "SETTINGS",
       patch: { overlay: message.enabled },
@@ -709,7 +741,7 @@ async function handle(message, sender) {
       !Number.isFinite(message.y) ||
       !["left", "right"].includes(message.side)
     )
-      throw new Error("Vị trí thanh icon không hợp lệ.");
+      throw new Error(t("Vị trí thanh icon không hợp lệ."));
     await commit({
       type: "SETTINGS",
       patch: {
@@ -721,7 +753,7 @@ async function handle(message, sender) {
     return {};
   }
   if (!trusted(sender))
-    throw new Error("Thao tác chỉ được thực hiện từ sidebar.");
+    throw new Error(t("Thao tác chỉ được thực hiện từ sidebar."));
   if (message.type === "GET_STATE") {
     const state = await readState();
     return {
@@ -738,7 +770,7 @@ async function handle(message, sender) {
       ? message.windowId
       : sender.tab?.windowId;
     if (!Number.isInteger(targetWindowId))
-      throw new Error("Không đọc được cửa sổ hiện tại.");
+      throw new Error(t("Không đọc được cửa sổ hiện tại."));
     const tabs = await chrome.tabs.query({ windowId: targetWindowId });
     return {
       tabs: tabs
@@ -757,7 +789,7 @@ async function handle(message, sender) {
       active: true,
       windowId: message.windowId,
     });
-    if (!tab?.url) throw new Error("Không đọc được tab hiện tại.");
+    if (!tab?.url) throw new Error(t("Không đọc được tab hiện tại."));
     return {
       state: await commit({
         type: "SAVE_PIN",
@@ -782,7 +814,7 @@ async function handle(message, sender) {
     requireBookmarks();
     const links = await getLinks();
     const link = links.find((item) => item.workspaceId === message.workspaceId);
-    if (!link) throw new Error("Không gian này chưa liên kết bookmark.");
+    if (!link) throw new Error(t("Không gian này chưa liên kết bookmark."));
     link.status = "ok";
     await pullLink(link);
     await setLinks(links);
@@ -805,7 +837,8 @@ async function handle(message, sender) {
   if (message.type === "RESOLVE_SYNC") {
     if (message.choice === "remote") {
       const cloud = await readCloud();
-      if (!cloud) throw new Error("Bản đồng bộ chưa đầy đủ. Hãy thử lại sau.");
+      if (!cloud)
+        throw new Error(t("Bản đồng bộ chưa đầy đủ. Hãy thử lại sau."));
       const state = await readState();
       await chrome.storage.local.set({
         conflictBackup: state,
@@ -840,10 +873,10 @@ async function handle(message, sender) {
         },
       });
       await upload(true);
-    } else throw new Error("Lựa chọn không hợp lệ.");
+    } else throw new Error(t("Lựa chọn không hợp lệ."));
     return {};
   }
-  throw new Error("Yêu cầu không được hỗ trợ.");
+  throw new Error(t("Yêu cầu không được hỗ trợ."));
 }
 chrome.runtime.onMessage.addListener((message, sender, reply) => {
   if (
@@ -871,7 +904,8 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
       const pin = message.id
         ? state.pins.find((p) => p.id === message.id)
         : null;
-      if (message.id && !pin) throw new Error("Trang ghim không còn tồn tại.");
+      if (message.id && !pin)
+        throw new Error(t("Trang ghim không còn tồn tại."));
       await chrome.storage.session.set({
         ["viewer." + sender.tab.windowId]: { pin: pin || null, nonce: C.uid() },
       });
@@ -887,7 +921,7 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
     serial(async () => {
       const state = await readState();
       const pin = state.pins.find((p) => p.id === message.id);
-      if (!pin) throw new Error("Trang ghim không còn tồn tại.");
+      if (!pin) throw new Error(t("Trang ghim không còn tồn tại."));
       await chrome.tabs.create({
         url: C.url(pin.url),
         active: !message.background,
@@ -991,14 +1025,15 @@ async function openFromOmnibox(url, disposition) {
 }
 chrome.omnibox?.onInputStarted.addListener(() => {
   chrome.omnibox.setDefaultSuggestion({
-    description:
+    description: t(
       "Tìm trong Pinned Sidebar: gõ tên, tên miền hoặc nhãn · gõ + để ghim tab hiện tại",
+    ),
   });
 });
 chrome.omnibox?.onInputChanged.addListener((text, suggest) => {
   if (text.trim() === "+") {
     chrome.omnibox.setDefaultSuggestion({
-      description: "Ghim tab hiện tại vào không gian đang chọn",
+      description: t("Ghim tab hiện tại vào không gian đang chọn"),
     });
     suggest([]);
     return;
@@ -1007,8 +1042,11 @@ chrome.omnibox?.onInputChanged.addListener((text, suggest) => {
     .then((results) => {
       chrome.omnibox.setDefaultSuggestion({
         description: results.length
-          ? `Mở <match>${escapeXml(results[0].pin.title)}</match> <dim>· ${escapeXml(results[0].workspace?.name || "")}</dim>`
-          : `Không có trang ghim khớp “${escapeXml(text)}”`,
+          ? t("Mở <match>{0}</match> <dim>· {1}</dim>", [
+              escapeXml(results[0].pin.title),
+              escapeXml(results[0].workspace?.name || ""),
+            ])
+          : t("Không có trang ghim khớp “{0}”", [escapeXml(text)]),
       });
       suggest(
         results.slice(1).map(({ pin, workspace, folder }) => ({
@@ -1028,7 +1066,7 @@ chrome.omnibox?.onInputEntered.addListener((text, disposition) => {
         active: true,
         lastFocusedWindow: true,
       });
-      if (!tab?.url) throw new Error("Không đọc được tab hiện tại.");
+      if (!tab?.url) throw new Error(t("Không đọc được tab hiện tại."));
       await commit({
         type: "SAVE_PIN",
         url: tab.url,
@@ -1053,7 +1091,7 @@ async function setup() {
   await chrome.contextMenus.removeAll();
   chrome.contextMenus.create({
     id: "pin-to-sidebar",
-    title: "Ghim vào Pinned Sidebar",
+    title: t("Ghim vào Pinned Sidebar"),
     contexts: ["page", "link"],
     documentUrlPatterns: ["http://*/*", "https://*/*"],
   });
@@ -1082,7 +1120,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     .then(async () => {
       await chrome.action.setBadgeText({ text: "", tabId: tab?.id });
       await chrome.action.setTitle({
-        title: "Mở Pinned Sidebar",
+        title: t("Mở Pinned Sidebar"),
         tabId: tab?.id,
       });
     })

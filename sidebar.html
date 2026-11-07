@@ -6,6 +6,8 @@
     <meta name="color-scheme" content="light dark" />
     <title>Pinned Sidebar</title>
     <link rel="stylesheet" href="sidebar.css" />
+    <script src="i18n-en.js" defer></script>
+    <script src="i18n.js" defer></script>
     <script src="core.js" defer></script>
     <script src="icons.js" defer></script>
     <script src="sidebar.js" defer></script>
@@ -91,7 +93,8 @@
               title="Ghim tab hiện tại"
               aria-label="Ghim tab hiện tại"
             >
-              <span data-icon="pin"></span><span class="pin-label">Ghim</span>
+              <span data-icon="pin"></span
+              ><span class="pin-label" data-en="Pin">Ghim</span>
             </button>
             <button
               class="icon-button bordered"
@@ -457,6 +460,9 @@
           ></select>
         </div>
         <label class="setting-row"
+          ><span>Ngôn ngữ</span
+          ><select id="setting-language"></select></label
+        ><label class="setting-row"
           ><span>Bấm vào website</span
           ><select id="setting-openMode">
             <option value="sidebar">Mở sidebar</option>

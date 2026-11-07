@@ -3,6 +3,7 @@
    applies it. Shared by the worker and Node tests. */
 (function (root) {
   "use strict";
+  const { t } = root.PinnedI18n || require("./i18n.js");
   const C =
     root.Pinned || (typeof require === "function" && require("./core.js"));
   const MAX_LINKED_URLS = 2000;
@@ -48,15 +49,19 @@
   function limits(tree) {
     if (tree.links.length > MAX_LINKED_URLS)
       throw new Error(
-        `Thư mục có hơn ${MAX_LINKED_URLS} bookmark. Hãy chọn thư mục nhỏ hơn.`,
+        t("Thư mục có hơn {0} bookmark. Hãy chọn thư mục nhỏ hơn.", [
+          MAX_LINKED_URLS,
+        ]),
       );
     if (tree.topFolders.length > MAX_LINKED_FOLDERS)
       throw new Error(
-        `Thư mục có hơn ${MAX_LINKED_FOLDERS} thư mục con. Hãy chọn thư mục nhỏ hơn.`,
+        t("Thư mục có hơn {0} thư mục con. Hãy chọn thư mục nhỏ hơn.", [
+          MAX_LINKED_FOLDERS,
+        ]),
       );
   }
   function folderName(node) {
-    return (node.title || "").trim().slice(0, 80) || "Không tên";
+    return (node.title || "").trim().slice(0, 80) || t("Không tên");
   }
   function pinTitle(node, address) {
     return (node.title || "").trim().slice(0, 180) || C.host(address);

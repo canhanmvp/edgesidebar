@@ -20,11 +20,34 @@ check(
   /^\d+(\.\d+){0,3}$/.test(manifest.version),
   "version phải dạng 1-4 số cách nhau bằng dấu chấm",
 );
-check(manifest.name.length <= 45, "name tối đa 45 ký tự");
+// Store limits apply to every locale's resolved __MSG_name__ value.
+const localesDir = path.join(dir, "_locales");
+const locales = fs.existsSync(localesDir) ? fs.readdirSync(localesDir) : [];
 check(
-  manifest.description && manifest.description.length <= 132,
-  "description bắt buộc, tối đa 132 ký tự",
+  !manifest.default_locale || locales.includes(manifest.default_locale),
+  "thiếu _locales/" + manifest.default_locale,
 );
+for (const locale of locales.length ? locales : [""]) {
+  const messages = locale
+    ? JSON.parse(
+        fs.readFileSync(path.join(localesDir, locale, "messages.json"), "utf8"),
+      )
+    : {};
+  const resolve = (value) =>
+    String(value || "").replace(
+      /^__MSG_(\w+)__$/,
+      (match, key) => messages[key]?.message ?? match,
+    );
+  const name = resolve(manifest.name);
+  const description = resolve(manifest.description);
+  const where = locale ? ` (${locale})` : "";
+  check(!name.startsWith("__MSG_"), "thiếu message cho name" + where);
+  check(name.length <= 45, "name tối đa 45 ký tự" + where);
+  check(
+    description && !description.startsWith("__MSG_") && description.length <= 132,
+    "description bắt buộc, tối đa 132 ký tự" + where,
+  );
+}
 for (const size of ["16", "48", "128"])
   check(manifest.icons?.[size], "thiếu icon " + size + "px");
 const referenced = new Set([

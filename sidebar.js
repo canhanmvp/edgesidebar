@@ -247,6 +247,7 @@ function applySettings() {
   for (const key of [
     "theme",
     "language",
+    "embedConsent",
     "openMode",
     "overlaySide",
     "compact",
@@ -1312,6 +1313,30 @@ async function openPin(pin, mode, background = false) {
     return;
   }
   closeMenu();
+  const origin = new URL(pin.url).origin;
+  // Unlocking strips X-Frame-Options/CSP for that site, so ask the first time
+  // unless the user chose "always". The quick translator needs no unlock.
+  if (
+    !isGoogleTranslate(pin) &&
+    !embedOrigins.includes(origin) &&
+    state.settings.embedConsent !== "always"
+  ) {
+    const answer = await choose(
+      t("Hiển thị {0} trong sidebar?", [C.host(pin.url)]),
+      t(
+        "Để hiện website này trong sidebar, extension sẽ bỏ lệnh chặn nhúng khung (X-Frame-Options, CSP) chỉ cho đúng website này và chỉ khi sidebar mở nó. Bạn có thể thu hồi trong Cài đặt.",
+      ),
+      [
+        { label: t("Mở tab mới"), value: "tab" },
+        { label: t("Luôn cho phép"), value: "always" },
+        { label: t("Cho phép"), value: "allow" },
+      ],
+    );
+    if (answer === "tab") return openPin(pin, "tab");
+    if (answer !== "allow" && answer !== "always") return;
+    if (answer === "always")
+      await mutate({ type: "SETTINGS", patch: { embedConsent: "always" } });
+  }
   currentPin = pin;
   $("viewer-title").textContent = pin.title;
   $("viewer-host").textContent = C.host(pin.url);
@@ -1328,7 +1353,6 @@ async function openPin(pin, mode, background = false) {
   $("load-line").hidden = false;
   $("viewer-status").textContent = t("Đang tự mở khóa website…");
   $("viewer-back").focus();
-  const origin = new URL(pin.url).origin;
   if (!embedOrigins.includes(origin)) {
     await request("EMBED", { origin, enabled: true });
     embedOrigins = [...new Set([...embedOrigins, origin])];
@@ -1492,6 +1516,7 @@ $("storage-status").onclick = settingsDialog;
 for (const key of [
   "theme",
   "language",
+  "embedConsent",
   "openMode",
   "overlaySide",
   "compact",
@@ -1846,29 +1871,65 @@ $("import-sessions-file").onchange = () =>
     renderSessions();
     toast(t("Đã nhập {0} phiên tab.", [mapped.length]));
   });
+// Import sources: our own JSON plus exports from other tools.
+const IMPORT_FORMATS = {
+  pinned: "Pinned Sidebar",
+  onetab: "OneTab",
+  toby: "Toby",
+  "workona-json": "Workona",
+  "workona-html": "Workona",
+  "raindrop-csv": "Raindrop.io",
+  "raindrop-html": "Raindrop.io",
+};
+const IMPORT_ERRORS = {
+  EMPTY: () => t("File trống."),
+  INVALID_JSON: () => t("File không phải JSON hợp lệ."),
+  UNKNOWN_FORMAT: () =>
+    t(
+      "Chưa nhận ra định dạng file. Hỗ trợ: JSON của Pinned Sidebar, OneTab, Toby, Workona, Raindrop.io và file bookmark HTML.",
+    ),
+};
+function readImport(text, fileName) {
+  try {
+    return PinnedImport.parseImport(text, fileName, {
+      labels: { group: "OneTab {n}", tabs: t("Tab"), overflow: t("Đã nhập") },
+    });
+  } catch (error) {
+    throw new Error(IMPORT_ERRORS[error.code]?.() || error.message);
+  }
+}
 $("import-file").onchange = () =>
   run(null, async () => {
     const file = $("import-file").files[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024)
-      throw new Error(t("File quá lớn. Giới hạn 5 MB."));
-    let data;
-    try {
-      data = JSON.parse(await file.text());
-    } catch {
-      throw new Error(t("File không phải JSON hợp lệ."));
-    }
+    if (file.size > 20 * 1024 * 1024)
+      throw new Error(t("File quá lớn. Giới hạn 20 MB."));
+    const imported = readImport(await file.text(), file.name);
+    const data = imported.data;
     const checked = C.parse(data);
+    const dropped =
+      checked.skipped +
+      (imported.skipped || 0) +
+      (imported.duplicates || 0) +
+      (imported.truncated || 0);
+    const format =
+      IMPORT_FORMATS[imported.format] ||
+      (imported.format === "netscape"
+        ? t("file bookmark HTML")
+        : String(imported.format || ""));
     const result = await choose(
       t("Nhập bộ sưu tập"),
-      t(
-        "Đã đọc {0} website và {1} thư mục.{2}\n\nGộp thêm sẽ bỏ qua website đã có. Thay thế sẽ lưu danh sách hiện tại thành bản dự phòng trước khi nhập.",
-        [
-          checked.state.pins.length,
-          checked.state.folders.length,
-          checked.skipped ? t(" Bỏ qua {0} mục trùng.", [checked.skipped]) : "",
-        ],
-      ),
+      t("Định dạng: {0}. ", [format]) +
+        t(
+          "Đã đọc {0} website và {1} thư mục.{2}\n\nGộp thêm sẽ bỏ qua website đã có. Thay thế sẽ lưu danh sách hiện tại thành bản dự phòng trước khi nhập.",
+          [
+            checked.state.pins.length,
+            checked.state.folders.length,
+            dropped
+              ? t(" Bỏ qua {0} mục trùng hoặc không phải website.", [dropped])
+              : "",
+          ],
+        ),
       [
         { label: t("Thay thế"), value: "replace", danger: true },
         { label: t("Gộp thêm"), value: "merge" },
@@ -1983,6 +2044,57 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (area === "session" && windowId != null && changes["viewer." + windowId])
     run(null, () => viewRequest(changes["viewer." + windowId].newValue));
 });
+// First-run tour: language, first pin, then the main shortcuts.
+let welcomePage = 1;
+function showWelcomePage(page) {
+  welcomePage = page;
+  for (const section of document.querySelectorAll(".welcome-page"))
+    section.hidden = Number(section.dataset.page) !== page;
+  $("welcome-step").textContent = page + " / 3";
+  $("welcome-title").textContent = [
+    t("Chào mừng tới Pinned Sidebar"),
+    t("Ghim trang đầu tiên"),
+    t("Vài mẹo nhỏ"),
+  ][page - 1];
+  $("welcome-next").textContent = page === 3 ? t("Bắt đầu") : t("Tiếp");
+}
+function openWelcome() {
+  $("welcome-language").replaceChildren(
+    ...PinnedI18n.LANGUAGES.map(
+      ([value, label]) =>
+        new Option(value === "auto" ? t(label) : label, value),
+    ),
+  );
+  $("welcome-language").value = state.settings.language;
+  showWelcomePage(1);
+  showDialog($("welcome-dialog"));
+}
+$("welcome-dialog").addEventListener("close", () => {
+  chrome.storage.local.set({ onboarding: "done" }).catch(() => {});
+});
+$("welcome-skip").onclick = () => $("welcome-dialog").close();
+$("welcome-next").onclick = () =>
+  welcomePage < 3
+    ? showWelcomePage(welcomePage + 1)
+    : $("welcome-dialog").close();
+$("welcome-pin").onclick = () =>
+  run($("welcome-pin"), async () => {
+    const data = await request("PIN_CURRENT", {
+      windowId,
+      workspaceId: activeWorkspaceId,
+    });
+    accept(data.state);
+    toast(t("Đã ghim tab hiện tại."));
+    showWelcomePage(3);
+  });
+// Changing language reloads the sidebar; the tour reopens on step 1.
+$("welcome-language").onchange = () =>
+  run($("welcome-language"), () =>
+    mutate({
+      type: "SETTINGS",
+      patch: { language: $("welcome-language").value },
+    }),
+  );
 async function reloadState() {
   const data = await request("GET_STATE");
   syncStatus = data.syncStatus || {};
@@ -2013,6 +2125,8 @@ async function reloadState() {
     }
     const session = await chrome.storage.session.get("viewer." + windowId);
     await viewRequest(session["viewer." + windowId]);
+    const { onboarding } = await chrome.storage.local.get("onboarding");
+    if (onboarding === "pending") openWelcome();
   } catch (error) {
     $("loading-state").textContent = error.message;
     $("loading-state").setAttribute("role", "alert");

@@ -1103,9 +1103,12 @@ async function setup() {
   // Bookmarks may have changed while the extension was not running.
   await pullAll().catch((error) => console.warn("Bookmarks:", error));
 }
-chrome.runtime.onInstalled.addListener(() =>
-  serial(setup).catch(console.error),
-);
+chrome.runtime.onInstalled.addListener((details) => {
+  // Only brand-new installs see the welcome tour; updates keep their flow.
+  if (details?.reason === "install")
+    chrome.storage.local.set({ onboarding: "pending" }).catch(() => {});
+  serial(setup).catch(console.error);
+});
 chrome.runtime.onStartup.addListener(() => serial(setup).catch(console.error));
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId !== "pin-to-sidebar") return;

@@ -91,6 +91,21 @@ async function waitState(page, count) {
     /^https:\/\/www\.google\.com\/s2\/favicons\?sz=64&domain_url=/,
   );
   passed("real extension installs and initial collection renders");
+  // A brand-new install opens the 3-step welcome tour once.
+  const welcome = page.locator("#welcome-dialog");
+  await welcome.waitFor();
+  assert.equal(await page.locator("#welcome-step").textContent(), "1 / 3");
+  await page.locator("#welcome-next").click();
+  await page.locator("#welcome-pin").waitFor();
+  await page.locator("#welcome-next").click();
+  assert.equal(await page.locator("#welcome-next").textContent(), "Bắt đầu");
+  await page.locator("#welcome-next").click();
+  await welcome.waitFor({ state: "hidden" });
+  await page.waitForFunction(
+    async () =>
+      (await chrome.storage.local.get("onboarding")).onboarding === "done",
+  );
+  passed("first install shows the welcome tour once and remembers it");
   const collections = page.locator('.group[data-folder]:not([data-folder=""])');
   assert.equal(await collections.count(), 2);
   const firstCollection = collections.nth(0);
@@ -405,6 +420,15 @@ async function waitState(page, count) {
   passed("theme swatches support click and arrow keys; header fits 280px");
   // Native DNR matching is enabled automatically; allowed only for sidebar initiator.
   await page.getByRole("link", { name: /^Trang thử nghiệm —/ }).click();
+  // First time: the user must agree before headers are stripped for a site.
+  await page.locator("#choice-dialog", { hasText: "trong sidebar?" }).waitFor();
+  assert.equal(
+    (await sw.evaluate(() => chrome.declarativeNetRequest.getDynamicRules()))
+      .length,
+    0,
+    "nothing is unlocked before consent",
+  );
+  await page.getByRole("button", { name: "Cho phép", exact: true }).click();
   await page.locator("#viewer:not([hidden])").waitFor();
   await page
     .frameLocator("#viewer-frame")
@@ -860,6 +884,39 @@ async function waitState(page, count) {
   await waitTitles(sortId, ["A", "C"]);
   passed("bookmarks move by keyboard and delete with undo");
   await bm.close();
+  const importer = await context.newPage();
+  importer.on("pageerror", (error) => errors.push(error.message));
+  await importer.goto(`chrome-extension://${id}/sidebar.html`);
+  await importer.locator("#pins-tab").click();
+  await importer.locator("#settings-btn").click();
+  const [chooser] = await Promise.all([
+    importer.waitForEvent("filechooser"),
+    importer.locator("#import-btn").click(),
+  ]);
+  await chooser.setFiles({
+    name: "onetab.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from(
+      [
+        "https://onetab-a.example/ | Trang A",
+        "https://onetab-b.example/ | Trang B",
+        "",
+        "javascript:void(0) | Bỏ qua",
+        "https://onetab-c.example/ | Trang C",
+        "",
+      ].join("\n"),
+    ),
+  });
+  await importer.locator("#choice-dialog", { hasText: "OneTab" }).waitFor();
+  await importer.getByRole("button", { name: "Gộp thêm", exact: true }).click();
+  await importer.waitForFunction(async () => {
+    const data = await chrome.runtime.sendMessage({ type: "GET_STATE" });
+    return ["a", "b", "c"].every((x) =>
+      data.state.pins.some((pin) => pin.url === `https://onetab-${x}.example/`),
+    );
+  });
+  await importer.close();
+  passed("OneTab export imports through the Import data button");
   const english = await context.newPage();
   english.on("pageerror", (error) => errors.push(error.message));
   await english.goto(`chrome-extension://${id}/sidebar.html`);

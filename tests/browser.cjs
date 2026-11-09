@@ -51,6 +51,8 @@ const server = http.createServer((req, res) => {
 });
 let context;
 const errors = [];
+// Extension pages should never navigate on their own; printed on failure.
+const navigations = [];
 const steps = [];
 function passed(name) {
   steps.push(name);
@@ -71,16 +73,30 @@ async function waitState(page, count) {
     viewport: { width: 380, height: 850 },
     // The checks below read Vietnamese labels; "auto" language follows this.
     locale: "vi-VN",
+    // Linux Chromium takes its UI language from the environment, not --lang.
+    env: { ...process.env, LANGUAGE: "vi", LANG: "vi_VN.UTF-8" },
     args: [
       "--lang=vi",
       `--disable-extensions-except=${extension}`,
       `--load-extension=${extension}`,
     ],
   });
+  const track = (p) =>
+    p.on("framenavigated", (frame) => {
+      if (frame === p.mainFrame())
+        navigations.push(`${new Date().toISOString()} ${frame.url()}`);
+    });
+  context.pages().forEach(track);
+  context.on("page", track);
   const sw =
     context.serviceWorkers()[0] ||
     (await context.waitForEvent("serviceworker"));
   const id = new URL(sw.url()).host;
+  // The checks read Vietnamese labels. Linux Chromium ignores --lang, so do
+  // not rely on "auto" detection: set the language before any page opens.
+  await sw.evaluate(() =>
+    serial(() => commit({ type: "SETTINGS", patch: { language: "vi" } })),
+  );
   const page = await context.newPage();
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(`chrome-extension://${id}/sidebar.html`);
@@ -91,6 +107,21 @@ async function waitState(page, count) {
     /^https:\/\/www\.google\.com\/s2\/favicons\?sz=64&domain_url=/,
   );
   passed("real extension installs and initial collection renders");
+  // A brand-new install opens the 3-step welcome tour once.
+  const welcome = page.locator("#welcome-dialog");
+  await welcome.waitFor();
+  assert.equal(await page.locator("#welcome-step").textContent(), "1 / 3");
+  await page.locator("#welcome-next").click();
+  await page.locator("#welcome-pin").waitFor();
+  await page.locator("#welcome-next").click();
+  assert.equal(await page.locator("#welcome-next").textContent(), "Bắt đầu");
+  await page.locator("#welcome-next").click();
+  await welcome.waitFor({ state: "hidden" });
+  await page.waitForFunction(
+    async () =>
+      (await chrome.storage.local.get("onboarding")).onboarding === "done",
+  );
+  passed("first install shows the welcome tour once and remembers it");
   const collections = page.locator('.group[data-folder]:not([data-folder=""])');
   assert.equal(await collections.count(), 2);
   const firstCollection = collections.nth(0);
@@ -138,10 +169,23 @@ async function waitState(page, count) {
   await page.locator("#workspace-select").selectOption("workspace-default");
   await waitState(page, 3);
   passed("workspaces isolate collections and can switch back");
+  // Starter names follow the browser language at install time ("Mặc định" or
+  // "Default"); read them instead of assuming one.
+  const defaultName = await page.evaluate(
+    async () =>
+      (await chrome.runtime.sendMessage({ type: "GET_STATE" })).state.workspaces.find(
+        (item) => item.id === "workspace-default",
+      ).name,
+  );
+  // Accessible-name match by prefix, so no regex escaping of the name.
+  const reopenDefault = {
+    name: "Mở lại " + defaultName + " ·",
+    exact: false,
+  };
   const sessionTab = await context.newPage();
   await sessionTab.goto(origin + "/session");
   await page.locator("#save-session").click();
-  await page.getByRole("button", { name: /^Mở lại Mặc định ·/ }).waitFor();
+  await page.getByRole("button", reopenDefault).waitFor();
   const savedSessions = await page.evaluate(
     async () => (await chrome.storage.local.get("savedSessions")).savedSessions,
   );
@@ -170,7 +214,7 @@ async function waitState(page, count) {
     buffer: Buffer.from(JSON.stringify(exportedSessions)),
   });
   await page.getByRole("button", { name: "Gộp thêm", exact: true }).click();
-  await page.getByRole("button", { name: /^Mở lại Mặc định ·/ }).waitFor();
+  await page.getByRole("button", reopenDefault).waitFor();
   await sessionTab.close();
   passed("saved tab sessions persist locally and can be exported/imported");
   const translate = await page.evaluate(() =>
@@ -314,13 +358,22 @@ async function waitState(page, count) {
   const moved = await from.getAttribute("data-pin");
   const target = await to.getAttribute("data-pin");
   await from.dragTo(to);
-  const saved = await page.evaluate(
-    async () => (await chrome.runtime.sendMessage({ type: "GET_STATE" })).state,
+  // The drop saves through the worker asynchronously; wait for the new order.
+  await page.waitForFunction(
+    async ([moved, target]) => {
+      const { state } = await chrome.runtime.sendMessage({ type: "GET_STATE" });
+      const index = (id) => state.pins.findIndex((p) => p.id === id);
+      return index(moved) < index(target);
+    },
+    [moved, target],
   );
-  assert.ok(
-    saved.pins.findIndex((p) => p.id === moved) <
-      saved.pins.findIndex((p) => p.id === target),
-  );
+  assert.ok(page.url().endsWith("/sidebar.html"), "sidebar did not navigate");
+  // Dropping a pin's link where no list accepts it must not navigate away.
+  const before = navigations.length;
+  await rows.nth(0).dragTo(page.locator(".app-header .brand"));
+  await page.waitForTimeout(300);
+  assert.equal(navigations.length, before, "stray drop navigated the sidebar");
+  assert.ok(page.url().endsWith("/sidebar.html"));
   passed("native drag/drop completes and saves order");
   // Viewport and theme inspection.
   await page.locator("#settings-btn").click();
@@ -405,6 +458,15 @@ async function waitState(page, count) {
   passed("theme swatches support click and arrow keys; header fits 280px");
   // Native DNR matching is enabled automatically; allowed only for sidebar initiator.
   await page.getByRole("link", { name: /^Trang thử nghiệm —/ }).click();
+  // First time: the user must agree before headers are stripped for a site.
+  await page.locator("#choice-dialog", { hasText: "trong sidebar?" }).waitFor();
+  assert.equal(
+    (await sw.evaluate(() => chrome.declarativeNetRequest.getDynamicRules()))
+      .length,
+    0,
+    "nothing is unlocked before consent",
+  );
+  await page.getByRole("button", { name: "Cho phép", exact: true }).click();
   await page.locator("#viewer:not([hidden])").waitFor();
   await page
     .frameLocator("#viewer-frame")
@@ -860,6 +922,39 @@ async function waitState(page, count) {
   await waitTitles(sortId, ["A", "C"]);
   passed("bookmarks move by keyboard and delete with undo");
   await bm.close();
+  const importer = await context.newPage();
+  importer.on("pageerror", (error) => errors.push(error.message));
+  await importer.goto(`chrome-extension://${id}/sidebar.html`);
+  await importer.locator("#pins-tab").click();
+  await importer.locator("#settings-btn").click();
+  const [chooser] = await Promise.all([
+    importer.waitForEvent("filechooser"),
+    importer.locator("#import-btn").click(),
+  ]);
+  await chooser.setFiles({
+    name: "onetab.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from(
+      [
+        "https://onetab-a.example/ | Trang A",
+        "https://onetab-b.example/ | Trang B",
+        "",
+        "javascript:void(0) | Bỏ qua",
+        "https://onetab-c.example/ | Trang C",
+        "",
+      ].join("\n"),
+    ),
+  });
+  await importer.locator("#choice-dialog", { hasText: "OneTab" }).waitFor();
+  await importer.getByRole("button", { name: "Gộp thêm", exact: true }).click();
+  await importer.waitForFunction(async () => {
+    const data = await chrome.runtime.sendMessage({ type: "GET_STATE" });
+    return ["a", "b", "c"].every((x) =>
+      data.state.pins.some((pin) => pin.url === `https://onetab-${x}.example/`),
+    );
+  });
+  await importer.close();
+  passed("OneTab export imports through the Import data button");
   const english = await context.newPage();
   english.on("pageerror", (error) => errors.push(error.message));
   await english.goto(`chrome-extension://${id}/sidebar.html`);
@@ -912,10 +1007,12 @@ async function waitState(page, count) {
     path.join(out, "browser-report.json"),
     JSON.stringify({ passed: steps, errors }, null, 2),
   );
+  console.log("Main-frame navigations:\n" + navigations.join("\n"));
   console.log(`${steps.length} browser checks passed.`);
 })()
   .catch(async (error) => {
     console.error(error);
+    console.error("Main-frame navigations:\n" + navigations.join("\n"));
     if (context) {
       const page = context
         .pages()

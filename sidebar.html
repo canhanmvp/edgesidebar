@@ -9,6 +9,7 @@
     <script src="i18n-en.js" defer></script>
     <script src="i18n.js" defer></script>
     <script src="core.js" defer></script>
+    <script src="import-core.js" defer></script>
     <script src="icons.js" defer></script>
     <script src="sidebar.js" defer></script>
     <script src="sidebar-bookmarks.js" defer></script>
@@ -305,7 +306,7 @@
         <button id="storage-status" class="storage-status">
           <span class="status-dot"></span
           ><span id="storage-label">Lưu trên thiết bị</span></button
-        ><span class="version">V4.1.0</span>
+        ><span class="version">V4.2.0</span>
       </footer>
     </div>
     <div id="item-menu" class="item-menu" role="menu" hidden></div>
@@ -514,7 +515,7 @@
           <button class="button" id="export-btn">
             <span data-icon="download"></span>Xuất JSON</button
           ><button class="button" id="import-btn">
-            <span data-icon="upload"></span>Nhập JSON
+            <span data-icon="upload"></span>Nhập dữ liệu
           </button>
         </div>
         <div class="button-pair">
@@ -554,10 +555,17 @@
           Chỉ áp dụng khi chính sidebar mở website. Bạn có thể thu hồi từng
           website bên dưới.
         </p>
+        <label class="setting-row"
+          ><span>Mở website mới trong sidebar</span
+          ><select id="setting-embedConsent">
+            <option value="ask">Hỏi trước</option>
+            <option value="always">Luôn cho phép</option>
+          </select></label
+        >
         <div id="embed-list"></div>
       </section>
       <p class="settings-footnote">
-        Pinned Sidebar 4.1 · Ctrl + M hoặc Ctrl + Shift + Y để mở
+        Pinned Sidebar 4.2 · Ctrl + M hoặc Ctrl + Shift + Y để mở
       </p>
     </dialog>
     <dialog id="link-dialog" aria-labelledby="link-dialog-title">
@@ -640,6 +648,66 @@
         </button>
       </div>
     </dialog>
+    <dialog id="welcome-dialog" aria-labelledby="welcome-title">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow" id="welcome-step">1 / 3</p>
+          <h2 id="welcome-title">Chào mừng tới Pinned Sidebar</h2>
+        </div>
+        <button
+          type="button"
+          class="icon-button"
+          data-close
+          aria-label="Đóng"
+          data-icon="close"
+        ></button>
+      </div>
+      <section class="welcome-page" data-page="1">
+        <p class="choice-copy">
+          Không gian làm việc ngay cạnh trình duyệt: mở website thật trong
+          sidebar, ghim, sắp xếp và lưu phiên tab. Dữ liệu lưu trên máy bạn.
+        </p>
+        <label class="setting-row"
+          ><span>Ngôn ngữ</span
+          ><select id="welcome-language"></select
+        ></label>
+      </section>
+      <section class="welcome-page" data-page="2" hidden>
+        <p class="choice-copy">
+          Ghim trang bạn đang xem để mở lại chỉ bằng một cú bấm. Đã có sẵn vài
+          trang mẫu; bạn có thể xóa bất cứ lúc nào.
+        </p>
+        <button
+          class="button primary full-width"
+          id="welcome-pin"
+          type="button"
+        >
+          <span data-icon="pin"></span>Ghim tab hiện tại
+        </button>
+        <p class="subtle">
+          Đang dùng OneTab, Toby, Workona hay Raindrop? Vào Cài đặt → Nhập dữ
+          liệu để chuyển sang.
+        </p>
+      </section>
+      <section class="welcome-page" data-page="3" hidden>
+        <ul class="welcome-tips">
+          <li><kbd>Ctrl</kbd> + <kbd>M</kbd> mở sidebar ở bất kỳ đâu.</li>
+          <li>
+            Gõ <kbd>p</kbd> rồi phím cách trên thanh địa chỉ để tìm trang ghim.
+          </li>
+          <li>
+            Thanh icon nhỏ trên mỗi website mở nhanh trang ghim; kéo để đổi chỗ.
+          </li>
+          <li>Tab Bookmark: duyệt, tìm và liên kết bookmark với không gian.</li>
+        </ul>
+      </section>
+      <div class="dialog-actions">
+        <button type="button" class="button" id="welcome-skip">Bỏ qua</button
+        ><button type="button" class="button primary" id="welcome-next">
+          Tiếp
+        </button>
+      </div>
+    </dialog>
     <dialog id="choice-dialog" aria-labelledby="choice-title">
       <div class="dialog-heading">
         <h2 id="choice-title"></h2>
@@ -656,7 +724,7 @@
     <input
       type="file"
       id="import-file"
-      accept="application/json,.json"
+      accept=".json,.html,.htm,.csv,.txt,application/json,text/html,text/csv,text/plain"
       hidden
     />
     <input

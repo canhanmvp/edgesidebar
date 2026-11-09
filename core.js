@@ -5,6 +5,7 @@
   const DEFAULTS = Object.freeze({
     theme: "system",
     language: "auto",
+    embedConsent: "ask",
     compact: false,
     overlay: true,
     overlaySide: "right",
@@ -258,6 +259,7 @@
       overlaySide: ["left", "right"],
       openMode: ["sidebar", "tab"],
       language: ["auto", "vi", "en"],
+      embedConsent: ["ask", "always"],
     })) {
       if (choices.includes(input[key])) result[key] = input[key];
     }

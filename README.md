@@ -1,6 +1,14 @@
-# Pinned Sidebar 4.1
+# Pinned Sidebar 4.2
 
 Extension Manifest V3 cho Edge/Chrome: biến sidebar thành không gian làm việc cá nhân để ghim, tìm, sắp xếp website và lưu lại các phiên tab. Giao diện tiếng Việt gọn trong một màn hình (thanh công cụ cố định, chỉ danh sách cuộn), 16 giao diện màu: theo hệ thống, Sáng, Tối, Đen, Pastel, Đại dương, Hoàng hôn, Oải hương, Hồng đào, Cát, Nửa đêm, Rừng, Nord, Mocha, Mận, Dracula; có chế độ chỉ biểu tượng.
+
+## Có gì mới trong 4.2
+
+- **Tiếng Anh**: toàn bộ giao diện có tiếng Việt và tiếng Anh, đổi trong Cài đặt → Ngôn ngữ (mặc định theo trình duyệt).
+- **Nhập từ công cụ khác**: Cài đặt → **Nhập dữ liệu** nhận JSON của Pinned Sidebar, file xuất của OneTab, Toby, Workona, Raindrop.io và file bookmark HTML của Chrome/Edge. Hộp xác nhận cho biết định dạng nhận ra và số mục bị bỏ qua.
+- **Hỏi trước khi mở khóa nhúng**: lần đầu mở một website trong sidebar sẽ hỏi Cho phép / Luôn cho phép / Mở tab mới. Đổi trong Cài đặt → "Mở website mới trong sidebar".
+- **Lần mở đầu tiên**: cài mới sẽ thấy 3 bước chào (ngôn ngữ, ghim trang đầu tiên, mẹo dùng). Người cập nhật từ bản cũ không thấy.
+- **CI**: chạy trên runner của GitHub, gồm cả test trình duyệt.
 
 ## Ngôn ngữ / Language
 
@@ -53,7 +61,7 @@ Bản 2.0 đọc `pins` và `settings` từ bộ nhớ sync cũ, chuyển thư m
 2. Chọn **Load unpacked**, trỏ tới thư mục chứa `manifest.json`.
 3. Bấm biểu tượng extension, `Ctrl+M` hoặc `Ctrl+Shift+Y` để mở sidebar. Nếu Edge giữ phím `Ctrl+M` cho chức năng hệ thống, vào `edge://extensions/shortcuts` để đổi phím.
 
-Bản đóng gói sạch ở `dist/pinned-sidebar/`; chỉ chứa các file chạy extension. File phát hành để chuyển máy là `release/pinned-sidebar-4.1.0.zip`: giải nén ZIP trước, rồi chọn thư mục đã giải nén trong **Load unpacked**. Khi cập nhật, chọn đúng thư mục cài cũ và bấm **Reload** để giữ extension ID và dữ liệu local. Dùng Chromium 120+ hoặc phiên bản Edge tương ứng có Side Panel API. Người sử dụng không cần Node.js.
+Bản đóng gói sạch ở `dist/pinned-sidebar/`; chỉ chứa các file chạy extension. File phát hành để chuyển máy là `release/pinned-sidebar-4.2.0.zip`: giải nén ZIP trước, rồi chọn thư mục đã giải nén trong **Load unpacked**. Khi cập nhật, chọn đúng thư mục cài cũ và bấm **Reload** để giữ extension ID và dữ liệu local. Dùng Chromium 120+ hoặc phiên bản Edge tương ứng có Side Panel API. Người sử dụng không cần Node.js.
 
 ## Sử dụng
 
@@ -133,15 +141,14 @@ npm run build
 - `tests/`: unit/integration tests và kiểm thử extension thật bằng Chromium với profile tách biệt.
 - `scripts/build.cjs`: sao chép đúng các file runtime sang `dist/pinned-sidebar`. Cờ `--grant-optional` (chỉ dùng cho kiểm thử browser) chuyển quyền tùy chọn thành quyền bắt buộc vì Chromium headless không bấm được hộp xin quyền.
 
-### CI với runner Docker trên máy
+### CI
 
-`.github/workflows/test.yml` chạy `npm test` khi push lên `main` và khi có pull request, trên runner tự host có nhãn `edgesidebar`. Runner là container chính thức `ghcr.io/actions/actions-runner` trong `ci/runner/`:
+`.github/workflows/test.yml` chạy khi push lên `main` và khi có pull request, trên runner `ubuntu-latest` của GitHub (miễn phí cho repo công khai):
 
-1. Lấy token: repo **Settings → Actions → Runners → New self-hosted runner**, chép giá trị sau `--token` (cần quyền Admin, hết hạn sau 1 giờ, chỉ dùng một lần).
-2. Chép `ci/runner/.env.example` thành `ci/runner/.env` và điền `RUNNER_TOKEN`. File `.env` không được commit.
-3. `docker compose -f ci/runner/compose.yml up -d`. Đăng ký được giữ trong volume `runner-home`, khởi động lại máy không cần token mới. Gỡ hẳn: `docker compose -f ci/runner/compose.yml down -v` rồi xóa runner trong Settings.
+- **unit**: `npm test` và `npm run package` (kiểm tra gói theo quy định store, mọi ngôn ngữ).
+- **browser**: cài Chromium cho Playwright rồi chạy `npm run test:browser`; khi lỗi, `test-results/` được tải lên làm artifact.
 
-Repo công khai nên workflow bỏ qua pull request từ fork, và container không có Docker socket hay `sudo`. Nên bật thêm **Settings → Actions → General → Fork pull request workflows → Require approval for all outside collaborators**, vì fork có thể sửa chính file workflow.
+Cấu hình runner Docker tự host cũ vẫn nằm trong `ci/runner/` nếu muốn chạy trên máy riêng; khi đó đổi `runs-on` sang `[self-hosted, linux, edgesidebar]` và chặn workflow từ fork.
 
 Bộ kiểm thử browser không đăng nhập tài khoản cá nhân; dùng HTTP server local có fixture chặn iframe. Ảnh QA và báo cáo nằm trong `test-results/`. Sync giữa hai tài khoản/thiết bị Edge thực tế cần kiểm tra thủ công; các bài tự động kiểm tra API, quota, bản chụp chưa đủ và xung đột trong môi trường kiểm thử.
 

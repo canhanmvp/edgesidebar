@@ -67,7 +67,11 @@ function htmlKeys() {
   for (const m of html.matchAll(/(?:title|aria-label|placeholder)="([^"]*)"/g))
     keys.add(norm(m[1]));
   // Brand names and samples stay as they are in every language.
+  // Key names in <kbd> (Ctrl, M, p) are the same in every language too.
   const SAME = [
+    "Ctrl",
+    "M",
+    "p",
     "Pinned Sidebar",
     "pinned",
     "Bookmark",

@@ -15,12 +15,9 @@ concurrency:
 
 jobs:
   unit:
-    # The runner is a Docker container on a personal machine (ci/runner).
-    # Never run code from forked pull requests on it.
-    if: >-
-      github.event_name != 'pull_request' ||
-      github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: [self-hosted, linux, edgesidebar]
+    # GitHub-hosted runners are free for public repositories and never wait
+    # on a personal machine being online.
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
@@ -30,3 +27,22 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - run: npm run package
+
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-test-results
+          path: test-results/

@@ -51,6 +51,8 @@ const server = http.createServer((req, res) => {
 });
 let context;
 const errors = [];
+// Extension pages should never navigate on their own; printed on failure.
+const navigations = [];
 const steps = [];
 function passed(name) {
   steps.push(name);
@@ -77,6 +79,13 @@ async function waitState(page, count) {
       `--load-extension=${extension}`,
     ],
   });
+  const track = (p) =>
+    p.on("framenavigated", (frame) => {
+      if (frame === p.mainFrame())
+        navigations.push(`${new Date().toISOString()} ${frame.url()}`);
+    });
+  context.pages().forEach(track);
+  context.on("page", track);
   const sw =
     context.serviceWorkers()[0] ||
     (await context.waitForEvent("serviceworker"));
@@ -329,13 +338,22 @@ async function waitState(page, count) {
   const moved = await from.getAttribute("data-pin");
   const target = await to.getAttribute("data-pin");
   await from.dragTo(to);
-  const saved = await page.evaluate(
-    async () => (await chrome.runtime.sendMessage({ type: "GET_STATE" })).state,
+  // The drop saves through the worker asynchronously; wait for the new order.
+  await page.waitForFunction(
+    async ([moved, target]) => {
+      const { state } = await chrome.runtime.sendMessage({ type: "GET_STATE" });
+      const index = (id) => state.pins.findIndex((p) => p.id === id);
+      return index(moved) < index(target);
+    },
+    [moved, target],
   );
-  assert.ok(
-    saved.pins.findIndex((p) => p.id === moved) <
-      saved.pins.findIndex((p) => p.id === target),
-  );
+  assert.ok(page.url().endsWith("/sidebar.html"), "sidebar did not navigate");
+  // Dropping a pin's link where no list accepts it must not navigate away.
+  const before = navigations.length;
+  await rows.nth(0).dragTo(page.locator(".app-header .brand"));
+  await page.waitForTimeout(300);
+  assert.equal(navigations.length, before, "stray drop navigated the sidebar");
+  assert.ok(page.url().endsWith("/sidebar.html"));
   passed("native drag/drop completes and saves order");
   // Viewport and theme inspection.
   await page.locator("#settings-btn").click();
@@ -969,10 +987,12 @@ async function waitState(page, count) {
     path.join(out, "browser-report.json"),
     JSON.stringify({ passed: steps, errors }, null, 2),
   );
+  console.log("Main-frame navigations:\n" + navigations.join("\n"));
   console.log(`${steps.length} browser checks passed.`);
 })()
   .catch(async (error) => {
     console.error(error);
+    console.error("Main-frame navigations:\n" + navigations.join("\n"));
     if (context) {
       const page = context
         .pages()

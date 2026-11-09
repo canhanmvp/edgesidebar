@@ -1296,6 +1296,18 @@ $("pin-list").addEventListener("drop", (event) => {
       }),
     );
 });
+// A link dropped where no list accepts it would make Chromium navigate the
+// whole sidebar to that URL. Lists that accept a drop cancel dragover
+// first; everything else (except text fields) refuses the drop.
+document.addEventListener("dragover", (event) => {
+  if (event.defaultPrevented || event.target.closest?.("input, textarea"))
+    return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "none";
+});
+document.addEventListener("drop", (event) => {
+  if (!event.target.closest?.("input, textarea")) event.preventDefault();
+});
 $("pin-list").addEventListener("dragend", () => {
   drag = null;
   clearDrop();

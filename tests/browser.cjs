@@ -73,6 +73,8 @@ async function waitState(page, count) {
     viewport: { width: 380, height: 850 },
     // The checks below read Vietnamese labels; "auto" language follows this.
     locale: "vi-VN",
+    // Linux Chromium takes its UI language from the environment, not --lang.
+    env: { ...process.env, LANGUAGE: "vi", LANG: "vi_VN.UTF-8" },
     args: [
       "--lang=vi",
       `--disable-extensions-except=${extension}`,
@@ -167,10 +169,23 @@ async function waitState(page, count) {
   await page.locator("#workspace-select").selectOption("workspace-default");
   await waitState(page, 3);
   passed("workspaces isolate collections and can switch back");
+  // Starter names follow the browser language at install time ("Mặc định" or
+  // "Default"); read them instead of assuming one.
+  const defaultName = await page.evaluate(
+    async () =>
+      (await chrome.runtime.sendMessage({ type: "GET_STATE" })).state.workspaces.find(
+        (item) => item.id === "workspace-default",
+      ).name,
+  );
+  // Accessible-name match by prefix, so no regex escaping of the name.
+  const reopenDefault = {
+    name: "Mở lại " + defaultName + " ·",
+    exact: false,
+  };
   const sessionTab = await context.newPage();
   await sessionTab.goto(origin + "/session");
   await page.locator("#save-session").click();
-  await page.getByRole("button", { name: /^Mở lại Mặc định ·/ }).waitFor();
+  await page.getByRole("button", reopenDefault).waitFor();
   const savedSessions = await page.evaluate(
     async () => (await chrome.storage.local.get("savedSessions")).savedSessions,
   );
@@ -199,7 +214,7 @@ async function waitState(page, count) {
     buffer: Buffer.from(JSON.stringify(exportedSessions)),
   });
   await page.getByRole("button", { name: "Gộp thêm", exact: true }).click();
-  await page.getByRole("button", { name: /^Mở lại Mặc định ·/ }).waitFor();
+  await page.getByRole("button", reopenDefault).waitFor();
   await sessionTab.close();
   passed("saved tab sessions persist locally and can be exported/imported");
   const translate = await page.evaluate(() =>

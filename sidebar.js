@@ -221,17 +221,20 @@ function markThemePicker(theme) {
   }
 }
 renderThemePicker();
-let shownLanguage = null;
+// The language setting ("auto", "vi" or "en") this page was rendered with.
+// Only a change of the setting reloads; "auto" is resolved once per page, so
+// a browser-language lookup that answers differently later cannot flip it.
+let shownLanguageSetting = null;
 function applySettings() {
   const s = state.settings;
-  const language = PinnedI18n.setLanguage(s.language);
-  if (shownLanguage && shownLanguage !== language) {
+  if (shownLanguageSetting !== null && shownLanguageSetting !== s.language) {
     // Static markup was translated once; a reload re-renders everything.
     location.reload();
     return;
   }
-  if (!shownLanguage) {
-    shownLanguage = language;
+  if (shownLanguageSetting === null) {
+    shownLanguageSetting = s.language;
+    PinnedI18n.setLanguage(s.language);
     PinnedI18n.translateDom(document.body);
     $("setting-language").replaceChildren(
       ...PinnedI18n.LANGUAGES.map(

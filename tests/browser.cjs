@@ -90,6 +90,11 @@ async function waitState(page, count) {
     context.serviceWorkers()[0] ||
     (await context.waitForEvent("serviceworker"));
   const id = new URL(sw.url()).host;
+  // The checks read Vietnamese labels. Linux Chromium ignores --lang, so do
+  // not rely on "auto" detection: set the language before any page opens.
+  await sw.evaluate(() =>
+    serial(() => commit({ type: "SETTINGS", patch: { language: "vi" } })),
+  );
   const page = await context.newPage();
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(`chrome-extension://${id}/sidebar.html`);

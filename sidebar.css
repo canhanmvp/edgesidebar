@@ -1980,3 +1980,37 @@ dialog.palette-dialog {
   font-size: 9px;
   color: var(--muted);
 }
+/* Notes in the viewer */
+.pane-note {
+  flex: none;
+  width: 100%;
+  min-height: 64px;
+  max-height: 30%;
+  padding: 8px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: var(--accent-soft);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  resize: vertical;
+}
+.pane-note:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+#viewer-notes.has-note,
+#viewer2-notes.has-note {
+  position: relative;
+}
+#viewer-notes.has-note::after,
+#viewer2-notes.has-note::after {
+  content: "";
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}

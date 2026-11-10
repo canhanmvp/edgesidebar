@@ -8,6 +8,9 @@
     embedConsent: "ask",
     splitRatio: 0.5,
     compact: false,
+    autoSession: false,
+    autoCleanup: false,
+    autoBackup: false,
     overlay: true,
     overlaySide: "right",
     overlayX: null,
@@ -170,6 +173,98 @@
       (query ? "?" + query : "")
     );
   }
+  // Saved tab sessions (device-only, storage.local). Tab groups are stored as
+  // [{ title, color, collapsed }] and each tab refers to one by index.
+  const MAX_SESSIONS = 20;
+  const MAX_AUTO_SESSIONS = 3;
+  function cleanGroups(value) {
+    if (!Array.isArray(value)) return [];
+    const colors = GROUP_COLORS.map(([name]) => name);
+    return value.slice(0, 20).map((group) => ({
+      title: typeof group?.title === "string" ? group.title.slice(0, 80) : "",
+      color: colors.includes(group?.color) ? group.color : "grey",
+      collapsed: group?.collapsed === true,
+    }));
+  }
+  function cleanSessions(value) {
+    if (!Array.isArray(value)) return [];
+    const ids = new Set();
+    return value
+      .filter((item) => item && typeof item === "object")
+      .map((item) => ({
+        id: typeof item.id === "string" && item.id.trim() ? item.id : uid(),
+        name:
+          typeof item.name === "string" && item.name.trim()
+            ? item.name.trim().slice(0, 100)
+            : t("Phiên làm việc"),
+        workspaceId:
+          typeof item.workspaceId === "string" ? item.workspaceId : "",
+        createdAt: Number.isFinite(item.createdAt)
+          ? item.createdAt
+          : Date.now(),
+        auto: item.auto === true,
+        groups: cleanGroups(item.groups),
+        tabs: Array.isArray(item.tabs)
+          ? item.tabs
+              .filter((tab) => tab && typeof tab.url === "string")
+              .map((tab) => {
+                try {
+                  return {
+                    title:
+                      typeof tab.title === "string" && tab.title.trim()
+                        ? tab.title.trim().slice(0, 180)
+                        : host(url(tab.url)),
+                    url: url(tab.url),
+                    faviconUrl:
+                      typeof tab.faviconUrl === "string"
+                        ? tab.faviconUrl.slice(0, 2048)
+                        : "",
+                    group:
+                      Number.isInteger(tab.group) &&
+                      tab.group >= 0 &&
+                      tab.group < Math.min(20, item.groups?.length || 0)
+                        ? tab.group
+                        : -1,
+                  };
+                } catch {
+                  return null;
+                }
+              })
+              .filter(Boolean)
+              .filter(
+                (tab, index, tabs) =>
+                  tabs.findIndex((other) => other.url === tab.url) === index,
+              )
+              .slice(0, 100)
+          : [],
+      }))
+      .filter((item) => item.tabs.length)
+      .map((item) => {
+        while (ids.has(item.id)) item.id = uid();
+        ids.add(item.id);
+        return item;
+      })
+      .slice(0, MAX_SESSIONS);
+  }
+  // Adds a session at the top. Automatic ones keep at most three and never
+  // push a session the user saved out of the 20 slots; the user's own saves
+  // replace the oldest automatic session first.
+  function putSession(list, session) {
+    let next = [session, ...list.filter((item) => item.id !== session.id)];
+    const autos = next.filter((item) => item.auto);
+    if (autos.length > MAX_AUTO_SESSIONS) {
+      const drop = new Set(autos.slice(MAX_AUTO_SESSIONS).map((s) => s.id));
+      next = next.filter((item) => !drop.has(item.id));
+    }
+    while (next.length > MAX_SESSIONS) {
+      const oldestAuto = next.findLastIndex((item) => item.auto);
+      if (oldestAuto >= 0 && next[oldestAuto] !== session)
+        next.splice(oldestAuto, 1);
+      else if (session.auto) return list;
+      else next.pop();
+    }
+    return next;
+  }
   function duplicateGroups(state, { acrossWorkspaces = false } = {}) {
     const groups = new Map();
     for (const pin of state.pins) {
@@ -253,7 +348,14 @@
   }
   function settings(input = {}) {
     const result = { ...DEFAULTS, collapsed: [] };
-    for (const key of ["compact", "overlay", "sync"])
+    for (const key of [
+      "compact",
+      "overlay",
+      "sync",
+      "autoSession",
+      "autoCleanup",
+      "autoBackup",
+    ])
       if (typeof input[key] === "boolean") result[key] = input[key];
     for (const [key, choices] of Object.entries({
       theme: THEMES.map(([id]) => id),
@@ -891,6 +993,8 @@
     search,
     urlKey,
     duplicateGroups,
+    cleanSessions,
+    putSession,
     classifyCheck,
     groupColor,
     settings,

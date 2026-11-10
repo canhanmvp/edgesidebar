@@ -474,6 +474,34 @@ test("groupColor maps workspace colors to tab group colors", () => {
   assert.equal(C.groupColor("#e01010"), "red");
   assert.equal(C.groupColor("nope"), "grey");
 });
+test("putSession keeps three automatic sessions and protects saved ones", () => {
+  const make = (id, auto) =>
+    C.cleanSessions([
+      { id, auto, name: id, tabs: [{ url: "https://a.test" }] },
+    ])[0];
+  let list = [];
+  for (let i = 0; i < 5; i++) list = C.putSession(list, make("a" + i, true));
+  assert.deepEqual(
+    list.map((s) => s.id),
+    ["a4", "a3", "a2"],
+  );
+  for (let i = 0; i < 18; i++) list = C.putSession(list, make("u" + i, false));
+  assert.equal(list.length, 20);
+  assert.equal(
+    list.filter((s) => s.auto).length,
+    2,
+    "user saves replace autos",
+  );
+  list = C.putSession(list, make("u18", false));
+  list = C.putSession(list, make("u19", false));
+  assert.equal(list.filter((s) => s.auto).length, 0);
+  const full = C.putSession(list, make("late", true));
+  assert.equal(full, list, "no room: the automatic one is skipped");
+  assert.equal(
+    C.cleanSessions([{ tabs: [{ url: "javascript:x" }] }]).length,
+    0,
+  );
+});
 test("split view ratio is clamped and rounded", () => {
   assert.equal(C.settings().splitRatio, 0.5);
   assert.equal(C.settings({ splitRatio: 0.333 }).splitRatio, 0.33);

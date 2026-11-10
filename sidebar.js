@@ -104,6 +104,7 @@ function accept(next) {
     renderSessions();
     renderViewState();
     render();
+    for (const pane of panes) if (pane.pin) renderNote(pane);
   }
 }
 async function mutate(action) {
@@ -247,6 +248,9 @@ function applySettings() {
   $("compact-btn").setAttribute("aria-pressed", String(s.compact));
   for (const key of [
     "theme",
+    "autoSession",
+    "autoCleanup",
+    "autoBackup",
     "language",
     "embedConsent",
     "openMode",
@@ -336,71 +340,17 @@ function setActiveView(view) {
   }
 }
 const GROUP_COLOR_NAMES = C.GROUP_COLORS.map(([name]) => name);
-// Tab groups saved with a session: [{ title, color, collapsed }]. Each tab
-// refers to one by index ("group"), or -1 when it was not grouped.
-function cleanGroups(value) {
-  if (!Array.isArray(value)) return [];
-  return value.slice(0, 20).map((group) => ({
-    title: typeof group?.title === "string" ? group.title.slice(0, 80) : "",
-    color: GROUP_COLOR_NAMES.includes(group?.color) ? group.color : "grey",
-    collapsed: group?.collapsed === true,
-  }));
-}
+// Sessions are cleaned and stored by the worker (C.cleanSessions); the
+// sidebar keeps a read-only copy that follows storage.onChanged.
 function cleanSessions(value) {
-  if (!Array.isArray(value)) return [];
-  const ids = new Set();
-  return value
-    .filter((item) => item && typeof item === "object")
-    .map((item) => ({
-      id: typeof item.id === "string" && item.id.trim() ? item.id : C.uid(),
-      name:
-        typeof item.name === "string" && item.name.trim()
-          ? item.name.trim().slice(0, 100)
-          : t("Phiên làm việc"),
-      workspaceId: typeof item.workspaceId === "string" ? item.workspaceId : "",
-      createdAt: Number.isFinite(item.createdAt) ? item.createdAt : Date.now(),
-      groups: cleanGroups(item.groups),
-      tabs: Array.isArray(item.tabs)
-        ? item.tabs
-            .filter((tab) => tab && typeof tab.url === "string")
-            .map((tab) => {
-              try {
-                return {
-                  title:
-                    typeof tab.title === "string" && tab.title.trim()
-                      ? tab.title.trim().slice(0, 180)
-                      : C.host(C.url(tab.url)),
-                  url: C.url(tab.url),
-                  faviconUrl:
-                    typeof tab.faviconUrl === "string"
-                      ? tab.faviconUrl.slice(0, 2048)
-                      : "",
-                  group:
-                    Number.isInteger(tab.group) &&
-                    tab.group >= 0 &&
-                    tab.group < Math.min(20, item.groups?.length || 0)
-                      ? tab.group
-                      : -1,
-                };
-              } catch {
-                return null;
-              }
-            })
-            .filter(Boolean)
-            .filter(
-              (tab, index, tabs) =>
-                tabs.findIndex((item) => item.url === tab.url) === index,
-            )
-            .slice(0, 100)
-        : [],
-    }))
-    .filter((item) => item.tabs.length)
-    .map((item) => {
-      while (ids.has(item.id)) item.id = C.uid();
-      ids.add(item.id);
-      return item;
-    })
-    .slice(0, 20);
+  return C.cleanSessions(value);
+}
+// Every change goes through the worker, the only writer of savedSessions.
+async function editSessions(change) {
+  const data = await request("SESSIONS", change);
+  savedSessions = data.sessions;
+  renderSessions();
+  return data.sessions;
 }
 // Sessions of a deleted workspace stay visible everywhere instead of silently
 // occupying one of the 20 session slots.
@@ -468,10 +418,7 @@ function renderSessions() {
           action: async () => {
             const name = window.prompt(t("Tên phiên tab"), session.name);
             if (!name?.trim()) return;
-            session.name = name.trim().slice(0, 100);
-            savedSessions = cleanSessions(savedSessions);
-            await chrome.storage.local.set({ [SESSIONS_KEY]: savedSessions });
-            renderSessions();
+            await editSessions({ op: "rename", id: session.id, name });
           },
         },
         {
@@ -573,16 +520,10 @@ async function openSession(session, { asGroup = false } = {}) {
   );
 }
 async function removeSession(session) {
-  const previous = savedSessions;
-  savedSessions = savedSessions.filter((item) => item.id !== session.id);
-  await chrome.storage.local.set({ [SESSIONS_KEY]: savedSessions });
-  renderSessions();
+  const index = savedSessions.findIndex((item) => item.id === session.id);
+  await editSessions({ op: "remove", id: session.id });
   toast(t("Đã xóa phiên “{0}”.", [session.name]), {
-    undo: async () => {
-      savedSessions = previous;
-      await chrome.storage.local.set({ [SESSIONS_KEY]: savedSessions });
-      renderSessions();
-    },
+    undo: () => editSessions({ op: "restore", session, index }),
   });
 }
 async function loadSessions() {
@@ -629,9 +570,7 @@ async function saveCurrentSession(onlyGroupId = null) {
     groups: cleaned.groups,
     tabs,
   };
-  savedSessions = [session, ...savedSessions].slice(0, 20);
-  await chrome.storage.local.set({ [SESSIONS_KEY]: savedSessions });
-  renderSessions();
+  await editSessions({ op: "add", session });
   toast(t("Đã lưu {0} tab thành một phiên.", [tabs.length]));
 }
 function renderStatus() {
@@ -1336,6 +1275,9 @@ function makePane(index, ids) {
     status: $(ids.status),
     loadLine: $(ids.loadLine),
     mobile: $(ids.mobile),
+    notesButton: $(ids.notesButton),
+    note: $(ids.note),
+    noteTimer: 0,
   };
 }
 const panes = [
@@ -1346,6 +1288,8 @@ const panes = [
     status: "viewer-status",
     loadLine: "load-line",
     mobile: "viewer-mobile",
+    notesButton: "viewer-notes",
+    note: "pane-note-1",
   }),
   makePane(1, {
     frame: "viewer-frame-2",
@@ -1354,8 +1298,60 @@ const panes = [
     status: "viewer2-status",
     loadLine: "load-line-2",
     mobile: "viewer2-mobile",
+    notesButton: "viewer2-notes",
+    note: "pane-note-2",
   }),
 ];
+// Notes reuse the pin's own note field (500 characters, synced with it).
+// Pages opened from bookmarks are not pins, so they have no note.
+function isPinnedPage(pin) {
+  return !!pin && !String(pin.id).startsWith("bookmark:");
+}
+function renderNote(pane) {
+  const pin = pane.pin && state.pins.find((item) => item.id === pane.pin.id);
+  const usable = isPinnedPage(pane.pin) && !!pin;
+  pane.notesButton.hidden = !usable;
+  pane.notesButton.classList.toggle("has-note", !!pin?.note);
+  if (!usable) {
+    pane.note.hidden = true;
+    pane.notesButton.setAttribute("aria-expanded", "false");
+  } else if (document.activeElement !== pane.note) pane.note.value = pin.note;
+}
+async function saveNote(pane) {
+  const pin = state.pins.find((item) => item.id === pane.pin?.id);
+  if (!pin || pin.note === pane.note.value) return;
+  await mutate({
+    type: "SAVE_PIN",
+    id: pin.id,
+    url: pin.url,
+    title: pin.title,
+    folderId: pin.folderId,
+    workspaceId: pin.workspaceId,
+    tags: pin.tags,
+    note: pane.note.value,
+    favorite: pin.favorite,
+  });
+  renderNote(pane);
+}
+for (const pane of panes) {
+  pane.notesButton.onclick = () => {
+    const open = pane.note.hidden;
+    pane.note.hidden = !open;
+    pane.notesButton.setAttribute("aria-expanded", String(open));
+    if (open) {
+      renderNote(pane);
+      pane.note.focus();
+    }
+  };
+  pane.note.addEventListener("input", () => {
+    clearTimeout(pane.noteTimer);
+    pane.noteTimer = setTimeout(() => run(null, () => saveNote(pane)), 800);
+  });
+  pane.note.addEventListener("blur", () => {
+    clearTimeout(pane.noteTimer);
+    run(null, () => saveNote(pane));
+  });
+}
 // Mobile mode is per site: the server gets an Android browser's headers for
 // that origin, so Facebook, Instagram… send their narrow phone layout.
 function renderMobileButtons() {
@@ -1445,6 +1441,7 @@ async function openPin(pin, mode, background = false) {
   }
   pane.pin = pin;
   renderMobileButtons();
+  renderNote(pane);
   pane.title.textContent = pin.title;
   pane.host.textContent = C.host(pin.url);
   pane.frame.title = pin.title;
@@ -1563,6 +1560,8 @@ for (const pane of panes)
 function clearPane(pane) {
   pane.pin = null;
   pane.mobile.hidden = true;
+  pane.notesButton.hidden = true;
+  pane.note.hidden = true;
   pane.loadRequest++;
   pane.blankRequest = 0;
   clearTimeout(pane.timer);
@@ -1587,6 +1586,7 @@ function closePane(index) {
   top.host.textContent = C.host(moving.url);
   top.frame.title = moving.title;
   renderMobileButtons();
+  renderNote(top);
   resetFrame(top);
 }
 function closeViewer() {
@@ -1710,6 +1710,9 @@ $("settings-btn").onclick = settingsDialog;
 $("storage-status").onclick = settingsDialog;
 for (const key of [
   "theme",
+  "autoSession",
+  "autoCleanup",
+  "autoBackup",
   "language",
   "embedConsent",
   "openMode",
@@ -1984,6 +1987,27 @@ $("export-sessions-btn").onclick = () => {
 };
 $("recovery-export").onclick = () =>
   run($("recovery-export"), async () => {
+    const { autoBackups = [] } = await chrome.storage.local.get("autoBackups");
+    if (autoBackups.length) {
+      const date = (time) => new Date(time).toLocaleString();
+      const picked = await choose(
+        t("Xuất bản dự phòng"),
+        t("Chọn bản cần xuất."),
+        [
+          {
+            label: t("Bản trước lần thay đổi lớn gần nhất"),
+            value: "recovery",
+          },
+          ...autoBackups.map((backup, i) => ({
+            label: t("Tự sao lưu · {0}", [date(backup.time)]),
+            value: String(i),
+          })),
+        ],
+      );
+      if (picked === "cancel") return;
+      if (picked !== "recovery")
+        return download(autoBackups[Number(picked)].data, "pinned-auto-backup");
+    }
     const data = await chrome.storage.local.get([
       "recoveryBackup",
       "importBackup",
@@ -2050,20 +2074,7 @@ $("import-sessions-file").onchange = () =>
       ],
     );
     if (result !== "merge" && result !== "replace") return;
-    if (result === "replace") savedSessions = mapped.slice(0, 20);
-    else {
-      const ids = new Set(savedSessions.map((session) => session.id));
-      const unique = mapped.map((session) => {
-        if (!ids.has(session.id)) {
-          ids.add(session.id);
-          return session;
-        }
-        return { ...session, id: C.uid() };
-      });
-      savedSessions = [...unique, ...savedSessions].slice(0, 20);
-    }
-    await chrome.storage.local.set({ [SESSIONS_KEY]: savedSessions });
-    renderSessions();
+    await editSessions({ op: result, sessions: mapped });
     toast(t("Đã nhập {0} phiên tab.", [mapped.length]));
   });
 // Import sources: our own JSON plus exports from other tools.

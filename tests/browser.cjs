@@ -635,6 +635,26 @@ async function waitState(page, count) {
   await page.locator("#settings-dialog[open]").waitFor();
   await page.locator("#settings-dialog [data-close]").click();
   passed("Ctrl+K palette finds pins, opens the bottom half and runs commands");
+  // Notes: the viewer edits the pin's own note field and saves by itself.
+  await page.evaluate(async () => {
+    await openPin(
+      state.pins.find((pin) => pin.title === "Trang thử nghiệm"),
+      "sidebar",
+    );
+  });
+  await page.locator("#viewer-notes:not([hidden])").click();
+  await page.locator("#pane-note-1").fill("Ghi chú từ viewer");
+  await page.waitForFunction(async () => {
+    const { state } = await chrome.runtime.sendMessage({ type: "GET_STATE" });
+    return state.pins.some(
+      (pin) =>
+        pin.title === "Trang thử nghiệm" && pin.note === "Ghi chú từ viewer",
+    );
+  });
+  await page.waitForFunction(() =>
+    document.querySelector("#viewer-notes").classList.contains("has-note"),
+  );
+  passed("viewer notes save to the pin by themselves");
   const site = await context.newPage();
   await site.goto(origin + "/host");
   await site.waitForFunction(() =>

@@ -13,6 +13,7 @@
     <script src="icons.js" defer></script>
     <script src="sidebar.js" defer></script>
     <script src="sidebar-bookmarks.js" defer></script>
+    <script src="linkcheck.js" defer></script>
     <script src="sidebar-cleanup.js" defer></script>
     <script src="sidebar-palette.js" defer></script>
   </head>
@@ -262,6 +263,16 @@
           ></button
           ><button
             class="icon-button"
+            id="viewer-notes"
+            title="Ghi chú"
+            aria-label="Ghi chú"
+            aria-expanded="false"
+            aria-controls="pane-note-1"
+            data-icon="edit"
+            hidden
+          ></button
+          ><button
+            class="icon-button"
             id="viewer-reset"
             title="Tải lại trang ghim ban đầu"
             aria-label="Tải lại trang ghim ban đầu"
@@ -294,6 +305,14 @@
         <div class="viewer-note">
           <span id="viewer-status" role="status">Đang tải trang…</span>
         </div>
+        <textarea
+          class="pane-note"
+          id="pane-note-1"
+          maxlength="500"
+          aria-label="Ghi chú cho trang này"
+          placeholder="Ghi chú cho trang này… (tự lưu)"
+          hidden
+        ></textarea>
         <div id="frame-container">
           <div class="viewer-pane" id="viewer-pane-1">
             <iframe
@@ -373,6 +392,16 @@
               ></button
               ><button
                 class="icon-button"
+                id="viewer2-notes"
+                title="Ghi chú"
+                aria-label="Ghi chú"
+                aria-expanded="false"
+                aria-controls="pane-note-2"
+                data-icon="edit"
+                hidden
+              ></button
+              ><button
+                class="icon-button"
                 id="viewer2-reset"
                 title="Tải lại trang ghim ban đầu"
                 aria-label="Tải lại trang ghim ban đầu"
@@ -396,6 +425,14 @@
             <div class="viewer-note">
               <span id="viewer2-status" role="status"></span>
             </div>
+            <textarea
+              class="pane-note"
+              id="pane-note-2"
+              maxlength="500"
+              aria-label="Ghi chú cho trang này"
+              placeholder="Ghi chú cho trang này… (tự lưu)"
+              hidden
+            ></textarea>
             <div class="pane-frame">
               <iframe
                 id="viewer-frame-2"
@@ -654,6 +691,26 @@
             ><span id="bookmark-permission-label">Bật bookmark</span>
           </button>
         </div>
+      </section>
+      <section class="settings-section">
+        <h3>Tự động</h3>
+        <label class="setting-row"
+          ><span>Tự lưu phiên khi đóng cửa sổ</span
+          ><input id="setting-autoSession" type="checkbox" role="switch"
+        /></label>
+        <label class="setting-row"
+          ><span>Tự kiểm tra link hỏng mỗi tuần</span
+          ><input id="setting-autoCleanup" type="checkbox" role="switch"
+        /></label>
+        <label class="setting-row"
+          ><span>Tự sao lưu mỗi tuần</span
+          ><input id="setting-autoBackup" type="checkbox" role="switch"
+        /></label>
+        <p class="subtle">
+          Mọi thứ chạy và lưu trên máy này. Tự lưu phiên giữ tối đa 3 phiên tự
+          động và không thay phiên bạn tự lưu. Link hỏng hiện số trên biểu tượng
+          extension.
+        </p>
       </section>
       <section class="settings-section">
         <h3>Website cho phép nhúng</h3>

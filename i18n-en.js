@@ -246,6 +246,11 @@
     "Mở sidebar": "Open sidebar",
     "Mở tab mới": "Open in new tab",
     "Mở ở nửa dưới": "Open in bottom half",
+    "mở bảng lệnh: tìm mọi thứ, gõ":
+      "opens the command palette: search everything, type",
+    "để chạy lệnh.": "to run a command.",
+    "Nút chia đôi trên viewer mở hai website cùng lúc; nút điện thoại bật giao diện di động.":
+      "The split button in the viewer shows two websites at once; the phone button switches a site to its mobile layout.",
     "Tự động": "Automatic",
     "Tự lưu phiên khi đóng cửa sổ": "Save a session when a window closes",
     "Tự kiểm tra link hỏng mỗi tuần": "Check for broken links every week",
@@ -356,8 +361,8 @@
     "Phiên tab": "Tab sessions",
     "Phím tắt tìm kiếm": "Search shortcut",
     "Phạm vi": "Scope",
-    "Pinned Sidebar 4.2 · Ctrl + M hoặc Ctrl + Shift + Y để mở":
-      "Pinned Sidebar 4.2 · Ctrl + M or Ctrl + Shift + Y to open",
+    "Pinned Sidebar 4.3 · Ctrl + M hoặc Ctrl + Shift + Y để mở":
+      "Pinned Sidebar 4.3 · Ctrl + M or Ctrl + Shift + Y to open",
     "Quản lý không gian hiện tại": "Manage current workspace",
     "Quản lý thư mục ": "Manage folder ",
     "Rê chuột để xem tên, kéo bất kỳ đâu trên thanh để di chuyển (thả gần mép sẽ tự dính vào mép), kéo mép để đổi độ rộng.":

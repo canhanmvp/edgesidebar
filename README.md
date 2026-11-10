@@ -1,6 +1,18 @@
-# Pinned Sidebar 4.2
+# Pinned Sidebar 4.3
 
 Extension Manifest V3 cho Edge/Chrome: biến sidebar thành không gian làm việc cá nhân để ghim, tìm, sắp xếp website và lưu lại các phiên tab. Giao diện tiếng Việt gọn trong một màn hình (thanh công cụ cố định, chỉ danh sách cuộn), 16 giao diện màu: theo hệ thống, Sáng, Tối, Đen, Pastel, Đại dương, Hoàng hôn, Oải hương, Hồng đào, Cát, Nửa đêm, Rừng, Nord, Mocha, Mận, Dracula; có chế độ chỉ biểu tượng.
+
+## Có gì mới trong 4.3
+
+- **Chia đôi sidebar**: mở hai website cùng lúc, xếp trên/dưới. Mở nửa dưới từ menu `⋯` của trang ghim hoặc bookmark ("Mở ở nửa dưới"), nút chia đôi trên viewer, hoặc `Shift+Enter` trong bảng lệnh. Kéo thanh chia (hoặc dùng `↑/↓`) để đổi tỷ lệ; tỷ lệ được nhớ. Đóng nửa trên thì trang ở nửa dưới lên thay. Dịch nhanh chỉ chạy ở nửa trên; sidebar thấp hơn 480px thì không chia.
+- **Chế độ di động** theo từng website: nút điện thoại trên viewer (hoặc trong Cài đặt → Website cho phép nhúng) gửi `User-Agent` và client hints của Chrome Android cho website đó, để Facebook, Instagram, Zalo… trả về giao diện điện thoại vừa khung hẹp. Chỉ áp cho khung do sidebar mở, không ảnh hưởng tab thường. **Giới hạn:** JavaScript của website vẫn đọc `navigator.userAgent` của máy tính, nên website chỉ nhận diện bằng JavaScript sẽ không đổi giao diện.
+- **Bảng lệnh `Ctrl+K`** (`Cmd+K` trên Mac, hoặc nút kính lúp trên đầu sidebar): tìm trang ghim của mọi không gian, bookmark, phiên tab và lệnh. `Enter` mở, `Ctrl+Enter` mở tab mới, `Shift+Enter` mở ở nửa dưới; gõ `>` để chỉ hiện lệnh (ghim tab, thêm website, đổi không gian, Dọn dẹp, Cài đặt, đổi giao diện, đổi ngôn ngữ…).
+- **Tự động** (Cài đặt → Tự động, đều tắt sẵn, chạy và lưu trên máy):
+  - **Tự lưu phiên khi đóng cửa sổ** có từ 2 tab trở lên; nếu trình duyệt bị thoát đột ngột, lần mở sau có "Phiên trước". Giữ tối đa 3 phiên tự động và không bao giờ thay phiên bạn tự lưu.
+  - **Tự kiểm tra link hỏng mỗi tuần** (tối đa 100 trang, ưu tiên trang lâu chưa kiểm tra); có link hỏng thì hiện số trên biểu tượng extension.
+  - **Tự sao lưu mỗi tuần**, giữ 3 bản; "Xuất bản dự phòng gần nhất" cho chọn bản theo ngày.
+- **Ghi chú ngay trong viewer**: nút ghi chú trên mỗi khung sửa trường ghi chú của trang ghim, tự lưu khi ngừng gõ.
+- Phiên tab giờ chỉ do worker ghi, nên tự lưu và chỉnh sửa trong sidebar không đè nhau.
 
 ## Có gì mới trong 4.2
 
@@ -61,7 +73,7 @@ Bản 2.0 đọc `pins` và `settings` từ bộ nhớ sync cũ, chuyển thư m
 2. Chọn **Load unpacked**, trỏ tới thư mục chứa `manifest.json`.
 3. Bấm biểu tượng extension, `Ctrl+M` hoặc `Ctrl+Shift+Y` để mở sidebar. Nếu Edge giữ phím `Ctrl+M` cho chức năng hệ thống, vào `edge://extensions/shortcuts` để đổi phím.
 
-Bản đóng gói sạch ở `dist/pinned-sidebar/`; chỉ chứa các file chạy extension. File phát hành để chuyển máy là `release/pinned-sidebar-4.2.0.zip`: giải nén ZIP trước, rồi chọn thư mục đã giải nén trong **Load unpacked**. Khi cập nhật, chọn đúng thư mục cài cũ và bấm **Reload** để giữ extension ID và dữ liệu local. Dùng Chromium 120+ hoặc phiên bản Edge tương ứng có Side Panel API. Người sử dụng không cần Node.js.
+Bản đóng gói sạch ở `dist/pinned-sidebar/`; chỉ chứa các file chạy extension. File phát hành để chuyển máy là `release/pinned-sidebar-4.3.0.zip`: giải nén ZIP trước, rồi chọn thư mục đã giải nén trong **Load unpacked**. Khi cập nhật, chọn đúng thư mục cài cũ và bấm **Reload** để giữ extension ID và dữ liệu local. Dùng Chromium 120+ hoặc phiên bản Edge tương ứng có Side Panel API. Người sử dụng không cần Node.js.
 
 ## Sử dụng
 

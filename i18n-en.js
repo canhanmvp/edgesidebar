@@ -246,6 +246,12 @@
     "Mở sidebar": "Open sidebar",
     "Mở tab mới": "Open in new tab",
     "Mở ở nửa dưới": "Open in bottom half",
+    "Chế độ di động": "Mobile mode",
+    "Chế độ di động: ": "Mobile mode: ",
+    "Đã bật chế độ di động cho {0}.": "Mobile mode on for {0}.",
+    "Đã tắt chế độ di động cho {0}.": "Mobile mode off for {0}.",
+    "Hãy mở website này trong sidebar trước.":
+      "Open this website in the sidebar first.",
     "Chia đôi": "Split view",
     "Đóng nửa dưới": "Close bottom half",
     "Đóng nửa trên": "Close top half",

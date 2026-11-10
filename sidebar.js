@@ -5,6 +5,7 @@ const C = Pinned;
 let state = null,
   syncStatus = {},
   embedOrigins = [],
+  mobileOrigins = [],
   windowId,
   activeWorkspaceId = null,
   savedSessions = [],
@@ -1334,6 +1335,7 @@ function makePane(index, ids) {
     host: $(ids.host),
     status: $(ids.status),
     loadLine: $(ids.loadLine),
+    mobile: $(ids.mobile),
   };
 }
 const panes = [
@@ -1343,6 +1345,7 @@ const panes = [
     host: "viewer-host",
     status: "viewer-status",
     loadLine: "load-line",
+    mobile: "viewer-mobile",
   }),
   makePane(1, {
     frame: "viewer-frame-2",
@@ -1350,8 +1353,44 @@ const panes = [
     host: "viewer2-host",
     status: "viewer2-status",
     loadLine: "load-line-2",
+    mobile: "viewer2-mobile",
   }),
 ];
+// Mobile mode is per site: the server gets an Android browser's headers for
+// that origin, so Facebook, Instagram… send their narrow phone layout.
+function renderMobileButtons() {
+  for (const pane of panes) {
+    const origin = pane.pin && new URL(pane.pin.url).origin;
+    pane.mobile.hidden =
+      !pane.pin || (pane.index === 0 && isGoogleTranslate(pane.pin));
+    pane.mobile.setAttribute(
+      "aria-pressed",
+      String(!!origin && mobileOrigins.includes(origin)),
+    );
+  }
+}
+async function setMobileMode(origin, enabled) {
+  await request("MOBILE", { origin, enabled });
+  mobileOrigins = enabled
+    ? [...new Set([...mobileOrigins, origin])]
+    : mobileOrigins.filter((item) => item !== origin);
+  renderMobileButtons();
+  renderEmbeds();
+  for (const pane of panes)
+    if (pane.pin && new URL(pane.pin.url).origin === origin) resetFrame(pane);
+  toast(
+    enabled
+      ? t("Đã bật chế độ di động cho {0}.", [new URL(origin).host])
+      : t("Đã tắt chế độ di động cho {0}.", [new URL(origin).host]),
+  );
+}
+for (const pane of panes)
+  pane.mobile.onclick = () =>
+    run(pane.mobile, async () => {
+      if (!pane.pin) return;
+      const origin = new URL(pane.pin.url).origin;
+      await setMobileMode(origin, !mobileOrigins.includes(origin));
+    });
 const MIN_SPLIT_HEIGHT = 480;
 function setSplit(open) {
   document.body.classList.toggle("split", open);
@@ -1405,6 +1444,7 @@ async function openPin(pin, mode, background = false) {
     setSplit(true);
   }
   pane.pin = pin;
+  renderMobileButtons();
   pane.title.textContent = pin.title;
   pane.host.textContent = C.host(pin.url);
   pane.frame.title = pin.title;
@@ -1522,6 +1562,7 @@ for (const pane of panes)
   });
 function clearPane(pane) {
   pane.pin = null;
+  pane.mobile.hidden = true;
   pane.loadRequest++;
   pane.blankRequest = 0;
   clearTimeout(pane.timer);
@@ -1545,6 +1586,7 @@ function closePane(index) {
   top.title.textContent = moving.title;
   top.host.textContent = C.host(moving.url);
   top.frame.title = moving.title;
+  renderMobileButtons();
   resetFrame(top);
 }
 function closeViewer() {
@@ -1670,7 +1712,11 @@ function renderEmbeds() {
             resetFrame(pane);
         toast(t("Đã thu hồi quyền nhúng."));
       });
-    row.append(button);
+    const mobile = iconButton("phone", t("Chế độ di động: ") + origin);
+    mobile.setAttribute("aria-pressed", String(mobileOrigins.includes(origin)));
+    mobile.onclick = () =>
+      run(mobile, () => setMobileMode(origin, !mobileOrigins.includes(origin)));
+    row.append(mobile, button);
     $("embed-list").append(row);
   }
 }
@@ -2197,6 +2243,11 @@ chrome.storage.onChanged.addListener((changes, area) => {
       embedOrigins = changes.embedOrigins.newValue || [];
       renderEmbeds();
     }
+    if (changes.mobileOrigins) {
+      mobileOrigins = changes.mobileOrigins.newValue || [];
+      renderEmbeds();
+      renderMobileButtons();
+    }
     if (changes[SESSIONS_KEY]) {
       savedSessions = cleanSessions(changes[SESSIONS_KEY].newValue);
       renderSessions();
@@ -2268,6 +2319,7 @@ async function reloadState() {
   const data = await request("GET_STATE");
   syncStatus = data.syncStatus || {};
   embedOrigins = data.embedOrigins || [];
+  mobileOrigins = data.mobileOrigins || [];
   const local = await chrome.storage.local.get([
     "activeWorkspaceId",
     "activeView",

@@ -1617,27 +1617,7 @@ $("viewer-close-top").onclick = () => closePane(0);
 $("viewer-split").onclick = (event) => {
   event.stopPropagation();
   if (panes[1].pin) return closePane(1);
-  const shown = new Set(panes.map((pane) => pane.pin?.id));
-  const choices = state.pins
-    .filter(
-      (pin) =>
-        pin.workspaceId === activeWorkspaceId &&
-        !shown.has(pin.id) &&
-        !isGoogleTranslate(pin),
-    )
-    .slice(0, 15);
-  if (!choices.length) {
-    toast(t("Chưa có trang ghim nào khác để mở."), { error: true });
-    return;
-  }
-  showMenu(
-    $("viewer-split"),
-    choices.map((pin) => ({
-      label: pin.title,
-      icon: "split",
-      action: () => openPin(pin, "split"),
-    })),
-  );
+  globalThis.PinnedPalette.open({ split: true });
 };
 // Divider: drag with the pointer or use the arrow keys; the ratio is saved
 // as a device-only setting. Iframes stop taking pointer events meanwhile, or

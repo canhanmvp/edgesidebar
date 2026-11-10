@@ -768,6 +768,12 @@
   globalThis.PinnedBookmarks = {
     render,
     searchGroup,
+    // Palette lookup: [] without permission, otherwise up to `limit` links.
+    async search(query, limit) {
+      if (!granted) return [];
+      await load();
+      return matches(C.fold(query), limit);
+    },
     hasPermission,
     ensurePermission,
     exportWorkspace,

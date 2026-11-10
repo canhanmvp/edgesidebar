@@ -1905,3 +1905,78 @@ body:not(.split) #viewer-close-top {
   flex: 1;
   min-width: 0;
 }
+/* Command palette */
+dialog.palette-dialog {
+  margin-top: 56px;
+  padding: 8px;
+  width: calc(100% - 20px);
+  max-width: 420px;
+}
+#palette-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+}
+#palette-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+}
+#palette-list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  max-height: min(56dvh, 420px);
+  overflow-y: auto;
+}
+.palette-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.palette-item svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+}
+.palette-item[aria-selected="true"] {
+  background: var(--accent-soft);
+}
+.palette-item[aria-selected="true"] svg {
+  color: var(--accent);
+}
+.palette-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.palette-label,
+.palette-detail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.palette-label {
+  font-size: 12px;
+  font-weight: 600;
+}
+.palette-detail {
+  font-size: 10px;
+  color: var(--muted);
+}
+#palette-empty {
+  padding: 10px;
+}
+.palette-hint {
+  margin: 6px 4px 0;
+  font-size: 9px;
+  color: var(--muted);
+}

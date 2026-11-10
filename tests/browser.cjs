@@ -494,7 +494,11 @@ async function waitState(page, count) {
     origin + "/second",
   );
   await page.locator("#viewer-split").click();
-  await page.getByRole("menuitem", { name: "Khung dưới", exact: true }).click();
+  await page.locator("#palette-input").fill("khung duoi");
+  await page
+    .locator("#palette-list .palette-label", { hasText: "Khung dưới" })
+    .waitFor();
+  await page.keyboard.press("Enter");
   await page.locator("#viewer-pane-2:not([hidden])").waitFor();
   await page
     .frameLocator("#viewer-frame-2")
@@ -585,6 +589,52 @@ async function waitState(page, count) {
     });
   }, origin + "/ua");
   passed("mobile mode sends an Android user agent for that site only");
+  // Command palette: Ctrl+K, search, Shift+Enter opens in the bottom half.
+  await page.keyboard.press("Control+k");
+  await page.locator("#palette-dialog[open]").waitFor();
+  await page.locator("#palette-input").fill("trang thu");
+  await page
+    .locator("#palette-list .palette-label", { hasText: "Trang thử nghiệm" })
+    .first()
+    .waitFor();
+  await page.screenshot({ path: path.join(out, "palette.png") });
+  await page.keyboard.press("Shift+Enter");
+  await page.locator("#viewer-pane-2:not([hidden])").waitFor();
+  assert.equal(
+    await page.locator("#viewer2-title").textContent(),
+    "Trang thử nghiệm",
+  );
+  await page.locator("#viewer2-close").click();
+  await page.locator("#viewer-pane-2").waitFor({ state: "hidden" });
+  // The split button opens the palette as a picker for the bottom half.
+  await page.locator("#viewer-split").click();
+  await page.locator("#palette-dialog[open]").waitFor();
+  assert.match(
+    await page.locator("#palette-input").getAttribute("placeholder"),
+    /nửa dưới/,
+  );
+  await page.locator("#palette-input").fill("trang thu");
+  await page
+    .locator("#palette-list .palette-label", { hasText: "Trang thử nghiệm" })
+    .first()
+    .waitFor();
+  await page.keyboard.press("Enter");
+  await page.locator("#viewer-pane-2:not([hidden])").waitFor();
+  await page.locator("#viewer2-close").click();
+  // ">" lists commands only; Enter runs the selected one.
+  await page.keyboard.press("Control+k");
+  await page.locator("#palette-input").fill(">cai dat");
+  await page
+    .locator("#palette-list .palette-label", { hasText: /^Cài đặt$/ })
+    .waitFor();
+  assert.equal(
+    await page.locator("#palette-list .palette-detail").first().textContent(),
+    "Lệnh",
+  );
+  await page.keyboard.press("Enter");
+  await page.locator("#settings-dialog[open]").waitFor();
+  await page.locator("#settings-dialog [data-close]").click();
+  passed("Ctrl+K palette finds pins, opens the bottom half and runs commands");
   const site = await context.newPage();
   await site.goto(origin + "/host");
   await site.waitForFunction(() =>

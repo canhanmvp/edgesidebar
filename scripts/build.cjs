@@ -19,6 +19,7 @@ const files = [
   "sidebar.js",
   "sidebar-bookmarks.js",
   "sidebar-cleanup.js",
+  "sidebar-palette.js",
   "sidebar.css",
   "content.js",
   "content.css",

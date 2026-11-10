@@ -14,6 +14,7 @@
     <script src="sidebar.js" defer></script>
     <script src="sidebar-bookmarks.js" defer></script>
     <script src="sidebar-cleanup.js" defer></script>
+    <script src="sidebar-palette.js" defer></script>
   </head>
   <body>
     <div id="app">
@@ -64,6 +65,13 @@
             aria-label="Chế độ chỉ biểu tượng"
             aria-pressed="false"
             data-icon="grid"
+          ></button>
+          <button
+            class="icon-button"
+            id="palette-btn"
+            title="Bảng lệnh (Ctrl+K)"
+            aria-label="Bảng lệnh (Ctrl+K)"
+            data-icon="search"
           ></button>
           <button
             class="icon-button"
@@ -805,6 +813,24 @@
           Tiếp
         </button>
       </div>
+    </dialog>
+    <dialog id="palette-dialog" class="palette-dialog" aria-label="Bảng lệnh">
+      <input
+        id="palette-input"
+        type="search"
+        role="combobox"
+        aria-expanded="true"
+        aria-controls="palette-list"
+        aria-autocomplete="list"
+        aria-label="Tìm trang, bookmark, phiên hoặc lệnh"
+        autocomplete="off"
+      />
+      <ul id="palette-list" role="listbox" aria-label="Kết quả"></ul>
+      <p id="palette-empty" class="subtle" hidden>Không có kết quả.</p>
+      <p class="palette-hint">
+        ↑↓ chọn · Enter mở · Ctrl+Enter tab mới · Shift+Enter nửa dưới · Esc
+        đóng
+      </p>
     </dialog>
     <dialog id="choice-dialog" aria-labelledby="choice-title">
       <div class="dialog-heading">

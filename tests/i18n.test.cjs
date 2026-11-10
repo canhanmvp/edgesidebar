@@ -16,6 +16,7 @@ const SOURCES = [
   "sidebar.js",
   "sidebar-bookmarks.js",
   "sidebar-cleanup.js",
+  "sidebar-palette.js",
   "content.js",
 ];
 const placeholders = (text) =>

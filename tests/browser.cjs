@@ -173,9 +173,9 @@ async function waitState(page, count) {
   // "Default"); read them instead of assuming one.
   const defaultName = await page.evaluate(
     async () =>
-      (await chrome.runtime.sendMessage({ type: "GET_STATE" })).state.workspaces.find(
-        (item) => item.id === "workspace-default",
-      ).name,
+      (
+        await chrome.runtime.sendMessage({ type: "GET_STATE" })
+      ).state.workspaces.find((item) => item.id === "workspace-default").name,
   );
   // Accessible-name match by prefix, so no regex escaping of the name.
   const reopenDefault = {
@@ -477,6 +477,61 @@ async function waitState(page, count) {
   );
   assert.deepEqual(rules[0].condition.initiatorDomains, [id]);
   passed("automatic DNR unlock loads protected fixture inside extension");
+  // Split view: a second pinned page opens in the bottom pane, the divider
+  // ratio is saved, and closing the top pane moves the bottom page up.
+  await page.evaluate(
+    (url) =>
+      chrome.runtime.sendMessage({
+        type: "MUTATE",
+        action: { type: "SAVE_PIN", url, title: "Khung dưới" },
+      }),
+    origin + "/second",
+  );
+  await page.locator("#viewer-split").click();
+  await page.getByRole("menuitem", { name: "Khung dưới", exact: true }).click();
+  await page.locator("#viewer-pane-2:not([hidden])").waitFor();
+  await page
+    .frameLocator("#viewer-frame-2")
+    .locator("h1", { hasText: "CSS isolation fixture" })
+    .waitFor({ timeout: 15000 });
+  await page.frameLocator("#viewer-frame").locator("#protected").waitFor();
+  const container = await page.locator("#frame-container").boundingBox();
+  const divider = await page.locator("#viewer-divider").boundingBox();
+  await page.mouse.move(
+    divider.x + divider.width / 2,
+    divider.y + divider.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    divider.x + divider.width / 2,
+    container.y + container.height * 0.3,
+    { steps: 5 },
+  );
+  await page.mouse.up();
+  await page.waitForFunction(async () => {
+    const { state } = await chrome.runtime.sendMessage({ type: "GET_STATE" });
+    return Math.abs(state.settings.splitRatio - 0.3) < 0.06;
+  });
+  await page.screenshot({ path: path.join(out, "split-view.png") });
+  const top = await page.locator("#viewer-pane-1").boundingBox();
+  assert.ok(top.height < container.height * 0.4, "top pane shrank");
+  await page.locator("#viewer-close-top").click();
+  await page.locator("#viewer-pane-2").waitFor({ state: "hidden" });
+  assert.equal(await page.locator("#viewer-title").textContent(), "Khung dưới");
+  await page
+    .frameLocator("#viewer-frame")
+    .locator("h1", { hasText: "CSS isolation fixture" })
+    .waitFor({ timeout: 15000 });
+  // Later checks count pins; remove the extra one and restore the top pane.
+  await page.evaluate(async (url) => {
+    const { state } = await chrome.runtime.sendMessage({ type: "GET_STATE" });
+    const pin = state.pins.find((item) => item.url === url);
+    await chrome.runtime.sendMessage({
+      type: "MUTATE",
+      action: { type: "DELETE_PIN", id: pin.id },
+    });
+  }, origin + "/second");
+  passed("split view opens a second site, saves the divider, and promotes it");
   const site = await context.newPage();
   await site.goto(origin + "/host");
   await site.waitForFunction(() =>

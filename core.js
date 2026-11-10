@@ -6,6 +6,7 @@
     theme: "system",
     language: "auto",
     embedConsent: "ask",
+    splitRatio: 0.5,
     compact: false,
     overlay: true,
     overlaySide: "right",
@@ -265,6 +266,10 @@
     }
     if (typeof input.workspaceId === "string")
       result.workspaceId = input.workspaceId;
+    // Share of the viewer the top pane gets in split view.
+    if (Number.isFinite(input.splitRatio))
+      result.splitRatio =
+        Math.round(Math.max(0.2, Math.min(0.8, input.splitRatio)) * 100) / 100;
     if (Number.isFinite(input.overlayWidth))
       result.overlayWidth = Math.max(
         160,

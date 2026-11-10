@@ -312,6 +312,12 @@
           icon: "external",
           action: () => openPin(asPin(node), "tab"),
         },
+        {
+          label: t("Mở ở nửa dưới"),
+          icon: "split",
+          action: () =>
+            openPin(asPin(node), panes[0].pin ? "split" : "sidebar"),
+        },
         null,
         {
           label: t("Ghim vào không gian hiện tại"),

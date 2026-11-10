@@ -256,50 +256,130 @@
             title="Mở liên kết ghim trong tab mới"
             aria-label="Mở liên kết ghim trong tab mới"
             data-icon="external"
+          ></button
+          ><button
+            class="icon-button"
+            id="viewer-split"
+            title="Chia đôi"
+            aria-label="Chia đôi"
+            aria-pressed="false"
+            aria-haspopup="menu"
+            data-icon="split"
+          ></button
+          ><button
+            class="icon-button"
+            id="viewer-close-top"
+            title="Đóng nửa trên"
+            aria-label="Đóng nửa trên"
+            data-icon="close"
           ></button>
         </div>
         <div class="viewer-note">
           <span id="viewer-status" role="status">Đang tải trang…</span>
         </div>
         <div id="frame-container">
-          <iframe
-            id="viewer-frame"
-            title="Website đã ghim"
-            referrerpolicy="no-referrer"
-            sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-downloads"
-          ></iframe>
-          <section id="translator" hidden aria-label="Dịch nhanh">
-            <div class="translator-controls">
-              <label
-                >Từ<select id="translator-source">
-                  <option value="auto">Tự nhận diện</option>
-                  <option value="vi">Tiếng Việt</option>
-                  <option value="en">Tiếng Anh</option>
-                  <option value="zh-CN">Tiếng Trung</option>
-                </select></label
-              ><label
-                >Sang<select id="translator-target">
-                  <option value="vi">Tiếng Việt</option>
-                  <option value="en">Tiếng Anh</option>
-                  <option value="zh-CN">Tiếng Trung</option>
-                </select></label
-              >
+          <div class="viewer-pane" id="viewer-pane-1">
+            <iframe
+              id="viewer-frame"
+              title="Website đã ghim"
+              referrerpolicy="no-referrer"
+              sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-downloads"
+            ></iframe>
+            <section id="translator" hidden aria-label="Dịch nhanh">
+              <div class="translator-controls">
+                <label
+                  >Từ<select id="translator-source">
+                    <option value="auto">Tự nhận diện</option>
+                    <option value="vi">Tiếng Việt</option>
+                    <option value="en">Tiếng Anh</option>
+                    <option value="zh-CN">Tiếng Trung</option>
+                  </select></label
+                ><label
+                  >Sang<select id="translator-target">
+                    <option value="vi">Tiếng Việt</option>
+                    <option value="en">Tiếng Anh</option>
+                    <option value="zh-CN">Tiếng Trung</option>
+                  </select></label
+                >
+              </div>
+              <label class="translator-field"
+                ><span>Văn bản cần dịch</span
+                ><textarea
+                  id="translator-input"
+                  maxlength="5000"
+                  placeholder="Nhập hoặc dán văn bản vào đây…"
+                ></textarea>
+              </label>
+              <button class="button primary full-width" id="translator-run">
+                Dịch văn bản
+              </button>
+              <p id="translator-status" class="subtle" role="status"></p>
+              <section
+                id="translator-output"
+                aria-live="polite"
+                hidden
+              ></section>
+            </section>
+            <div class="load-line" id="load-line"></div>
+          </div>
+          <div
+            class="viewer-divider"
+            id="viewer-divider"
+            role="separator"
+            aria-orientation="horizontal"
+            aria-valuemin="20"
+            aria-valuemax="80"
+            aria-label="Kéo để chia lại hai khung"
+            title="Kéo để chia lại hai khung"
+            tabindex="0"
+            hidden
+          ></div>
+          <section
+            class="viewer-pane"
+            id="viewer-pane-2"
+            aria-label="Website ở nửa dưới"
+            hidden
+          >
+            <div class="viewer-toolbar pane-toolbar">
+              <div class="viewer-info">
+                <strong id="viewer2-title"></strong
+                ><span id="viewer2-host"></span>
+              </div>
+              <button
+                class="icon-button"
+                id="viewer2-reset"
+                title="Tải lại trang ghim ban đầu"
+                aria-label="Tải lại trang ghim ban đầu"
+                data-icon="reload"
+              ></button
+              ><button
+                class="icon-button"
+                id="viewer2-tab"
+                title="Mở liên kết ghim trong tab mới"
+                aria-label="Mở liên kết ghim trong tab mới"
+                data-icon="external"
+              ></button
+              ><button
+                class="icon-button"
+                id="viewer2-close"
+                title="Đóng nửa dưới"
+                aria-label="Đóng nửa dưới"
+                data-icon="close"
+              ></button>
             </div>
-            <label class="translator-field"
-              ><span>Văn bản cần dịch</span
-              ><textarea
-                id="translator-input"
-                maxlength="5000"
-                placeholder="Nhập hoặc dán văn bản vào đây…"
-              ></textarea>
-            </label>
-            <button class="button primary full-width" id="translator-run">
-              Dịch văn bản
-            </button>
-            <p id="translator-status" class="subtle" role="status"></p>
-            <section id="translator-output" aria-live="polite" hidden></section>
+            <div class="viewer-note">
+              <span id="viewer2-status" role="status"></span>
+            </div>
+            <div class="pane-frame">
+              <iframe
+                id="viewer-frame-2"
+                title="Website ở nửa dưới"
+                referrerpolicy="no-referrer"
+                sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-downloads"
+              ></iframe>
+              <div class="load-line" id="load-line-2" hidden></div>
+            </div>
           </section>
-          <div class="load-line" id="load-line"></div>
         </div>
       </section>
       <footer class="app-footer">

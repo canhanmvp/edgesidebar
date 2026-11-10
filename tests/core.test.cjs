@@ -474,3 +474,10 @@ test("groupColor maps workspace colors to tab group colors", () => {
   assert.equal(C.groupColor("#e01010"), "red");
   assert.equal(C.groupColor("nope"), "grey");
 });
+test("split view ratio is clamped and rounded", () => {
+  assert.equal(C.settings().splitRatio, 0.5);
+  assert.equal(C.settings({ splitRatio: 0.333 }).splitRatio, 0.33);
+  assert.equal(C.settings({ splitRatio: 0.05 }).splitRatio, 0.2);
+  assert.equal(C.settings({ splitRatio: 2 }).splitRatio, 0.8);
+  assert.equal(C.settings({ splitRatio: "0.4" }).splitRatio, 0.5);
+});

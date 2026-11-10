@@ -17,11 +17,7 @@ const SESSIONS_KEY = "savedSessions";
 let editingPin = null,
   editingFolder = null,
   editingWorkspace = null,
-  currentPin = null,
-  drag = null,
-  viewerTimer;
-let viewerLoadRequest = 0;
-let viewerBlankRequest = 0;
+  drag = null;
 let menuTrigger = null,
   queryTimer,
   latestViewNonce = "";
@@ -244,6 +240,7 @@ function applySettings() {
     );
   }
   document.documentElement.dataset.theme = s.theme;
+  showSplitRatio(s.splitRatio);
   markThemePicker(s.theme);
   document.body.classList.toggle("compact", s.compact);
   $("compact-btn").setAttribute("aria-pressed", String(s.compact));
@@ -946,6 +943,11 @@ function pinMenu(pin, trigger) {
       icon: "external",
       action: () => openPin(pin, "tab"),
     },
+    {
+      label: t("Mở ở nửa dưới"),
+      icon: "split",
+      action: () => openPin(pin, panes[0].pin ? "split" : "sidebar"),
+    },
     null,
     {
       label: t("Sửa / chuyển thư mục"),
@@ -1318,6 +1320,45 @@ $("pin-list").addEventListener("dragend", () => {
     .querySelectorAll(".dragging,.collection-dragging")
     .forEach((el) => el.classList.remove("dragging", "collection-dragging"));
 });
+// The viewer has two panes: the top one (with the quick translator) and an
+// optional bottom one for split view. Each keeps its own load bookkeeping.
+function makePane(index, ids) {
+  return {
+    index,
+    pin: null,
+    loadRequest: 0,
+    blankRequest: 0,
+    timer: 0,
+    frame: $(ids.frame),
+    title: $(ids.title),
+    host: $(ids.host),
+    status: $(ids.status),
+    loadLine: $(ids.loadLine),
+  };
+}
+const panes = [
+  makePane(0, {
+    frame: "viewer-frame",
+    title: "viewer-title",
+    host: "viewer-host",
+    status: "viewer-status",
+    loadLine: "load-line",
+  }),
+  makePane(1, {
+    frame: "viewer-frame-2",
+    title: "viewer2-title",
+    host: "viewer2-host",
+    status: "viewer2-status",
+    loadLine: "load-line-2",
+  }),
+];
+const MIN_SPLIT_HEIGHT = 480;
+function setSplit(open) {
+  document.body.classList.toggle("split", open);
+  $("viewer-pane-2").hidden = !open;
+  $("viewer-divider").hidden = !open;
+  $("viewer-split").setAttribute("aria-pressed", String(open));
+}
 async function openPin(pin, mode, background = false) {
   if (mode === "tab") {
     await chrome.tabs.create({
@@ -1352,31 +1393,44 @@ async function openPin(pin, mode, background = false) {
     if (answer === "always")
       await mutate({ type: "SETTINGS", patch: { embedConsent: "always" } });
   }
-  currentPin = pin;
-  $("viewer-title").textContent = pin.title;
-  $("viewer-host").textContent = C.host(pin.url);
-  $("viewer-frame").title = pin.title;
+  // "split" opens the bottom pane next to what is already shown. The quick
+  // translator only lives in the top pane.
+  let pane = panes[0];
+  if (mode === "split" && panes[0].pin && !isGoogleTranslate(pin)) {
+    if (innerHeight < MIN_SPLIT_HEIGHT) {
+      toast(t("Sidebar quá thấp để chia đôi."), { error: true });
+      return;
+    }
+    pane = panes[1];
+    setSplit(true);
+  }
+  pane.pin = pin;
+  pane.title.textContent = pin.title;
+  pane.host.textContent = C.host(pin.url);
+  pane.frame.title = pin.title;
   $("list-view").hidden = true;
   $("viewer").hidden = false;
   document.body.classList.add("viewing");
-  if (isGoogleTranslate(pin)) {
+  if (pane.index === 0 && isGoogleTranslate(pin)) {
     openTranslator();
     $("viewer-back").focus();
     return;
   }
-  closeTranslator();
-  $("load-line").hidden = false;
-  $("viewer-status").textContent = t("Đang tự mở khóa website…");
-  $("viewer-back").focus();
+  if (pane.index === 0) {
+    closeTranslator();
+    $("viewer-back").focus();
+  }
+  pane.loadLine.hidden = false;
+  pane.status.textContent = t("Đang tự mở khóa website…");
   if (!embedOrigins.includes(origin)) {
     await request("EMBED", { origin, enabled: true });
     embedOrigins = [...new Set([...embedOrigins, origin])];
     renderEmbeds();
   }
-  if (currentPin?.id === pin.id) resetFrame();
+  if (pane.pin?.id === pin.id) resetFrame(pane);
 }
 function openTranslator() {
-  clearTimeout(viewerTimer);
+  clearTimeout(panes[0].timer);
   $("viewer-frame").hidden = true;
   $("translator").hidden = false;
   $("load-line").hidden = true;
@@ -1420,31 +1474,31 @@ async function translateText() {
       ? t("Đã nhận diện: ") + data[2] + "."
       : t("Đã dịch xong.");
 }
-function resetFrame() {
-  if (!currentPin) return;
-  const loadRequest = ++viewerLoadRequest;
-  const origin = new URL(currentPin.url).origin;
+function resetFrame(pane = panes[0]) {
+  if (!pane.pin) return;
+  const loadRequest = ++pane.loadRequest;
+  const origin = new URL(pane.pin.url).origin;
   const embedEnabled = embedOrigins.includes(origin);
-  $("load-line").hidden = false;
-  $("viewer-status").textContent = embedEnabled
+  pane.loadLine.hidden = false;
+  pane.status.textContent = embedEnabled
     ? t("Đang mở với quyền nhúng riêng cho website này…")
     : t("Đang tải lại website…");
-  clearTimeout(viewerTimer);
+  clearTimeout(pane.timer);
   // Reassigning the same URL after adding a DNR rule can leave Chromium on its
   // cached iframe error page. A srcdoc page always creates a new document,
   // unlike about:blank, then we navigate from that clean document to the pin.
-  const frame = $("viewer-frame");
-  viewerBlankRequest = loadRequest;
+  const frame = pane.frame;
+  pane.blankRequest = loadRequest;
   frame.addEventListener(
     "load",
     () => {
-      if (loadRequest !== viewerLoadRequest || !currentPin) return;
-      viewerBlankRequest = 0;
+      if (loadRequest !== pane.loadRequest || !pane.pin) return;
+      pane.blankRequest = 0;
       frame.removeAttribute("srcdoc");
-      frame.src = C.url(currentPin.url);
-      viewerTimer = setTimeout(() => {
-        $("load-line").hidden = true;
-        $("viewer-status").textContent = embedEnabled
+      frame.src = C.url(pane.pin.url);
+      pane.timer = setTimeout(() => {
+        pane.loadLine.hidden = true;
+        pane.status.textContent = embedEnabled
           ? t("Nếu vẫn bị chặn, website này cần mở trong tab mới.")
           : t("Website này cần mở trong tab mới.");
       }, 5000);
@@ -1453,25 +1507,50 @@ function resetFrame() {
   );
   frame.srcdoc = "<!doctype html><title>Loading</title>";
 }
-$("viewer-frame").addEventListener("load", () => {
-  if (!currentPin) return;
-  if (viewerBlankRequest === viewerLoadRequest) return;
-  clearTimeout(viewerTimer);
-  $("load-line").hidden = true;
-  // A cross-origin iframe loads for its browser error page too, so this is not
-  // proof that the website actually rendered.
-  const embedEnabled = embedOrigins.includes(new URL(currentPin.url).origin);
-  $("viewer-status").textContent = embedEnabled
-    ? t("Đang hiển thị trong sidebar…")
-    : t("Website này cần mở trong tab mới.");
-});
-function closeViewer() {
-  currentPin = null;
-  viewerLoadRequest++;
-  viewerBlankRequest = 0;
-  clearTimeout(viewerTimer);
+for (const pane of panes)
+  pane.frame.addEventListener("load", () => {
+    if (!pane.pin) return;
+    if (pane.blankRequest === pane.loadRequest) return;
+    clearTimeout(pane.timer);
+    pane.loadLine.hidden = true;
+    // A cross-origin iframe loads for its browser error page too, so this is
+    // not proof that the website actually rendered.
+    const embedEnabled = embedOrigins.includes(new URL(pane.pin.url).origin);
+    pane.status.textContent = embedEnabled
+      ? t("Đang hiển thị trong sidebar…")
+      : t("Website này cần mở trong tab mới.");
+  });
+function clearPane(pane) {
+  pane.pin = null;
+  pane.loadRequest++;
+  pane.blankRequest = 0;
+  clearTimeout(pane.timer);
+  pane.frame.removeAttribute("srcdoc");
+  pane.frame.src = "about:blank";
+}
+// Closing the top pane while the bottom one is open moves the bottom page up.
+function closePane(index) {
+  if (index === 1 || !panes[1].pin) {
+    if (index === 0) return closeViewer();
+    clearPane(panes[1]);
+    setSplit(false);
+    return;
+  }
+  const moving = panes[1].pin;
+  clearPane(panes[1]);
+  setSplit(false);
   closeTranslator();
-  $("viewer-frame").src = "about:blank";
+  const top = panes[0];
+  top.pin = moving;
+  top.title.textContent = moving.title;
+  top.host.textContent = C.host(moving.url);
+  top.frame.title = moving.title;
+  resetFrame(top);
+}
+function closeViewer() {
+  for (const pane of panes) clearPane(pane);
+  setSplit(false);
+  closeTranslator();
   if (windowId != null)
     chrome.storage.session.remove("viewer." + windowId).catch(() => {});
   $("viewer").hidden = true;
@@ -1484,9 +1563,83 @@ $("home-btn").onclick = (event) => {
   event.preventDefault();
   closeViewer();
 };
-$("viewer-reset").onclick = resetFrame;
+$("viewer-reset").onclick = () => resetFrame(panes[0]);
 $("viewer-tab").onclick = () =>
-  run($("viewer-tab"), () => currentPin && openPin(currentPin, "tab"));
+  run($("viewer-tab"), () => panes[0].pin && openPin(panes[0].pin, "tab"));
+$("viewer2-reset").onclick = () => resetFrame(panes[1]);
+$("viewer2-tab").onclick = () =>
+  run($("viewer2-tab"), () => panes[1].pin && openPin(panes[1].pin, "tab"));
+$("viewer2-close").onclick = () => closePane(1);
+$("viewer-close-top").onclick = () => closePane(0);
+// Split button: close the bottom pane, or pick a site for it.
+$("viewer-split").onclick = (event) => {
+  event.stopPropagation();
+  if (panes[1].pin) return closePane(1);
+  const shown = new Set(panes.map((pane) => pane.pin?.id));
+  const choices = state.pins
+    .filter(
+      (pin) =>
+        pin.workspaceId === activeWorkspaceId &&
+        !shown.has(pin.id) &&
+        !isGoogleTranslate(pin),
+    )
+    .slice(0, 15);
+  if (!choices.length) {
+    toast(t("Chưa có trang ghim nào khác để mở."), { error: true });
+    return;
+  }
+  showMenu(
+    $("viewer-split"),
+    choices.map((pin) => ({
+      label: pin.title,
+      icon: "split",
+      action: () => openPin(pin, "split"),
+    })),
+  );
+};
+// Divider: drag with the pointer or use the arrow keys; the ratio is saved
+// as a device-only setting. Iframes stop taking pointer events meanwhile, or
+// they would swallow the drag.
+function showSplitRatio(ratio) {
+  $("frame-container").style.setProperty("--split", String(ratio));
+  $("viewer-divider").setAttribute(
+    "aria-valuenow",
+    String(Math.round(ratio * 100)),
+  );
+}
+function saveSplitRatio(ratio) {
+  const value = Math.round(Math.max(0.2, Math.min(0.8, ratio)) * 100) / 100;
+  showSplitRatio(value);
+  return mutate({ type: "SETTINGS", patch: { splitRatio: value } });
+}
+$("viewer-divider").addEventListener("pointerdown", (event) => {
+  const divider = $("viewer-divider");
+  const box = $("frame-container").getBoundingClientRect();
+  let ratio = state.settings.splitRatio;
+  divider.setPointerCapture(event.pointerId);
+  document.body.classList.add("resizing");
+  const move = (moveEvent) => {
+    ratio = Math.max(
+      0.2,
+      Math.min(0.8, (moveEvent.clientY - box.top) / box.height),
+    );
+    showSplitRatio(ratio);
+  };
+  const end = () => {
+    divider.removeEventListener("pointermove", move);
+    document.body.classList.remove("resizing");
+    run(null, () => saveSplitRatio(ratio));
+  };
+  divider.addEventListener("pointermove", move);
+  divider.addEventListener("pointerup", end, { once: true });
+  divider.addEventListener("pointercancel", end, { once: true });
+});
+$("viewer-divider").addEventListener("keydown", (event) => {
+  const step = { ArrowUp: -0.05, ArrowDown: 0.05 }[event.key];
+  if (!step) return;
+  event.preventDefault();
+  run(null, () => saveSplitRatio(state.settings.splitRatio + step));
+});
 $("translator-run").onclick = () =>
   run($("translator-run"), translateText, $("translator-status"));
 $("translator-input").addEventListener("keydown", (event) => {
@@ -1512,8 +1665,9 @@ function renderEmbeds() {
         await request("EMBED", { origin, enabled: false });
         embedOrigins = embedOrigins.filter((o) => o !== origin);
         renderEmbeds();
-        if (currentPin && new URL(currentPin.url).origin === origin)
-          resetFrame();
+        for (const pane of panes)
+          if (pane.pin && new URL(pane.pin.url).origin === origin)
+            resetFrame(pane);
         toast(t("Đã thu hồi quyền nhúng."));
       });
     row.append(button);
@@ -2008,7 +2162,7 @@ document.addEventListener("keydown", (event) => {
     }
     if (event.key === "Tab") closeMenu();
   }
-  if (event.key === "Escape" && currentPin) {
+  if (event.key === "Escape" && panes[0].pin) {
     closeViewer();
     return;
   }
@@ -2019,7 +2173,7 @@ document.addEventListener("keydown", (event) => {
     !["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName)
   ) {
     event.preventDefault();
-    if (currentPin) closeViewer();
+    if (panes[0].pin) closeViewer();
     $("search").focus();
   }
 });
@@ -2030,7 +2184,7 @@ async function viewRequest(value) {
   if (value.pin) {
     const pin = state?.pins.find((p) => p.id === value.pin.id);
     if (pin) await openPin(pin, "sidebar");
-  } else if (currentPin) closeViewer();
+  } else if (panes[0].pin) closeViewer();
 }
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === "local") {

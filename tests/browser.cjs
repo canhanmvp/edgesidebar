@@ -635,6 +635,26 @@ async function waitState(page, count) {
   await page.locator("#settings-dialog[open]").waitFor();
   await page.locator("#settings-dialog [data-close]").click();
   passed("Ctrl+K palette finds pins, opens the bottom half and runs commands");
+  // Notes: the viewer edits the pin's own note field and saves by itself.
+  await page.evaluate(async () => {
+    await openPin(
+      state.pins.find((pin) => pin.title === "Trang thử nghiệm"),
+      "sidebar",
+    );
+  });
+  await page.locator("#viewer-notes:not([hidden])").click();
+  await page.locator("#pane-note-1").fill("Ghi chú từ viewer");
+  await page.waitForFunction(async () => {
+    const { state } = await chrome.runtime.sendMessage({ type: "GET_STATE" });
+    return state.pins.some(
+      (pin) =>
+        pin.title === "Trang thử nghiệm" && pin.note === "Ghi chú từ viewer",
+    );
+  });
+  await page.waitForFunction(() =>
+    document.querySelector("#viewer-notes").classList.contains("has-note"),
+  );
+  passed("viewer notes save to the pin by themselves");
   const site = await context.newPage();
   await site.goto(origin + "/host");
   await site.waitForFunction(() =>
@@ -951,15 +971,21 @@ async function waitState(page, count) {
   await bm
     .getByRole("menuitem", { name: "Lưu nhóm “Thiết kế”", exact: true })
     .click();
-  const groupedSession = await bm.waitForFunction(async () => {
-    const [session] =
-      (await chrome.storage.local.get("savedSessions")).savedSessions || [];
-    return session?.groups?.[0]?.title === "Thiết kế" &&
-      session.tabs.every((tab) => tab.group === 0)
-      ? session.name
-      : null;
-  });
-  const sessionName = await groupedSession.jsonValue();
+  // Poll explicitly: the save now goes through the worker, and the session
+  // name is only known once it is stored.
+  let sessionName = null;
+  for (let i = 0; i < 100 && !sessionName; i++) {
+    sessionName = await bm.evaluate(async () => {
+      const [session] =
+        (await chrome.storage.local.get("savedSessions")).savedSessions || [];
+      return session?.groups?.[0]?.title === "Thiết kế" &&
+        session.tabs.every((tab) => tab.group === 0)
+        ? session.name
+        : null;
+    });
+    if (!sessionName) await bm.waitForTimeout(100);
+  }
+  assert.ok(sessionName, "grouped session was saved");
   await bm.evaluate(async () => {
     const tabs = await chrome.tabs.query({});
     await chrome.tabs.remove(

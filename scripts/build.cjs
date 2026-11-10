@@ -12,6 +12,7 @@ const files = [
   "i18n.js",
   "core.js",
   "bookmarks-core.js",
+  "linkcheck.js",
   "import-core.js",
   "background.js",
   "icons.js",

@@ -1,6 +1,12 @@
 /* Single writer: mutations and cloud deliveries share the same durable queue. */
 "use strict";
-importScripts("i18n-en.js", "i18n.js", "core.js", "bookmarks-core.js");
+importScripts(
+  "i18n-en.js",
+  "i18n.js",
+  "core.js",
+  "bookmarks-core.js",
+  "linkcheck.js",
+);
 const { t } = PinnedI18n;
 const C = Pinned;
 const B = BookmarkSync;
@@ -847,6 +853,8 @@ async function handle(message, sender) {
       ])),
     };
   }
+  if (message.type === "SESSIONS")
+    return { sessions: await editSessions(message) };
   if (message.type === "GET_TABS") {
     const targetWindowId = Number.isInteger(message.windowId)
       ? message.windowId
@@ -1168,11 +1176,232 @@ chrome.omnibox?.onInputEntered.addListener((text, disposition) => {
     if (target) await openFromOmnibox(target, disposition);
   }).catch((error) => console.warn("Omnibox:", error));
 });
+/* Saved tab sessions live in storage.local; only this worker writes them, so
+   the sidebar's edits and automatic saves cannot overwrite each other. */
+const SESSIONS_KEY = "savedSessions";
+async function readSessions() {
+  return C.cleanSessions(
+    (await chrome.storage.local.get(SESSIONS_KEY))[SESSIONS_KEY],
+  );
+}
+async function editSessions(message) {
+  let list = await readSessions();
+  if (message.op === "add") {
+    const [session] = C.cleanSessions([message.session]);
+    if (!session) throw new Error(t("Không có tab website nào để lưu."));
+    list = C.putSession(list, session);
+  } else if (message.op === "remove")
+    list = list.filter((item) => item.id !== message.id);
+  else if (message.op === "rename") {
+    const item = list.find((session) => session.id === message.id);
+    if (item && typeof message.name === "string" && message.name.trim())
+      item.name = message.name.trim().slice(0, 100);
+  } else if (message.op === "restore") {
+    const [session] = C.cleanSessions([message.session]);
+    if (session && !list.some((item) => item.id === session.id))
+      list.splice(
+        Math.max(0, Math.min(list.length, message.index || 0)),
+        0,
+        session,
+      );
+    list = list.slice(0, 20);
+  } else if (message.op === "replace") list = C.cleanSessions(message.sessions);
+  else if (message.op === "merge") {
+    const ids = new Set(list.map((session) => session.id));
+    const incoming = C.cleanSessions(message.sessions).map((session) =>
+      ids.has(session.id) ? { ...session, id: C.uid() } : session,
+    );
+    list = C.cleanSessions([...incoming, ...list]);
+  } else throw new Error(t("Yêu cầu không được hỗ trợ."));
+  await chrome.storage.local.set({ [SESSIONS_KEY]: list });
+  return list;
+}
+/* Auto-save a window's tabs when it closes (setting autoSession, off by
+   default). Snapshots are kept per window in storage.local while it is open,
+   so they survive the worker sleeping; leftovers at browser startup become a
+   "previous session". Nothing leaves the device. */
+const SNAPSHOTS_KEY = "windowSnapshots";
+const snapshotTimers = new Map();
+async function autoSessionOn() {
+  const state = await readState();
+  return state.settings.autoSession === true;
+}
+async function snapshotWindow(windowId) {
+  let tabs;
+  try {
+    tabs = await chrome.tabs.query({ windowId });
+  } catch {
+    return;
+  }
+  if (tabs.some((tab) => tab.incognito)) return;
+  const groups = chrome.tabGroups
+    ? await chrome.tabGroups.query({ windowId }).catch(() => [])
+    : [];
+  const used = groups.filter((group) =>
+    tabs.some((tab) => tab.groupId === group.id),
+  );
+  const snapshot = {
+    at: Date.now(),
+    groups: used,
+    tabs: tabs
+      .filter((tab) => /^https?:\/\//i.test(tab.url || ""))
+      .map((tab) => ({
+        title: tab.title,
+        url: tab.url,
+        faviconUrl: tab.favIconUrl || "",
+        group: used.findIndex((group) => group.id === tab.groupId),
+      })),
+  };
+  const all =
+    (await chrome.storage.local.get(SNAPSHOTS_KEY))[SNAPSHOTS_KEY] || {};
+  all[windowId] = snapshot;
+  await chrome.storage.local.set({ [SNAPSHOTS_KEY]: all });
+}
+function scheduleSnapshot(windowId) {
+  if (!Number.isInteger(windowId) || windowId < 0) return;
+  clearTimeout(snapshotTimers.get(windowId));
+  snapshotTimers.set(
+    windowId,
+    setTimeout(() => {
+      snapshotTimers.delete(windowId);
+      serial(async () => {
+        if (await autoSessionOn()) await snapshotWindow(windowId);
+      }).catch(() => {});
+    }, 1500),
+  );
+}
+async function saveSnapshot(snapshot, name) {
+  if (!snapshot || snapshot.tabs.length < 2) return;
+  const state = await readState();
+  await editSessions({
+    op: "add",
+    session: {
+      id: C.uid(),
+      name,
+      workspaceId: await activeWorkspace(state),
+      createdAt: snapshot.at || Date.now(),
+      auto: true,
+      groups: snapshot.groups,
+      tabs: snapshot.tabs,
+    },
+  });
+}
+const timeLabel = (time) =>
+  new Date(time).toLocaleString(PinnedI18n.language === "en" ? "en" : "vi-VN", {
+    dateStyle: "short",
+    timeStyle: "short",
+  });
+chrome.tabs.onCreated?.addListener((tab) => scheduleSnapshot(tab.windowId));
+chrome.tabs.onUpdated?.addListener((tabId, change, tab) => {
+  if (change.url || change.title || change.status === "complete")
+    scheduleSnapshot(tab.windowId);
+});
+chrome.tabs.onMoved?.addListener((tabId, info) =>
+  scheduleSnapshot(info.windowId),
+);
+chrome.tabs.onAttached?.addListener((tabId, info) =>
+  scheduleSnapshot(info.newWindowId),
+);
+chrome.tabs.onDetached?.addListener((tabId, info) =>
+  scheduleSnapshot(info.oldWindowId),
+);
+chrome.tabs.onRemoved?.addListener((tabId, info) => {
+  // Closing the whole window must keep the last full snapshot.
+  if (!info.isWindowClosing) scheduleSnapshot(info.windowId);
+});
+chrome.windows?.onRemoved?.addListener((windowId) => {
+  clearTimeout(snapshotTimers.get(windowId));
+  snapshotTimers.delete(windowId);
+  serial(async () => {
+    const all =
+      (await chrome.storage.local.get(SNAPSHOTS_KEY))[SNAPSHOTS_KEY] || {};
+    const snapshot = all[windowId];
+    delete all[windowId];
+    await chrome.storage.local.set({ [SNAPSHOTS_KEY]: all });
+    if (await autoSessionOn())
+      await saveSnapshot(snapshot, t("Tự lưu · {0}", [timeLabel(Date.now())]));
+  }).catch(console.warn);
+});
+// Window ids do not survive a browser restart: whatever is left was open
+// when the browser quit or crashed.
+async function recoverSnapshots() {
+  const all =
+    (await chrome.storage.local.get(SNAPSHOTS_KEY))[SNAPSHOTS_KEY] || {};
+  await chrome.storage.local.set({ [SNAPSHOTS_KEY]: {} });
+  if (!(await autoSessionOn())) return;
+  for (const snapshot of Object.values(all))
+    await saveSnapshot(
+      snapshot,
+      t("Phiên trước · {0}", [timeLabel(snapshot.at || Date.now())]),
+    );
+}
+async function snapshotAllWindows() {
+  if (!(await autoSessionOn())) return;
+  for (const window of await chrome.windows.getAll().catch(() => []))
+    await snapshotWindow(window.id);
+}
+/* Weekly jobs (both off by default): check up to 100 pinned links, the
+   least recently checked first, and keep 3 automatic backups. */
+const WEEKLY_ALARM = "pinned-weekly";
+const AUTO_BACKUPS_KEY = "autoBackups";
+async function weeklyCleanup(state) {
+  const { linkCheck = {} } = await chrome.storage.local.get("linkCheck");
+  const pins = [...state.pins]
+    .sort(
+      (a, b) =>
+        (linkCheck[a.id]?.checkedAt || 0) - (linkCheck[b.id]?.checkedAt || 0),
+    )
+    .slice(0, 100);
+  const results = await PinnedLinkCheck.run(pins, {
+    signal: new AbortController().signal,
+    concurrency: 6,
+  });
+  const live = new Set(state.pins.map((pin) => pin.id));
+  const merged = Object.fromEntries(
+    Object.entries({ ...linkCheck, ...results }).filter(([id]) => live.has(id)),
+  );
+  await chrome.storage.local.set({ linkCheck: merged });
+  const broken = Object.values(merged).filter(
+    (result) => result.status === "broken",
+  ).length;
+  await chrome.action.setBadgeBackgroundColor?.({ color: "#b54040" });
+  await chrome.action.setBadgeText({ text: broken ? String(broken) : "" });
+}
+async function weeklyBackup(state) {
+  const old =
+    (await chrome.storage.local.get(AUTO_BACKUPS_KEY))[AUTO_BACKUPS_KEY] || [];
+  // Large collections keep a single copy to stay well inside local storage.
+  const keep = JSON.stringify(state).length > 1_000_000 ? 1 : 3;
+  await chrome.storage.local.set({
+    [AUTO_BACKUPS_KEY]: [{ time: Date.now(), data: state }, ...old].slice(
+      0,
+      keep,
+    ),
+  });
+}
+async function weeklyJobs() {
+  const state = await readState();
+  if (state.settings.autoBackup) await weeklyBackup(state);
+  if (state.settings.autoCleanup) await weeklyCleanup(state);
+}
+async function scheduleWeekly() {
+  if (!(await chrome.alarms.get(WEEKLY_ALARM)))
+    await chrome.alarms.create(WEEKLY_ALARM, {
+      delayInMinutes: 60,
+      periodInMinutes: 7 * 24 * 60,
+    });
+}
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === "pinned-sync") serial(() => upload()).catch(syncError);
+  // Not inside serial(): link checks can take minutes and must not hold up
+  // the user's edits. They only write linkCheck / autoBackups / the badge.
+  if (alarm.name === WEEKLY_ALARM) weeklyJobs().catch(console.warn);
 });
+
 async function setup() {
   await initialize();
+  await scheduleWeekly();
+  await snapshotAllWindows();
   await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
   await chrome.contextMenus.removeAll();
   chrome.contextMenus.create({
@@ -1201,7 +1430,13 @@ chrome.runtime.onInstalled.addListener((details) => {
     chrome.storage.local.set({ onboarding: "pending" }).catch(() => {});
   serial(setup).catch(console.error);
 });
-chrome.runtime.onStartup.addListener(() => serial(setup).catch(console.error));
+chrome.runtime.onStartup.addListener(() =>
+  serial(async () => {
+    await initialize();
+    await recoverSnapshots();
+    await setup();
+  }).catch(console.error),
+);
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId !== "pin-to-sidebar") return;
   serial(async () =>

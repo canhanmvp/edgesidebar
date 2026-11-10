@@ -17,7 +17,7 @@ function event() {
     },
   };
 }
-function worker(initial = {}, { bookmarks } = {}) {
+function worker(initial = {}, { bookmarks, fetch } = {}) {
   const changed = event();
   let failLocal = false;
   function storage(area, initialData = {}) {
@@ -73,7 +73,26 @@ function worker(initial = {}, { bookmarks } = {}) {
       async sendMessage() {},
       async create() {},
     },
-    alarms: { onAlarm: event(), async create() {}, async clear() {} },
+    alarms: {
+      onAlarm: event(),
+      created: {},
+      async create(name, info) {
+        this.created[name] = info;
+      },
+      async clear() {},
+      async get(name) {
+        return this.created[name];
+      },
+    },
+    windows: {
+      onRemoved: event(),
+      async getAll() {
+        return [];
+      },
+      async getLastFocused() {
+        return { id: 9 };
+      },
+    },
     omnibox: {
       onInputStarted: event(),
       onInputChanged: event(),
@@ -94,13 +113,15 @@ function worker(initial = {}, { bookmarks } = {}) {
       async setPanelBehavior() {},
     },
     commands: { onCommand: event() },
-    windows: {
-      async getLastFocused() {
-        return { id: 9 };
-      },
-    },
     contextMenus: { onClicked: event(), async removeAll() {}, create() {} },
-    action: { async setBadgeText() {}, async setTitle() {} },
+    action: {
+      badge: "",
+      async setBadgeText({ text }) {
+        this.badge = text;
+      },
+      async setBadgeBackgroundColor() {},
+      async setTitle() {},
+    },
     declarativeNetRequest: {
       rules: [],
       sessionRules: [],
@@ -127,6 +148,13 @@ function worker(initial = {}, { bookmarks } = {}) {
     console,
     setTimeout,
     clearTimeout,
+    AbortController,
+    AbortSignal,
+    fetch:
+      fetch ||
+      (async () => {
+        throw new TypeError("offline");
+      }),
   });
   context.importScripts = (...files) =>
     files.forEach((file) =>
@@ -965,4 +993,144 @@ test("sites without mobile mode keep the plain embed rule", async () => {
       !rule.action.requestHeaders.some((h) => h.header === "user-agent"),
     );
   assert.equal(w.chrome.declarativeNetRequest.sessionRules.length, 0);
+});
+
+const tabsOf = (n) =>
+  Array.from({ length: n }, (_, i) => ({
+    url: `https://s${i}.test/`,
+    title: "S" + i,
+  }));
+test("the worker is the only writer of saved sessions", async () => {
+  const w = worker({ pins: [] });
+  await w.send({ type: "GET_STATE" });
+  const add = (name) =>
+    w.send({ type: "SESSIONS", op: "add", session: { name, tabs: tabsOf(2) } });
+  await add("A");
+  const { sessions } = await add("B");
+  assert.equal(
+    JSON.stringify(sessions.map((s) => s.name)),
+    JSON.stringify(["B", "A"]),
+  );
+  const a = sessions[1];
+  await w.send({ type: "SESSIONS", op: "rename", id: a.id, name: "A2" });
+  await w.send({ type: "SESSIONS", op: "remove", id: a.id });
+  let list = (
+    await w.send({
+      type: "SESSIONS",
+      op: "restore",
+      session: { ...a, name: "A2" },
+      index: 1,
+    })
+  ).sessions;
+  assert.equal(
+    JSON.stringify(list.map((s) => s.name)),
+    JSON.stringify(["B", "A2"]),
+  );
+  list = (
+    await w.send({
+      type: "SESSIONS",
+      op: "merge",
+      sessions: [{ ...a, name: "copy" }],
+    })
+  ).sessions;
+  assert.equal(list.length, 3);
+  assert.equal(new Set(list.map((s) => s.id)).size, 3, "ids stay unique");
+  const bad = await w.send({ type: "SESSIONS", op: "explode" });
+  assert.equal(bad.ok, false);
+  assert.equal(w.chrome.storage.local.data.savedSessions.length, 3);
+});
+test("closing a window saves an automatic session only when enabled", async () => {
+  const w = worker({ pins: [] });
+  await w.send({ type: "GET_STATE" });
+  const closeWindow = async (id, tabs) => {
+    await w.chrome.storage.local.set({
+      windowSnapshots: { [id]: { at: 1, groups: [], tabs } },
+    });
+    w.chrome.windows.onRemoved.emit(id);
+    await w.idle();
+    await w.idle();
+  };
+  await closeWindow(4, tabsOf(3));
+  assert.equal(
+    w.chrome.storage.local.data.savedSessions,
+    undefined,
+    "off by default",
+  );
+  await w.send({
+    type: "MUTATE",
+    action: { type: "SETTINGS", patch: { autoSession: true } },
+  });
+  await closeWindow(5, tabsOf(1));
+  assert.equal(
+    w.chrome.storage.local.data.savedSessions,
+    undefined,
+    "single tab skipped",
+  );
+  for (let i = 0; i < 4; i++) await closeWindow(10 + i, tabsOf(2));
+  const saved = w.chrome.storage.local.data.savedSessions;
+  assert.equal(saved.length, 3, "at most three automatic sessions");
+  assert.ok(saved.every((s) => s.auto && /^Tự lưu ·/.test(s.name)));
+  assert.deepEqual(w.chrome.storage.local.data.windowSnapshots, {});
+});
+test("leftover window snapshots become a previous session at startup", async () => {
+  const w = worker({ pins: [] });
+  await w.send({ type: "GET_STATE" });
+  await w.send({
+    type: "MUTATE",
+    action: { type: "SETTINGS", patch: { autoSession: true } },
+  });
+  await w.chrome.storage.local.set({
+    windowSnapshots: { 77: { at: 1, groups: [], tabs: tabsOf(2) } },
+  });
+  w.chrome.runtime.onStartup.emit();
+  await w.idle();
+  await w.idle();
+  const [session] = w.chrome.storage.local.data.savedSessions;
+  assert.match(session.name, /^Phiên trước ·/);
+  assert.equal(session.auto, true);
+});
+test("weekly jobs back up and badge broken links when enabled", async () => {
+  const w = worker(
+    { pins: [] },
+    {
+      fetch: async (url) => ({
+        status: url.includes("gone") ? 404 : 200,
+        redirected: false,
+        url,
+        body: null,
+      }),
+    },
+  );
+  await w.send({ type: "GET_STATE" });
+  for (const url of ["https://gone.test/", "https://fine.test/"])
+    await w.send({ type: "MUTATE", action: { type: "SAVE_PIN", url } });
+  const weekly = () =>
+    new Promise((resolve) => {
+      w.chrome.alarms.onAlarm.emit({ name: "pinned-weekly" });
+      setTimeout(resolve, 50);
+    });
+  await weekly();
+  assert.equal(
+    w.chrome.storage.local.data.autoBackups,
+    undefined,
+    "off by default",
+  );
+  await w.send({
+    type: "MUTATE",
+    action: {
+      type: "SETTINGS",
+      patch: { autoBackup: true, autoCleanup: true },
+    },
+  });
+  await weekly();
+  assert.equal(w.chrome.storage.local.data.autoBackups.length, 1);
+  const checks = Object.values(w.chrome.storage.local.data.linkCheck);
+  assert.equal(checks.filter((c) => c.status === "broken").length, 1);
+  assert.equal(w.chrome.action.badge, "1");
+  for (let i = 0; i < 3; i++) await weekly();
+  assert.equal(
+    w.chrome.storage.local.data.autoBackups.length,
+    3,
+    "keeps three",
+  );
 });

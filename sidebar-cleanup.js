@@ -3,29 +3,8 @@
 "use strict";
 (() => {
   const CONCURRENCY = 4;
-  const TIMEOUT = 10000;
   let controller = null;
   let results = {}; // pinId -> { status, code, finalUrl, checkedAt }
-  async function probe(url, signal) {
-    const options = {
-      credentials: "omit",
-      cache: "no-store",
-      referrerPolicy: "no-referrer",
-      redirect: "follow",
-      signal: AbortSignal.any([signal, AbortSignal.timeout(TIMEOUT)]),
-    };
-    let response = await fetch(url, { ...options, method: "HEAD" });
-    // Many servers mishandle HEAD; confirm any error with a real GET.
-    if (response.status >= 400) {
-      response = await fetch(url, { ...options, method: "GET" });
-      response.body?.cancel().catch(() => {});
-    }
-    return {
-      status: response.status,
-      redirected: response.redirected,
-      finalUrl: response.url,
-    };
-  }
   function scopePins() {
     return $("cleanup-scope").value === "all"
       ? state.pins
@@ -232,7 +211,6 @@
     $("cleanup-progress").hidden = false;
     $("cleanup-bar").style.width = "0";
     renderResults();
-    const queue = [...pins];
     const status = () => {
       $("cleanup-status").textContent = t("Đã kiểm tra {0}/{1} trang…", [
         done,
@@ -242,27 +220,17 @@
         (pins.length ? (done / pins.length) * 100 : 100) + "%";
     };
     status();
-    async function worker() {
-      while (queue.length && !signal.aborted) {
-        const pin = queue.shift();
-        let outcome;
-        try {
-          outcome = await probe(pin.url, signal);
-        } catch (error) {
-          if (signal.aborted) return;
-          outcome = { error: error.name || "error" };
-        }
-        results[pin.id] = {
-          ...C.classifyCheck(pin.url, outcome),
-          checkedAt: Date.now(),
-        };
-        done++;
-        status();
-        if (done % 10 === 0) renderResults();
-      }
-    }
     try {
-      await Promise.all(Array.from({ length: CONCURRENCY }, worker));
+      await PinnedLinkCheck.run(pins, {
+        signal,
+        concurrency: CONCURRENCY,
+        onResult: (pin, result) => {
+          results[pin.id] = result;
+          done++;
+          status();
+          if (done % 10 === 0) renderResults();
+        },
+      });
     } finally {
       controller = null;
       $("cleanup-run").hidden = false;
@@ -291,6 +259,8 @@
     $("cleanup-status").textContent = "";
     $("cleanup-progress").hidden = true;
     $("cleanup-run").textContent = t("Bắt đầu kiểm tra");
+    // The weekly check shows broken links as a number on the toolbar icon.
+    chrome.action?.setBadgeText({ text: "" }).catch(() => {});
     showDialog($("cleanup-dialog"));
     renderResults();
   }

@@ -72,6 +72,8 @@ function htmlKeys() {
   const SAME = [
     "Ctrl",
     "M",
+    "K",
+    "&gt;",
     "p",
     "Pinned Sidebar",
     "pinned",

@@ -28,6 +28,10 @@ GHIM VÀ SẮP XẾP
 MỞ WEB NGAY TRONG THANH BÊN
 • Xem website trong sidebar mà không rời trang đang làm
 • Thanh nổi tùy chọn trên mọi trang, kéo đặt ở đâu cũng được, ẩn chỉ với một cú nhấp
+• Chia đôi sidebar: hai website cùng lúc
+• Chế độ di động theo từng website cho Facebook, Instagram, Zalo…
+• Bảng lệnh Ctrl+K: tìm trang ghim, bookmark, phiên và chạy lệnh
+• Tự động (tùy chọn): tự lưu phiên, tự kiểm tra link và sao lưu mỗi tuần
 • Dịch nhanh văn bản ngay trong thanh bên
 
 TAB VÀ BOOKMARK
@@ -70,6 +74,10 @@ OPEN SITES IN THE SIDE PANEL
 
 TABS AND BOOKMARKS
 • Save and restore tab sessions, including named, colored tab groups
+• Split view: two websites in the side panel at once
+• Mobile mode per site, for phone layouts of Facebook, Instagram and more
+• Ctrl+K command palette for pins, bookmarks, sessions and commands
+• Optional automation: auto-save sessions, weekly link check and backups
 • Bookmarks tab: browse, search, drag and drop, delete with undo
 • Two-way link between a bookmark folder and a workspace
 • Type "p" in the address bar to open a pinned site, or "p +" to pin the current tab

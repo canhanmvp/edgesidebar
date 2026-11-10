@@ -1901,3 +1901,7 @@ body.resizing {
 body:not(.split) #viewer-close-top {
   display: none;
 }
+.embed-row span {
+  flex: 1;
+  min-width: 0;
+}

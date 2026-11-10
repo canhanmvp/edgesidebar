@@ -15,7 +15,13 @@ execFileSync(process.execPath, [
 const extension = path.join(root, "dist", "pinned-sidebar");
 const server = http.createServer((req, res) => {
   res.setHeader("Content-Type", "text/html; charset=utf-8");
-  if (req.url.startsWith("/gone")) {
+  if (req.url.startsWith("/ua")) {
+    // Echoes the headers mobile mode changes.
+    const esc = (v) => String(v || "").replace(/[<>&]/g, "");
+    res.end(
+      `<!doctype html><title>UA</title><h1 id="ua">${esc(req.headers["user-agent"])}</h1><p id="mobile">${esc(req.headers["sec-ch-ua-mobile"])}</p>`,
+    );
+  } else if (req.url.startsWith("/gone")) {
     res.statusCode = 410;
     res.end("Gone");
   } else if (req.url.startsWith("/moved")) {
@@ -532,6 +538,53 @@ async function waitState(page, count) {
     });
   }, origin + "/second");
   passed("split view opens a second site, saves the divider, and promotes it");
+  // Mobile mode: the frame's page request carries an Android user agent.
+  await page.evaluate(
+    (url) =>
+      chrome.runtime.sendMessage({
+        type: "MUTATE",
+        action: { type: "SAVE_PIN", url, title: "Trình duyệt" },
+      }),
+    origin + "/ua",
+  );
+  await page.evaluate(async (url) => {
+    await openPin(
+      state.pins.find((pin) => pin.url === url),
+      "sidebar",
+    );
+  }, origin + "/ua");
+  const uaText = () =>
+    page.frameLocator("#viewer-frame").locator("#ua").textContent();
+  await page.frameLocator("#viewer-frame").locator("#ua").waitFor();
+  assert.doesNotMatch(await uaText(), /Android/);
+  await page.locator("#viewer-mobile").click();
+  await page.waitForFunction(
+    () =>
+      document.querySelector("#viewer-mobile").getAttribute("aria-pressed") ===
+      "true",
+  );
+  await page
+    .frameLocator("#viewer-frame")
+    .locator("#ua", { hasText: "Android" })
+    .waitFor({ timeout: 15000 });
+  assert.equal(
+    await page.frameLocator("#viewer-frame").locator("#mobile").textContent(),
+    "?1",
+  );
+  await page.locator("#viewer-mobile").click();
+  await page
+    .frameLocator("#viewer-frame")
+    .locator("#ua")
+    .filter({ hasNotText: "Android" })
+    .waitFor({ timeout: 15000 });
+  await page.evaluate(async (url) => {
+    const pin = state.pins.find((item) => item.url === url);
+    await chrome.runtime.sendMessage({
+      type: "MUTATE",
+      action: { type: "DELETE_PIN", id: pin.id },
+    });
+  }, origin + "/ua");
+  passed("mobile mode sends an Android user agent for that site only");
   const site = await context.newPage();
   await site.goto(origin + "/host");
   await site.waitForFunction(() =>

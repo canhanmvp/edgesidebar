@@ -37,6 +37,8 @@ globalThis.PinnedIcons = {
     '<path d="M15.7 14 18.7 11a4 4 0 0 0-5.7-5.7l-1 1M8.3 10l-3 3a4 4 0 0 0 5.7 5.7l1-1M3 3l18 18"/>',
   broom:
     '<path d="m14 4 6-1-1 6M20 3l-8.5 8.5M11 10l3 3-1.5 6.5L4 21l1.5-8.5L11 10ZM7 16l2 2"/>',
+  phone:
+    '<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>',
   split:
     '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 12h18"/>',
   layers: '<path d="m12 3 9 5-9 5-9-5 9-5ZM3 13l9 5 9-5"/>',

@@ -66,6 +66,7 @@ function worker(initial = {}, { bookmarks } = {}) {
       onChanged: changed,
     },
     tabs: {
+      TAB_ID_NONE: -1,
       async query() {
         return [];
       },
@@ -102,11 +103,18 @@ function worker(initial = {}, { bookmarks } = {}) {
     action: { async setBadgeText() {}, async setTitle() {} },
     declarativeNetRequest: {
       rules: [],
+      sessionRules: [],
       async getDynamicRules() {
         return this.rules;
       },
       async updateDynamicRules({ addRules }) {
         this.rules = addRules;
+      },
+      async getSessionRules() {
+        return this.sessionRules;
+      },
+      async updateSessionRules({ addRules }) {
+        this.sessionRules = addRules;
       },
     },
   };
@@ -889,4 +897,72 @@ test("omnibox suggestions escape user text and open the best match", async () =>
     JSON.stringify(created),
     '[{"url":"https://b.test/","active":false}]',
   );
+});
+test("mobile mode adds Android headers for the frame and its subresources", async () => {
+  const w = worker({ pins: [] });
+  await w.send({ type: "GET_STATE" });
+  const refused = await w.send({
+    type: "MOBILE",
+    origin: "https://www.facebook.com",
+    enabled: true,
+  });
+  assert.match(refused.error, /trong sidebar trước/);
+  await w.send({
+    type: "EMBED",
+    origin: "https://www.facebook.com",
+    enabled: true,
+  });
+  const on = await w.send({
+    type: "MOBILE",
+    origin: "https://www.facebook.com",
+    enabled: true,
+  });
+  assert.equal(on.ok, true, on.error);
+  const dnr = w.chrome.declarativeNetRequest;
+  const byRegex = (host) =>
+    dnr.rules.find((rule) =>
+      new RegExp(rule.condition.regexFilter).test(`https://${host}/x`),
+    );
+  for (const host of ["www.facebook.com", "facebook.com", "m.facebook.com"]) {
+    const headers = byRegex(host).action.requestHeaders;
+    const ua = headers.find((h) => h.header === "user-agent");
+    assert.match(ua.value, /Android .*Mobile Safari/, host);
+    assert.ok(
+      headers.some((h) => h.header === "sec-ch-ua-mobile" && h.value === "?1"),
+    );
+    assert.equal(
+      byRegex(host).condition.initiatorDomains[0],
+      w.chrome.runtime.id,
+    );
+  }
+  const [session] = dnr.sessionRules;
+  assert.deepEqual(
+    Array.from(session.condition.tabIds),
+    [-1],
+    "never the user's tabs",
+  );
+  assert.deepEqual(Array.from(session.condition.requestDomains).sort(), [
+    "facebook.com",
+    "m.facebook.com",
+    "www.facebook.com",
+  ]);
+  // Revoking the embed exception also ends mobile mode.
+  await w.send({
+    type: "EMBED",
+    origin: "https://www.facebook.com",
+    enabled: false,
+  });
+  assert.equal(w.chrome.storage.local.data.mobileOrigins.length, 0);
+  assert.equal(dnr.sessionRules.length, 0);
+  assert.equal(dnr.rules.length, 0);
+});
+test("sites without mobile mode keep the plain embed rule", async () => {
+  const w = worker({ pins: [] });
+  await w.send({ type: "GET_STATE" });
+  await w.send({ type: "EMBED", origin: "https://example.com", enabled: true });
+  for (const rule of w.chrome.declarativeNetRequest.rules)
+    assert.ok(
+      !rule.action.requestHeaders.some((h) => h.header === "user-agent"),
+    );
+  assert.equal(w.chrome.declarativeNetRequest.sessionRules.length, 0);
 });

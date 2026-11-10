@@ -644,19 +644,73 @@ function trusted(sender) {
 }
 async function setEmbed(origin, enabled) {
   const parsed = new URL(C.url(origin));
-  const { embedOrigins = [] } = await chrome.storage.local.get("embedOrigins");
+  const { embedOrigins = [], mobileOrigins = [] } =
+    await chrome.storage.local.get(["embedOrigins", "mobileOrigins"]);
   const origins = new Set(embedOrigins);
   enabled ? origins.add(parsed.origin) : origins.delete(parsed.origin);
   if (origins.size > 100)
     throw new Error(t("Tối đa 100 website được cho phép nhúng."));
-  await applyEmbedRules([...origins]);
-  await chrome.storage.local.set({ embedOrigins: [...origins] });
+  // Revoking the embed exception also ends mobile mode for that site.
+  const mobile = mobileOrigins.filter((item) => origins.has(item));
+  await applyEmbedRules([...origins], mobile);
+  await chrome.storage.local.set({
+    embedOrigins: [...origins],
+    mobileOrigins: mobile,
+  });
 }
-async function applyEmbedRules(origins) {
+async function setMobile(origin, enabled) {
+  const parsed = new URL(C.url(origin));
+  const { embedOrigins = [], mobileOrigins = [] } =
+    await chrome.storage.local.get(["embedOrigins", "mobileOrigins"]);
+  if (enabled && !embedOrigins.includes(parsed.origin))
+    throw new Error(t("Hãy mở website này trong sidebar trước."));
+  const mobile = new Set(mobileOrigins);
+  enabled ? mobile.add(parsed.origin) : mobile.delete(parsed.origin);
+  await applyEmbedRules(embedOrigins, [...mobile]);
+  await chrome.storage.local.set({ mobileOrigins: [...mobile] });
+}
+// A phone browser as servers expect it: reduced Chrome UA for Android with
+// this browser's real major version, plus the matching client hints.
+function mobileHeaders() {
+  const major =
+    /Chrome\/(\d+)/.exec(globalThis.navigator?.userAgent || "")?.[1] || "120";
+  return [
+    {
+      header: "user-agent",
+      operation: "set",
+      value: `Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${major}.0.0.0 Mobile Safari/537.36`,
+    },
+    { header: "sec-ch-ua-mobile", operation: "set", value: "?1" },
+    { header: "sec-ch-ua-platform", operation: "set", value: '"Android"' },
+  ];
+}
+// Sites in mobile mode often redirect to their m. host.
+function mobileAliases(origin) {
+  const url = new URL(origin);
+  const named =
+    url.hostname.includes(".") && !/^[\d.]+$|^\[/.test(url.hostname);
+  if (!named) return [];
+  const bare = url.hostname.replace(/^(www|m)\./, "");
+  return [`${url.protocol}//m.${bare}${url.port ? ":" + url.port : ""}`];
+}
+async function applyEmbedRules(origins, mobileOrigins = []) {
   const existing = await chrome.declarativeNetRequest.getDynamicRules();
   const escape = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const mobile = new Set(
+    mobileOrigins.flatMap((origin) => [
+      origin,
+      ...embedAliases(origin),
+      ...mobileAliases(origin),
+    ]),
+  );
   const requestOrigins = [
-    ...new Set(origins.flatMap((origin) => [origin, ...embedAliases(origin)])),
+    ...new Set(
+      origins.flatMap((origin) => [
+        origin,
+        ...embedAliases(origin),
+        ...(mobileOrigins.includes(origin) ? mobileAliases(origin) : []),
+      ]),
+    ),
   ];
   const addRules = requestOrigins.map((origin, index) => ({
     id: 2000 + index,
@@ -667,6 +721,7 @@ async function applyEmbedRules(origins) {
       // iframe load and answer with an error page; present it as a page load.
       requestHeaders: [
         { header: "sec-fetch-dest", operation: "set", value: "document" },
+        ...(mobile.has(origin) ? mobileHeaders() : []),
       ],
       responseHeaders: [
         { header: "x-frame-options", operation: "remove" },
@@ -682,6 +737,32 @@ async function applyEmbedRules(origins) {
   await chrome.declarativeNetRequest.updateDynamicRules({
     removeRuleIds: existing.map((r) => r.id),
     addRules,
+  });
+  await applyMobileSubresourceRules([...mobile]);
+}
+// Images, scripts and XHR inside the embedded page are not initiated by the
+// extension, so the frame rule above misses them. The side panel is not a
+// tab (tabId -1), which keeps this rule away from the user's normal tabs.
+// Session rules vanish when the browser closes; setup() applies them again.
+async function applyMobileSubresourceRules(origins) {
+  const existing = await chrome.declarativeNetRequest.getSessionRules();
+  const hosts = [...new Set(origins.map((origin) => new URL(origin).hostname))];
+  await chrome.declarativeNetRequest.updateSessionRules({
+    removeRuleIds: existing.map((rule) => rule.id),
+    addRules: hosts.length
+      ? [
+          {
+            id: 5000,
+            priority: 1,
+            action: { type: "modifyHeaders", requestHeaders: mobileHeaders() },
+            condition: {
+              tabIds: [chrome.tabs.TAB_ID_NONE],
+              requestDomains: hosts,
+              excludedResourceTypes: ["main_frame"],
+            },
+          },
+        ]
+      : [],
   });
 }
 // The only settings content.js reads.
@@ -762,6 +843,7 @@ async function handle(message, sender) {
         "syncStatus",
         "migration",
         "embedOrigins",
+        "mobileOrigins",
       ])),
     };
   }
@@ -823,6 +905,10 @@ async function handle(message, sender) {
   }
   if (message.type === "EMBED") {
     await setEmbed(message.origin, message.enabled);
+    return {};
+  }
+  if (message.type === "MOBILE") {
+    await setMobile(message.origin, message.enabled);
     return {};
   }
   if (message.type === "SYNC_NOW") {
@@ -1095,10 +1181,16 @@ async function setup() {
     contexts: ["page", "link"],
     documentUrlPatterns: ["http://*/*", "https://*/*"],
   });
-  const { embedOrigins = [], syncStatus = {} } = await chrome.storage.local.get(
-    ["embedOrigins", "syncStatus"],
-  );
-  await applyEmbedRules(embedOrigins);
+  const {
+    embedOrigins = [],
+    mobileOrigins = [],
+    syncStatus = {},
+  } = await chrome.storage.local.get([
+    "embedOrigins",
+    "mobileOrigins",
+    "syncStatus",
+  ]);
+  await applyEmbedRules(embedOrigins, mobileOrigins);
   if (syncStatus.dirty) await scheduleSync();
   // Bookmarks may have changed while the extension was not running.
   await pullAll().catch((error) => console.warn("Bookmarks:", error));
